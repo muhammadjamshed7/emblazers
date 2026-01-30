@@ -1,0 +1,145 @@
+
+Task Type: Critical System Fix and Data Persistence Implementation
+Priority: High
+
+Objective
+Fix all non-functional modules in the School Management System where UI actions show success or dashboards display data, but backend persistence, data flow, and module functionality are broken. The system must be fully functional end-to-end.
+
+Core Problem Summary
+Most modules:
+•	Display success messages without saving data
+•	Show dashboards with zero or blank values despite user actions
+•	Have non-working buttons (Add, Save, Create, New)
+•	Lack database persistence or correct API integration
+You must fix database schemas, backend APIs, frontend integration, and reporting logic.
+
+Required Fixes (Module-wise)
+
+1. Payroll Module (CRITICAL)
+Issues
+•	Payroll generation shows success but:
+o	No record is saved
+o	No data appears in payroll history
+o	Paid / Unpaid sections are empty
+o	Reports show nothing
+Tasks
+•	Create or fix payroll database tables
+•	Persist payroll data on generation
+•	Implement payroll status (Paid / Unpaid)
+•	Ensure payroll appears in:
+o	Records
+o	Dashboard
+o	Reports
+
+2. Attendance Module
+Issues
+•	Attendance marking works
+•	Records, reports, and dashboard statistics remain empty or zero
+Tasks
+•	Persist attendance records in database
+•	Fix Attendance Records view
+•	Fix Attendance Reports (percentages, totals)
+•	Sync attendance data with dashboard metrics
+
+3. Timetable Module
+Issues
+•	Dashboard shows zero values
+•	Classes and sections appear but are not clickable
+•	Timetables cannot be created or saved
+Tasks
+•	Enable class/section selection
+•	Implement timetable creation and storage
+•	Display recent and total timetables on dashboard
+
+4. Date Sheet Module
+Issues
+•	Create form opens
+•	Save Date Sheet does not work
+•	Add Subject button does not work
+•	No date sheet data persists
+Tasks
+•	Fix Save Date Sheet functionality
+•	Fix Add Subject functionality
+•	Implement full CRUD for date sheets
+________________________________________
+5. Curriculum & Exams Module
+Curriculum Issues
+•	Dashboard loads
+•	No records shown
+•	No add/manage functionality
+Exams Issues
+•	Add Exam button does not work
+•	No exam records
+•	Results section empty
+•	Exam combinations cannot be added
+Tasks
+•	Implement curriculum CRUD
+•	Fix Add Exam functionality
+•	Implement exam, result, and exam setup persistence
+________________________________________
+6. POS (Point of Sale) Module
+Issues
+•	Dashboard shows figures
+•	New Sale button does not work
+•	Add Item form does not open
+•	Items cannot be added
+•	Reports are blank
+•	Inventory and stationery data missing
+Tasks
+•	Fix item creation form
+•	Fix new sale creation
+•	Persist sales and inventory data
+•	Implement POS reports
+________________________________________
+7. Library Module
+Issues
+•	Library login and workflows not functioning
+Tasks
+•	Fix authentication and role access
+•	Restore full library module functionality
+
+8. Hostel Module
+Rooms Issues
+•	Add Room button does not work
+•	No room form opens
+Residents Issues
+•	Add Resident button does not work
+•	No resident records saved
+Fees & Reports Issues
+•	Hostel fee logic broken
+•	Reports show no data
+Tasks
+•	Implement room management CRUD
+•	Implement resident management CRUD
+•	Fix hostel fee processing
+•	Fix hostel reports
+
+9. Reports Module (Global)
+Issues
+•	Overall reports section does not work
+•	No data from any module is displayed
+Tasks
+•	Implement unified reporting system
+•	Connect all modules to reports
+•	Ensure reports reflect real database data
+
+Technical Requirements
+•	Ensure proper database schema for all modules
+•	Fix or implement missing API endpoints
+•	Ensure frontend actions trigger backend logic
+•	Implement full CRUD operations
+•	Fix data aggregation for dashboards
+•	Remove fake or hardcoded success messages
+
+Completion Criteria
+•	All modules must save and retrieve data correctly
+•	Dashboards must show real values
+•	Reports must display accurate data
+•	All buttons (Add, Save, Create, New) must function
+•	No module should appear “working” without real persistence
+
+Deliverables
+•	Fixed backend logic
+•	Fixed frontend integration as well fix the backend and everything should be saved into the database. 
+•	Verified database persistence
+•	Functional dashboards and reports

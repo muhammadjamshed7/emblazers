@@ -1,0 +1,76 @@
+Set up my project “Emblazers” as a production-level full stack app with BOTH frontend and backend APIs, using MongoDB Atlas for persistent storage.
+
+STRICT REQUIREMENTS
+- Use Node.js + Express for backend API
+- Use MongoDB Atlas with Mongoose (ALL data must be saved in MongoDB)
+- Use environment variables (dotenv). Do not hardcode secrets.
+- Implement production-grade structure, error handling, validation, and security basics (CORS, helmet, rate limiting).
+- Frontend must authenticate against the backend (remove any dummy frontend logins).
+- Backend must be the single source of truth for authentication and roles.
+- Provide runnable scripts and clear start commands.
+
+ENV (.env for backend)
+MONGO_URI=mongodb+srv://jamshed2019_db_user:xh5ziyiMJSPPCT4h@emblazers-cluster.wrxnfck.mongodb.net/emblazers?retryWrites=true&w=majority
+PORT=5000
+JWT_SECRET=replace_with_long_random_secret
+CLIENT_URL=http://localhost:5173
+
+DATABASE REQUIREMENTS
+Create MongoDB database: emblazers
+Create collection: users
+User model fields:
+- email (string, required, unique)
+- passwordHash (string, required, bcrypt)
+- role (enum: Student, HR, Fee, Payroll, Finance, Attendance, Timetable, Datesheet, Curriculum, POS, Library, Transport, Hostel)
+- isActive (boolean, default true)
+- timestamps
+
+SEED USERS (script required, hashed passwords, idempotent)
+Student  student@emblazers.com  12345678
+HR       hr@emblazers.com       12345678
+Fee      fee@emblazers.com      12345678
+Payroll  payroll@emblazers.com  12345678
+Finance  finance@emblazers.com  12345678
+Attendance attendance@emblazers.com 12345678
+Timetable timetable@emblazers.com 12345678
+Datesheet datesheet@emblazers.com 12345678
+Curriculum curriculum@emblazers.com 12345678
+POS      pos@emblazers.com      12345678
+Library  library@emblazers.com  12345678
+Transport transport@emblazers.com 12345678
+Hostel   hostel@emblazers.com   12345678
+
+BACKEND API (Express)
+Endpoints:
+- GET /api/health -> { ok: true }
+- POST /api/auth/login (email, password) -> returns { token, user:{email, role} } (JWT expiry 2h)
+- GET /api/auth/me (protected) -> returns current user (requires Authorization: Bearer <token>)
+Implement JWT middleware and role-ready authorization helper.
+
+FRONTEND (production-level)
+- Keep existing UI but remove dummy login logic.
+- Login form must call POST /api/auth/login.
+- Store token securely (prefer httpOnly cookie; if not possible in this environment, use memory/localStorage with clear structure).
+- After login, route user to dashboard based on role:
+  Student -> /student
+  HR -> /hr
+  Fee -> /fee
+  Payroll -> /payroll
+  Finance -> /finance
+  Attendance -> /attendance
+  Timetable -> /timetable
+  Datesheet -> /datesheet
+  Curriculum -> /curriculum
+  POS -> /pos
+  Library -> /library
+  Transport -> /transport
+  Hostel -> /hostel
+- Protect all dashboards with auth guard (block access without valid token).
+- Add a small API client wrapper that attaches Authorization header.
+
+DELIVERABLES
+- Provide the complete code changes for both backend and frontend.
+- Provide scripts/commands:
+  - backend: install, seed users, start (dev/prod)
+  - frontend: install, start, build
+- Confirm that login works and that users are saved/read from MongoDB Atlas.

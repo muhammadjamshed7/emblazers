@@ -1,0 +1,161 @@
+Build a Student Module under /student.
+•	Login: /student/login, email studentadmin@skoolzoom.com, password student123.
+•	Sidebar after login: Dashboard, Student List, Add Student, Alumni, Reports, Logout.
+•	Dashboard: show total students, new admissions this month, table of recent admissions, optional “students leaving soon”.
+•	Student List: table with Student ID, Name, Class, Section, Status, Admission Date; search by name/ID; filters for Class, Section, Status; actions View/Edit/Delete.
+•	Add/Edit Student: form with basic info (ID, Name, Gender, DOB), family info (Parent name, Contact numbers, Address), academic info (Class, Section, Admission Date, Status); Save/Cancel.
+•	Student Profile: read-only view with tabs: Profile, Family & Contact, Academics (simple grade history dummy), Attendance Summary (uses attendance dummy records), Fee Summary (uses fee dummy records), Notes.
+•	Alumni: list of ex-students (Status = Alumni/Left) with filters and basic contact info.
+•	Reports: simple tables e.g. students per class, attendance/fee summary using dummy data.
+Connections: Student IDs and Class/Section are referenced by Fees, Attendance, Exams, Library, Transport, Hostel modules.
+________________________________________
+3) HR / Staff Module – 
+Build an HR / Staff Module under /hr.
+•	Login: /hr/login, email hr@skoolzoom.com, password skoolzoom123.
+•	Sidebar: HR Dashboard, Staff List, Add Staff, Vacancies, Applicants, HR Reports, Logout.
+•	HR Dashboard: cards for Total Staff, New Joinees, Staff on Probation; tables for Recent Joinees and Contracts Ending Soon.
+•	Staff List: table with Staff ID, Name, Designation, Department, Status, Joining Date; filters for Dept, Status; actions View/Edit/Delete.
+•	Add/Edit Staff: form with personal info, job info (Designation, Department, Campus, Employment Type/Status, Joining Date), basic salary and payment mode reference; Save/Cancel.
+•	Staff Profile: tabs: Profile, Attendance & Leave (dummy summary from attendance module), Payroll Summary (dummy from payroll module), Performance, Letters & Notes, History.
+•	Vacancies & Applicants: simple vacancy list + form; applicants list linked to vacancies with ability to mark status (Applied, Shortlisted, Hired, Rejected).
+•	HR Reports: simple tables for staff by department, joiners/leavers by date range.
+Connections: Staff IDs used by Payroll, Attendance, Finance, Exams (invigilators), Time Table, Transport.
+________________________________________
+4) Fee Module – 
+Build a Fee Module under /fee.
+•	Login: /fee/login, email feeadmin@skoolzoom.com, password fee123.
+•	Sidebar: Fee Dashboard, Fee Vouchers, Generate Voucher, Fee Reports, Logout.
+•	Fee Dashboard: cards for Total Expected, Total Received, Total Pending (dummy sums); tables for Recent Payments and Top Defaulters.
+•	Fee Vouchers: table with Voucher ID, Student Name, Class, Month/Period, Amount, Paid Amount, Status, Due Date; filters by Class, Status; search by name/Voucher ID; actions View, Mark as Paid (dummy), Delete.
+•	Generate/Edit Voucher: form with Student selector (link to student list by ID), Class, Month, Fee Heads (simple rows: Head Name + Amount), Discount, Fine, Due Date, Status; Save/Cancel.
+•	Voucher Detail: read-only view including breakdown and a mini payment history list; button to mark voucher paid/unpaid (only updates dummy data).
+•	Fee Reports: fee collection summary by month/class, defaulter list, and simple “fee register” style table.
+Connections: Fee vouchers reference Student IDs/Classes and send totals conceptually to Finance and summaries to Reports & History.
+________________________________________
+5) Payroll Module – 
+Build a Payroll Module under /payroll.
+•	Login: /payroll/login, email payrolladmin@skoolzoom.com, password payroll123.
+•	Sidebar: Payroll Dashboard, Payroll List, Generate Payroll, Payroll Reports, Logout.
+•	Payroll Dashboard: show total staff on payroll, this month’s total gross/net salaries, and a table of recent salary payments.
+•	Payroll List: table with Staff Name, Month, Basic Salary, Allowances, Deductions, Net Salary, Status (Paid/Unpaid), Actions.
+•	Generate/Edit Payroll: form for one staff/month record; fields: Staff selector (by Staff ID from HR), Month, Basic Salary, Allowances text/amount, Deductions text/amount, Net Salary (manual), Status; Save/Cancel.
+•	Payroll Detail: read-only “salary slip” view with all fields plus dummy notes; Back button.
+•	Payroll Reports: list of payroll totals by month, deduction summary, and staff-wise payroll history tables.
+Connections: Payroll records reference Staff IDs from HR and send totals conceptually to Finance and Reports & History.
+________________________________________
+6) Finance (Accounting) Module – 
+Build a Finance / Accounting Module under /finance.
+•	Login: /finance/login, email financeadmin@skoolzoom.com, password finance123.
+•	Sidebar: Finance Dashboard, Chart of Accounts, Vouchers, Ledgers, Reports, Logout.
+•	Finance Dashboard: cards for Total Income, Total Expense, Net Balance; mini tables for Recent Receipts and Recent Payments.
+•	Chart of Accounts: list of accounts (Assets, Liabilities, Income, Expense) with ability to add/edit accounts (Name, Code, Type).
+•	Vouchers: tabbed view for Payment, Receipt, Journal vouchers; each tab lists vouchers with fields Date, Voucher No, Account(s), Amount, Narration; New Voucher form for manual entry.
+•	Ledgers: screen to select an Account and Date Range, showing ledger table (Date, Voucher, Debit, Credit, Balance).
+•	Reports: simple Trial Balance, Profit & Loss (dummy totals), and Balance Sheet in table form.
+Connections: Finance module conceptually receives fee totals from Fee and salary totals from Payroll (use account references, but still dummy data).
+________________________________________
+7) Attendance Module – 
+Build a manual Attendance Module under /attendance.
+•	Login: /attendance/login, email attendanceadmin@skoolzoom.com, password attendance123.
+•	Sidebar: Attendance Dashboard, Mark Attendance, Attendance Records, Attendance Reports, Logout.
+•	Attendance Dashboard: today’s summary (Present, Absent, Late) for students and optionally staff; simple table per class with counts.
+•	Mark Attendance: select Date, Class, Section; show student list from Student dummy data; for each student select Status (Present/Absent/Late/Leave) + optional remarks; Save/Cancel.
+•	Attendance Records: table of saved attendance rows with filters (Date range, Class, Section, Status, Student); columns: Date, Student, Class, Status, Remarks.
+•	Attendance Reports: monthly attendance summary per class and per student (simple percentage and counts).
+Connections: Uses Student IDs from Student and Staff IDs from HR; summaries shown in HR and Student profile tabs and in Reports & History.
+________________________________________
+8) Time Table Module – 
+Build a Time Table Module under /timetable.
+•	Login: /timetable/login, email timetableadmin@skoolzoom.com, password timetable123.
+•	Sidebar: Timetable Dashboard, Class Timetables, Teacher Timetables, Create Timetable, Logout.
+•	Dashboard: show how many class timetables exist and which classes have missing subjects; list “Recently Updated Timetables”.
+•	Create/Edit Timetable: select Class & Section; grid view (Days vs Periods) where each cell can set Subject + Teacher (from dummy lists); Save/Cancel.
+•	Class Timetables: select Class/Section to view read-only timetable grid.
+•	Teacher Timetables: select Teacher (from HR dummy staff) to view their weekly schedule.
+Connections: Uses Student classes and HR teachers but only for display; basic conflict check can be skipped or kept simple (front-end hint only).
+________________________________________
+9) Date Sheet Module – 
+Build a Date Sheet Module under /datesheet.
+•	Login: /datesheet/login, email datesheetadmin@skoolzoom.com, password datesheet123.
+•	Sidebar: Date Sheet Dashboard, Date Sheets, Create Date Sheet, Logout.
+•	Dashboard: show upcoming exams count and a list of “Next Exams” (Class, Subject, Date).
+•	Create/Edit Date Sheet: select Exam Name (Monthly/Term/Annual), Class (or All Classes); add rows: Subject, Date, Start Time, End Time, Room/Hall, Invigilator; Save/Cancel.
+•	Date Sheets List: table of created date sheets (Exam Name, Class Range, Start Date, End Date, Actions View/Edit/Delete).
+•	View Date Sheet: read-only table for students/teachers.
+Connections: Uses subjects/classes/teachers from Curriculum & Exam, Student, and HR, but still dummy.
+________________________________________
+10) Curriculum & Exam Module – 
+Build a Curriculum & Exam Module under /curriculum.
+•	Login: /curriculum/login, email curriculumadmin@skoolzoom.com, password curriculum123.
+•	Sidebar: Curriculum, Exams, Result Entry, Result Reports, Logout.
+•	Curriculum: per Class/Subject, allow uploading/entering syllabus topics list; show syllabus coverage status (Not Started/In Progress/Completed).
+•	Exams: list of exams with fields: Name, Term, Class Range, Start Date, End Date; form to add/edit.
+•	Result Entry: select Exam, Class, Subject; show list of students for that class and input marks/grades; Save.
+•	Result Reports: show simple report card style tables for a selected student or class; include Subject-wise marks, Total, Grade.
+Connections: Pulls Students and Classes from Student Module; results and academic performance used in Reports & History and Student Profile.
+________________________________________
+11) POS (Point of Sale) Module – 
+Build a POS Module under /pos.
+•	Login: /pos/login, email posadmin@skoolzoom.com, password pos123.
+•	Sidebar: POS Dashboard, Sales, New Sale, Items, POS Reports, Logout.
+•	Dashboard: show today’s sales count and amount; table for recent sales invoices.
+•	Items: catalog of items (Uniforms, Books, Stationery) with fields Item Code, Name, Category, Price, Stock; add/edit/delete.
+•	New Sale: simple invoice form with: Date, Customer (Student/Family free text), multiple item rows (Item, Qty, Price, Line Total), Grand Total; Save.
+•	Sales List: table of sales invoices with columns Invoice No, Customer, Date, Total Amount; View/Delete.
+•	POS Reports: daily/monthly sales summary and stock usage tables.
+Connections: Can use Student info as customer reference and send totals conceptually to Finance.
+________________________________________
+12) Library Module – 
+Build a Library Module under /library.
+•	Login: /library/login, email libraryadmin@skoolzoom.com, password library123.
+•	Sidebar: Library Dashboard, Books, Members, Issue/Return, Library Reports, Logout.
+•	Books: catalog with fields: Accession No, Title, Author, Category, ISBN, Status (Available/Issued); add/edit/delete.
+•	Members: list of members (Students/Staff) using Student/Staff IDs, with Name, Type, Contact; add/edit.
+•	Issue/Return: search/select Member + Book; mark Issue with Issue Date, Due Date; mark Return with Return Date and auto/manual fine field; all dummy.
+•	Dashboard: counts for total books, issued books, overdue books; small tables.
+•	Reports: issued books list, overdue list, member-wise borrowing history.
+Connections: Uses Student and Staff IDs from Student and HR; summary goes into Reports & History.
+________________________________________
+13) Transport Module – 
+Build a Transport Module under /transport.
+•	Login: /transport/login, email transportadmin@skoolzoom.com, password transport123.
+•	Sidebar: Transport Dashboard, Routes, Vehicles, Drivers, Student Allocation, Transport Reports, Logout.
+•	Routes: list of routes with Route Name, Code, Stops (simple text list); add/edit.
+•	Vehicles: records for buses/vans with Reg No, Capacity, Assigned Route, Status.
+•	Drivers & Staff: list of transport staff with Name, Contact, Assigned Vehicle.
+•	Student Allocation: assign students to Route/Stop/Vehicle using Student list.
+•	Dashboard & Reports: show counts of vehicles, students in transport, and simple route-wise lists.
+Connections: Uses Student/Staff from Student and HR; related cost data conceptually to Finance and stats to Reports & History.
+________________________________________
+14) Hostel Module – 
+Build a Hostel Module under /hostel.
+•	Login: /hostel/login, email hosteladmin@skoolzoom.com, password hostel123.
+•	Sidebar: Hostel Dashboard, Rooms, Residents, Hostel Fee, Hostel Reports, Logout.
+•	Rooms: list hostels, room numbers, bed count, occupancy status.
+•	Residents: list of hostel students (linked by Student ID) with Room/Bed, Join Date, Status.
+•	Hostel Fee: simple fee records per resident with Month, Amount, Paid/Pending; manual entry only.
+•	Dashboard: occupancy summary and fee collection summary; table of residents with overdue fees.
+•	Reports: hostel occupancy list, hostel fee status list.
+Connections: Uses Students from Student and optionally Finance from Fee/Finance.
+________________________________________
+15) Inventory / Assets Module – 
+Build an Inventory & Assets Module under /inventory.
+•	Login: /inventory/login, email inventoryadmin@skoolzoom.com, password inventory123.
+•	Sidebar: Inventory Dashboard, Items, Asset Allocation, Purchase/Issue, Inventory Reports, Logout.
+•	Items: catalog of assets and consumables with Item Code, Name, Category, Quantity, Location, Status.
+•	Purchase/Issue: simple records for items purchased (Date, Supplier, Qty, Cost) and items issued (Date, To Whom, Dept, Qty).
+•	Asset Allocation: assign items to Department/Room/Staff and show current holder/location.
+•	Dashboard: counts for total items, low stock items, allocated vs in-store.
+•	Reports: stock report, consumption report, asset location list.
+Connections: May reference Staff and Departments from HR, and cost figures conceptually to Finance.
+________________________________________
+16) Reports & History Module – 
+Build a Reports & History Module under /reports.
+•	Login: /reports/login, email reportsadmin@skoolzoom.com, password reports123.
+•	Sidebar: Student Reports, Staff Reports, Finance Reports, Academic Reports, System Logs, Logout.
+•	Student Reports: call existing dummy data from Student, Attendance, Exams, Fees; show prebuilt tables (e.g. student list, attendance summary, fee status).
+•	Staff Reports: combine HR, Payroll, Attendance dummy data; show staff list, leave summary, payroll summary.
+•	Finance Reports: show income/expense summaries from Fee, Payroll, POS, Finance modules.
+•	Academic Reports: show exam and result summaries from Curriculum & Exam module.
+•	System Logs (simplified): a simple table of “actions” (hardcoded dummy rows).
+Connections: This module only reads dummy data from all other modules for aggregated views (in practice, you can just re-use or duplicate sample data structures).
