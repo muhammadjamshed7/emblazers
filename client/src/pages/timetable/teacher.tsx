@@ -3,7 +3,7 @@ import { ModuleLayout } from "@/components/layout/module-layout";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { timetableNavItems, useTimetableData, teachers, days, periods } from "./timetable-data";
+import { timetableNavItems, useTimetableData, teachers, days } from "./timetable-data";
 
 export default function TeacherTimetables() {
   const { timetables } = useTimetableData();
@@ -11,28 +11,40 @@ export default function TeacherTimetables() {
 
   const teacher = teachers.find((t) => t.id === selectedTeacher);
 
-  const getTeacherSlots = () => {
-    const slots: { day: string; period: number; class: string; section: string; subject: string }[] = [];
+  const getTeacherSlotsByDay = (day: string) => {
+    const slots: {
+      day: string;
+      period: number;
+      class: string;
+      section: string;
+      subject: string;
+      startTime?: string;
+      endTime?: string;
+    }[] = [];
+
     timetables.forEach((tt) => {
       tt.slots.forEach((slot) => {
-        if (slot.teacherId === selectedTeacher) {
+        if (slot.teacherId === selectedTeacher && slot.day === day) {
           slots.push({
             day: slot.day,
             period: slot.period,
             class: tt.class,
             section: tt.section,
             subject: slot.subject,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
           });
         }
       });
     });
-    return slots;
-  };
 
-  const teacherSlots = getTeacherSlots();
-
-  const getSlot = (day: string, period: number) => {
-    return teacherSlots.find((s) => s.day === day && s.period === period);
+    // Sort by start time
+    return slots.sort((a, b) => {
+      if (a.startTime && b.startTime) {
+        return a.startTime.localeCompare(b.startTime);
+      }
+      return a.period - b.period;
+    });
   };
 
   return (
@@ -59,39 +71,50 @@ export default function TeacherTimetables() {
             <CardTitle>{teacher?.name} - {teacher?.subject}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-sm">
-                <thead>
-                  <tr>
-                    <th className="border p-2 bg-muted">Day / Period</th>
-                    {periods.slice(0, 6).map((p) => (
-                      <th key={p} className="border p-2 bg-muted">Period {p}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {days.map((day) => (
-                    <tr key={day}>
-                      <td className="border p-2 font-medium bg-muted/50">{day}</td>
-                      {periods.slice(0, 6).map((period) => {
-                        const slot = getSlot(day, period);
-                        return (
-                          <td key={period} className="border p-2 text-center">
-                            {slot ? (
-                              <div>
-                                <div className="font-medium">{slot.class} {slot.section}</div>
-                                <div className="text-xs text-muted-foreground">{slot.subject}</div>
+            <div className="space-y-6">
+              {days.map((day) => {
+                const daySlots = getTeacherSlotsByDay(day);
+                return (
+                  <div key={day} className="border rounded-lg overflow-hidden">
+                    <div className="bg-muted px-4 py-2 font-semibold">
+                      {day}
+                    </div>
+                    <div className="p-4">
+                      {daySlots.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {daySlots.map((slot, idx) => (
+                            <div
+                              key={idx}
+                              className="border rounded-md p-3 bg-card hover:bg-muted/50 transition-colors"
+                            >
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="text-xs font-medium text-muted-foreground">
+                                  Period {slot.period}
+                                </div>
+                                {slot.startTime && slot.endTime && (
+                                  <div className="text-xs font-medium text-primary">
+                                    {slot.startTime} - {slot.endTime}
+                                  </div>
+                                )}
                               </div>
-                            ) : (
-                              <span className="text-muted-foreground">Free</span>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                              <div className="font-semibold text-sm mb-1">
+                                {slot.class} {slot.section}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {slot.subject}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-4 text-muted-foreground text-sm">
+                          No classes scheduled
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>

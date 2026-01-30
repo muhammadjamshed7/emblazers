@@ -660,6 +660,29 @@ export class MemStorage implements IStorage {
     if (!existing) return undefined;
     const updated = { ...existing, ...updates, id };
     this.students.set(id, updated);
+
+    // Cascade updates to attendance records if relevant fields changed
+    const fieldsToSync = ['name', 'class', 'section'];
+    const hasRelevantChanges = fieldsToSync.some(field =>
+      updates[field as keyof Student] !== undefined &&
+      updates[field as keyof Student] !== existing[field as keyof Student]
+    );
+
+    if (hasRelevantChanges) {
+      // Update all attendance records for this student
+      for (const [recordId, record] of this.attendanceRecords.entries()) {
+        if (record.studentId === existing.studentId) {
+          const updatedRecord = {
+            ...record,
+            studentName: updated.name,
+            class: updated.class,
+            section: updated.section,
+          };
+          this.attendanceRecords.set(recordId, updatedRecord);
+        }
+      }
+    }
+
     return updated;
   }
 
@@ -904,10 +927,53 @@ export class MemStorage implements IStorage {
   }
 
   async createTimetable(timetable: InsertTimetable): Promise<Timetable> {
-    const id = randomUUID();
-    const newTimetable: Timetable = { ...timetable, id };
-    this.timetables.set(id, newTimetable);
-    return newTimetable;
+    // Check if a timetable already exists for this class-section
+    let existing: Timetable | undefined;
+    let existingId: string | undefined;
+
+    for (const [id, tt] of this.timetables.entries()) {
+      if (tt.class === timetable.class && tt.section === timetable.section) {
+        existing = tt;
+        existingId = id;
+        break;
+      }
+    }
+
+    if (existing && existingId) {
+      // Merge new slots with existing slots
+      const existingSlots = existing.slots || [];
+      const newSlots = timetable.slots || [];
+
+      // Create a map of existing slots by day-period key
+      const slotMap = new Map();
+      existingSlots.forEach((slot) => {
+        const key = `${slot.day}-${slot.period}`;
+        slotMap.set(key, slot);
+      });
+
+      // Add or update with new slots
+      newSlots.forEach((slot) => {
+        const key = `${slot.day}-${slot.period}`;
+        slotMap.set(key, slot);
+      });
+
+      // Convert map back to array
+      const mergedSlots = Array.from(slotMap.values());
+      const updated: Timetable = {
+        ...existing,
+        slots: mergedSlots,
+        updatedAt: timetable.updatedAt
+      };
+
+      this.timetables.set(existingId, updated);
+      return updated;
+    } else {
+      // Create new timetable
+      const id = randomUUID();
+      const newTimetable: Timetable = { ...timetable, id };
+      this.timetables.set(id, newTimetable);
+      return newTimetable;
+    }
   }
 
   async updateTimetable(id: string, updates: Partial<Timetable>): Promise<Timetable | undefined> {

@@ -3,7 +3,7 @@ import { ModuleLayout } from "@/components/layout/module-layout";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { timetableNavItems, useTimetableData, classes, sections, days, periods } from "./timetable-data";
+import { timetableNavItems, useTimetableData, classes, sections, days } from "./timetable-data";
 
 export default function ClassTimetables() {
   const { timetables } = useTimetableData();
@@ -12,9 +12,18 @@ export default function ClassTimetables() {
 
   const timetable = timetables.find((t) => t.class === selectedClass && t.section === selectedSection);
 
-  const getSlot = (day: string, period: number) => {
-    if (!timetable) return null;
-    return timetable.slots.find((s) => s.day === day && s.period === period);
+  const getSlotsByDay = (day: string) => {
+    if (!timetable) return [];
+    return timetable.slots
+      .filter((s) => s.day === day)
+      .sort((a, b) => {
+        // Sort by start time
+        if (a.startTime && b.startTime) {
+          return a.startTime.localeCompare(b.startTime);
+        }
+        // Fallback to period number if times not available
+        return a.period - b.period;
+      });
   };
 
   return (
@@ -55,39 +64,50 @@ export default function ClassTimetables() {
           </CardHeader>
           <CardContent>
             {timetable ? (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-sm">
-                  <thead>
-                    <tr>
-                      <th className="border p-2 bg-muted">Day / Period</th>
-                      {periods.slice(0, 6).map((p) => (
-                        <th key={p} className="border p-2 bg-muted">Period {p}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {days.map((day) => (
-                      <tr key={day}>
-                        <td className="border p-2 font-medium bg-muted/50">{day}</td>
-                        {periods.slice(0, 6).map((period) => {
-                          const slot = getSlot(day, period);
-                          return (
-                            <td key={period} className="border p-2 text-center">
-                              {slot ? (
-                                <div>
-                                  <div className="font-medium">{slot.subject}</div>
-                                  <div className="text-xs text-muted-foreground">{slot.teacherName}</div>
+              <div className="space-y-6">
+                {days.map((day) => {
+                  const daySlots = getSlotsByDay(day);
+                  return (
+                    <div key={day} className="border rounded-lg overflow-hidden">
+                      <div className="bg-muted px-4 py-2 font-semibold">
+                        {day}
+                      </div>
+                      <div className="p-4">
+                        {daySlots.length > 0 ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {daySlots.map((slot, idx) => (
+                              <div
+                                key={idx}
+                                className="border rounded-md p-3 bg-card hover:bg-muted/50 transition-colors"
+                              >
+                                <div className="flex items-start justify-between mb-2">
+                                  <div className="text-xs font-medium text-muted-foreground">
+                                    Period {slot.period}
+                                  </div>
+                                  {slot.startTime && slot.endTime && (
+                                    <div className="text-xs font-medium text-primary">
+                                      {slot.startTime} - {slot.endTime}
+                                    </div>
+                                  )}
                                 </div>
-                              ) : (
-                                <span className="text-muted-foreground">-</span>
-                              )}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                                <div className="font-semibold text-sm mb-1">
+                                  {slot.subject}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {slot.teacherName}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-4 text-muted-foreground text-sm">
+                            No periods scheduled
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">

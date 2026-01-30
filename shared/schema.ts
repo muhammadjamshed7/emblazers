@@ -470,6 +470,8 @@ export const timetableSlotSchema = z.object({
   subject: z.string(),
   teacherId: z.string(),
   teacherName: z.string(),
+  startTime: z.string(),
+  endTime: z.string(),
 });
 
 export const timetableSchema = z.object({

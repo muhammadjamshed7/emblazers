@@ -22,6 +22,7 @@ import {
   checkHostelResidentReferences,
 } from "./validation";
 import {
+  studentSchema,
   insertStudentSchema,
   insertStaffSchema,
   insertVacancySchema,
@@ -309,7 +310,7 @@ export async function registerRoutes(
 
   app.patch("/api/students/:id", async (req, res) => {
     const { id, ...updates } = req.body;
-    const parsed = insertStudentSchema.partial().safeParse(updates);
+    const parsed = studentSchema.partial().omit({ id: true, studentId: true }).safeParse(updates);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const student = await storage.updateStudent(req.params.id, parsed.data);
     if (!student) return res.status(404).json({ error: "Not found" });
@@ -583,6 +584,12 @@ export async function registerRoutes(
         section as string,
         date as string
       );
+      return res.json(records);
+    }
+
+    const { studentId } = req.query;
+    if (studentId) {
+      const records = await storage.getStudentAttendance(studentId as string);
       return res.json(records);
     }
 

@@ -6,14 +6,17 @@ import { BulkUpload, type BulkUploadResult } from "@/components/shared/bulk-uplo
 import { attendanceCSVColumns } from "@/lib/csv-utils";
 import { attendanceNavItems, useAttendanceData } from "./attendance-data";
 import { Button } from "@/components/ui/button";
-import { Upload } from "lucide-react";
+import { Upload, Eye } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { StudentAttendanceHistory } from "@/components/shared/student-attendance-history";
 
 export default function AttendanceRecords() {
   const { records, refreshRecords } = useAttendanceData();
   const { canCreate } = useAuth();
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [viewStudent, setViewStudent] = useState<{ name: string, studentId: string, class: string, section: string } | null>(null);
 
   const handleBulkUpload = async (data: Record<string, unknown>[]): Promise<BulkUploadResult> => {
     try {
@@ -45,6 +48,25 @@ export default function AttendanceRecords() {
       render: (item: typeof records[0]) => <StatusBadge status={item.status} />,
     },
     { key: "remarks" as const, label: "Remarks", render: (item: typeof records[0]) => item.remarks || "-" },
+    {
+      key: "actions" as const,
+      label: "History",
+      render: (item: typeof records[0]) => (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setViewStudent({
+            name: item.studentName,
+            studentId: item.studentId,
+            class: item.class,
+            section: item.section
+          })}
+          title="View Complete History"
+        >
+          <Eye className="h-4 w-4" />
+        </Button>
+      ),
+    },
   ];
 
   return (
@@ -92,6 +114,15 @@ export default function AttendanceRecords() {
           templateFilename="attendance-template"
           onUpload={handleBulkUpload}
         />
+
+        <Dialog open={!!viewStudent} onOpenChange={(open) => !open && setViewStudent(null)}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Attendance History - {viewStudent?.name}</DialogTitle>
+            </DialogHeader>
+            {viewStudent && <StudentAttendanceHistory studentProfile={viewStudent} />}
+          </DialogContent>
+        </Dialog>
       </div>
     </ModuleLayout>
   );

@@ -7,16 +7,35 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { StatusBadge } from "@/components/shared/data-table";
 
-interface StudentAttendanceHistoryProps {
-    student: Student;
+interface StudentProfile {
+    studentId: string;
+    name: string;
+    class: string;
+    section: string;
+    id?: string;
 }
 
-export function StudentAttendanceHistory({ student }: StudentAttendanceHistoryProps) {
+interface StudentAttendanceHistoryProps {
+    student?: Student;
+    studentProfile?: StudentProfile;
+}
+
+export function StudentAttendanceHistory({ student, studentProfile }: StudentAttendanceHistoryProps) {
+    const profile = student || studentProfile;
+
     // Fetch student specific attendance records
+    // If we have a full student object with UUID, use the student specific endpoint
+    // Otherwise use the general records endpoint filtered by studentId (Roll No)
+    const apiPath = student?.id
+        ? `/api/students/${student.id}/attendance`
+        : `/api/attendance-records?studentId=${profile?.studentId}`;
+
     const { data: attendanceRecords = [] } = useQuery<AttendanceRecord[]>({
-        queryKey: [`/api/students/${student.id}/attendance`],
-        enabled: !!student.studentId,
+        queryKey: [apiPath],
+        enabled: !!profile?.studentId,
     });
+
+    if (!profile) return null;
 
     // Calculate attendance statistics
     const totalRecords = attendanceRecords.length;
@@ -27,7 +46,7 @@ export function StudentAttendanceHistory({ student }: StudentAttendanceHistoryPr
     const attendanceRate = totalRecords > 0 ? Math.round((presentCount / totalRecords) * 100) : 0;
 
     const downloadAttendanceReport = () => {
-        if (!student) return;
+        if (!profile) return;
 
         const doc = new jsPDF();
 
@@ -36,8 +55,8 @@ export function StudentAttendanceHistory({ student }: StudentAttendanceHistoryPr
         doc.text("Attendance Report", 14, 22);
 
         doc.setFontSize(12);
-        doc.text(`Student: ${student.name} (${student.studentId})`, 14, 32);
-        doc.text(`Class: ${student.class} - Section ${student.section}`, 14, 40);
+        doc.text(`Student: ${profile.name} (${profile.studentId})`, 14, 32);
+        doc.text(`Class: ${profile.class} - Section ${profile.section}`, 14, 40);
         doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 48);
 
         // Summary
@@ -69,7 +88,7 @@ export function StudentAttendanceHistory({ student }: StudentAttendanceHistoryPr
             alternateRowStyles: { fillColor: [245, 245, 245] }
         });
 
-        doc.save(`Attendance_Report_${student.name.replace(/\s+/g, '_')}.pdf`);
+        doc.save(`Attendance_Report_${profile.name.replace(/\s+/g, '_')}.pdf`);
     };
 
     return (

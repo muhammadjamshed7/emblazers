@@ -124,8 +124,55 @@ export class MongoStorage implements IStorage {
   }
 
   async updateStudent(id: string, updates: Partial<Student>): Promise<Student | undefined> {
+    const existing = await StudentModel.findById(id);
+    if (!existing) return undefined;
+
     const doc = await StudentModel.findByIdAndUpdate(id, updates, { new: true });
-    return doc ? toDTO<Student>(doc) : undefined;
+    if (!doc) return undefined;
+
+    // Cascade updates to attendance records if relevant fields changed
+    const fieldsToSync = ['name', 'class', 'section'];
+    const hasRelevantChanges = fieldsToSync.some(field =>
+      updates[field as keyof Student] !== undefined &&
+      updates[field as keyof Student] !== existing[field as keyof Student]
+    );
+
+    if (hasRelevantChanges) {
+      const updatedStudent = toDTO<Student>(doc);
+
+      // Update all attendance records for this student
+      // MongoDB attendance has a batch structure with records array
+      await AttendanceModel.updateMany(
+        { "records.entityId": existing.studentId },
+        {
+          $set: {
+            "records.$[elem].entityName": updatedStudent.name,
+          }
+        },
+        {
+          arrayFilters: [{ "elem.entityId": existing.studentId }]
+        }
+      );
+
+      // If class/section changed, we also need to update the document-level class/section
+      // But this is tricky because each attendance document has class/section
+      // We need to find and update only records where this student appears
+      if (updates.class !== undefined || updates.section !== undefined) {
+        const attendanceDocs = await AttendanceModel.find({
+          "records.entityId": existing.studentId
+        });
+
+        for (const attendanceDoc of attendanceDocs) {
+          // Check if all students in this document have the same class/section
+          // If this student moved classes, they might need to be removed from old attendance
+          // and added to new class attendance - but that's for future enhancement
+          // For now, just update the record name
+          await attendanceDoc.save();
+        }
+      }
+    }
+
+    return toDTO<Student>(doc);
   }
 
   async deleteStudent(id: string): Promise<boolean> {
@@ -510,8 +557,42 @@ export class MongoStorage implements IStorage {
   }
 
   async createTimetable(timetable: InsertTimetable): Promise<Timetable> {
-    const doc = await TimetableModel.create(timetable);
-    return toDTO<Timetable>(doc);
+    // Check if a timetable already exists for this class-section
+    const existing = await TimetableModel.findOne({
+      class: timetable.class,
+      section: timetable.section
+    });
+
+    if (existing) {
+      // Merge new slots with existing slots
+      // Remove duplicate slots (same day + period) and add new ones
+      const existingSlots = existing.slots || [];
+      const newSlots = timetable.slots || [];
+
+      // Create a map of existing slots by day-period key
+      const slotMap = new Map();
+      existingSlots.forEach((slot: any) => {
+        const key = `${slot.day}-${slot.period}`;
+        slotMap.set(key, slot);
+      });
+
+      // Add or update with new slots
+      newSlots.forEach((slot: any) => {
+        const key = `${slot.day}-${slot.period}`;
+        slotMap.set(key, slot);
+      });
+
+      // Convert map back to array
+      existing.slots = Array.from(slotMap.values());
+      existing.updatedAt = timetable.updatedAt;
+
+      await existing.save();
+      return toDTO<Timetable>(existing);
+    } else {
+      // Create new timetable
+      const doc = await TimetableModel.create(timetable);
+      return toDTO<Timetable>(doc);
+    }
   }
 
   async updateTimetable(id: string, updates: Partial<Timetable>): Promise<Timetable | undefined> {
