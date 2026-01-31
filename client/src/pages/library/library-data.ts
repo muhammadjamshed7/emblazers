@@ -1,6 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { type Book, type BookIssue, type InsertBook, type InsertBookIssue, type Student, type Staff, type BookCategory, type InsertBookCategory } from "@shared/schema";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { getAuthToken } from "@/lib/auth";
 import {
   LayoutDashboard,
   BookOpen,
@@ -138,13 +139,23 @@ export function useLibraryData() {
 
 // Search functions for students and staff
 export async function searchStudents(query: string): Promise<Student[]> {
-  const res = await apiRequest("GET", `/api/students?query=${encodeURIComponent(query)}`);
+  const token = getAuthToken();
+  const res = await fetch(`/api/library/search-students?query=${encodeURIComponent(query)}`, {
+    headers: {
+      "Authorization": `Bearer ${token}`
+    }
+  });
   if (!res.ok) return [];
   return res.json();
 }
 
 export async function searchStaff(query: string): Promise<Staff[]> {
-  const res = await apiRequest("GET", `/api/staff?query=${encodeURIComponent(query)}`);
+  const token = getAuthToken();
+  const res = await fetch(`/api/library/search-staff?query=${encodeURIComponent(query)}`, {
+    headers: {
+      "Authorization": `Bearer ${token}`
+    }
+  });
   if (!res.ok) return [];
   return res.json();
 }
