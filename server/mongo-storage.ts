@@ -16,7 +16,6 @@ import {
   type PosItem, type InsertPosItem,
   type Sale, type InsertSale,
   type Book, type InsertBook,
-  type LibraryMember, type InsertLibraryMember,
   type BookIssue, type InsertBookIssue,
   type Route, type InsertRoute,
   type Vehicle, type InsertVehicle,
@@ -61,7 +60,6 @@ import {
   POSItem as POSItemModel,
   Sale as SaleModel,
   Book as BookModel,
-  LibraryMember as LibraryMemberModel,
   BookIssue as BookIssueModel,
   Route as RouteModel,
   Vehicle as VehicleModel,
@@ -779,33 +777,6 @@ export class MongoStorage implements IStorage {
 
   async deleteBook(id: string): Promise<boolean> {
     const result = await BookModel.findByIdAndDelete(id);
-    return !!result;
-  }
-
-  async getLibraryMembers(): Promise<LibraryMember[]> {
-    const docs = await LibraryMemberModel.find().sort({ name: 1 });
-    return toDTOArray<LibraryMember>(docs);
-  }
-
-  async getLibraryMember(id: string): Promise<LibraryMember | undefined> {
-    const doc = await LibraryMemberModel.findById(id);
-    return doc ? toDTO<LibraryMember>(doc) : undefined;
-  }
-
-  async createLibraryMember(member: InsertLibraryMember): Promise<LibraryMember> {
-    const count = await LibraryMemberModel.countDocuments();
-    const memberId = `LM${String(count + 1).padStart(4, "0")}`;
-    const doc = await LibraryMemberModel.create({ ...member, memberId });
-    return toDTO<LibraryMember>(doc);
-  }
-
-  async updateLibraryMember(id: string, updates: Partial<LibraryMember>): Promise<LibraryMember | undefined> {
-    const doc = await LibraryMemberModel.findByIdAndUpdate(id, updates, { new: true });
-    return doc ? toDTO<LibraryMember>(doc) : undefined;
-  }
-
-  async deleteLibraryMember(id: string): Promise<boolean> {
-    const result = await LibraryMemberModel.findByIdAndDelete(id);
     return !!result;
   }
 

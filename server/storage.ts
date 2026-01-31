@@ -16,7 +16,6 @@ import {
   type PosItem, type InsertPosItem,
   type Sale, type InsertSale,
   type Book, type InsertBook,
-  type LibraryMember, type InsertLibraryMember,
   type BookIssue, type InsertBookIssue,
   type Route, type InsertRoute,
   type Vehicle, type InsertVehicle,
@@ -158,12 +157,6 @@ export interface IStorage {
   createBook(book: InsertBook): Promise<Book>;
   updateBook(id: string, updates: Partial<Book>): Promise<Book | undefined>;
   deleteBook(id: string): Promise<boolean>;
-
-  getLibraryMembers(): Promise<LibraryMember[]>;
-  getLibraryMember(id: string): Promise<LibraryMember | undefined>;
-  createLibraryMember(member: InsertLibraryMember): Promise<LibraryMember>;
-  updateLibraryMember(id: string, updates: Partial<LibraryMember>): Promise<LibraryMember | undefined>;
-  deleteLibraryMember(id: string): Promise<boolean>;
 
   getBookIssues(): Promise<BookIssue[]>;
   getBookIssue(id: string): Promise<BookIssue | undefined>;
@@ -312,7 +305,6 @@ export class MemStorage implements IStorage {
   private posItems: Map<string, PosItem>;
   private sales: Map<string, Sale>;
   private books: Map<string, Book>;
-  private libraryMembers: Map<string, LibraryMember>;
   private bookIssues: Map<string, BookIssue>;
   private routes: Map<string, Route>;
   private vehicles: Map<string, Vehicle>;
@@ -342,7 +334,6 @@ export class MemStorage implements IStorage {
     this.posItems = new Map();
     this.sales = new Map();
     this.books = new Map();
-    this.libraryMembers = new Map();
     this.bookIssues = new Map();
     this.routes = new Map();
     this.vehicles = new Map();
@@ -523,16 +514,37 @@ export class MemStorage implements IStorage {
     ];
     bookData.forEach(b => this.books.set(b.id, b));
 
-    const libraryMemberData: LibraryMember[] = [
-      { id: "1", memberId: "LM001", name: "Ahmad Khan", type: "Student", contact: "+92 300 1234567", referenceId: "1" },
-      { id: "2", memberId: "LM002", name: "Fatima Ali", type: "Student", contact: "+92 301 2345678", referenceId: "2" },
-      { id: "3", memberId: "LM003", name: "Dr. Amir Hussain", type: "Staff", contact: "+92 300 1111111", referenceId: "1" },
-    ];
-    libraryMemberData.forEach(m => this.libraryMembers.set(m.id, m));
-
     const bookIssueData: BookIssue[] = [
-      { id: "1", bookId: "2", bookTitle: "Mathematics for Beginners", memberId: "1", memberName: "Ahmad Khan", issueDate: "2024-12-01", dueDate: "2024-12-15", fine: 0, status: "Issued" },
-      { id: "2", bookId: "5", bookTitle: "Computer Science Fundamentals", memberId: "3", memberName: "Dr. Amir Hussain", issueDate: "2024-11-15", dueDate: "2024-12-15", fine: 0, status: "Issued" },
+      {
+        id: "1",
+        bookId: "2",
+        bookTitle: "Mathematics for Beginners",
+        accessionNo: "LIB002",
+        memberId: "1",
+        memberName: "Ahmad Khan",
+        memberType: "Student",
+        class: "Class 5",
+        section: "A",
+        issueDate: "2024-12-01",
+        dueDate: "2024-12-15",
+        fine: 0,
+        finePaid: false,
+        status: "Issued",
+      },
+      {
+        id: "2",
+        bookId: "5",
+        bookTitle: "Computer Science Fundamentals",
+        accessionNo: "LIB005",
+        memberId: "1",
+        memberName: "Dr. Amir Hussain",
+        memberType: "Staff",
+        issueDate: "2024-11-15",
+        dueDate: "2024-12-15",
+        fine: 0,
+        finePaid: false,
+        status: "Issued",
+      },
     ];
     bookIssueData.forEach(i => this.bookIssues.set(i.id, i));
 
@@ -1175,33 +1187,6 @@ export class MemStorage implements IStorage {
 
   async deleteBook(id: string): Promise<boolean> {
     return this.books.delete(id);
-  }
-
-  async getLibraryMembers(): Promise<LibraryMember[]> {
-    return Array.from(this.libraryMembers.values());
-  }
-
-  async getLibraryMember(id: string): Promise<LibraryMember | undefined> {
-    return this.libraryMembers.get(id);
-  }
-
-  async createLibraryMember(member: InsertLibraryMember): Promise<LibraryMember> {
-    const id = randomUUID();
-    const newMember: LibraryMember = { ...member, id };
-    this.libraryMembers.set(id, newMember);
-    return newMember;
-  }
-
-  async updateLibraryMember(id: string, updates: Partial<LibraryMember>): Promise<LibraryMember | undefined> {
-    const existing = this.libraryMembers.get(id);
-    if (!existing) return undefined;
-    const updated = { ...existing, ...updates, id };
-    this.libraryMembers.set(id, updated);
-    return updated;
-  }
-
-  async deleteLibraryMember(id: string): Promise<boolean> {
-    return this.libraryMembers.delete(id);
   }
 
   async getBookIssues(): Promise<BookIssue[]> {

@@ -6,7 +6,6 @@ export { default as FeeVoucher } from "./FeeVoucher";
 export { default as Attendance } from "./Attendance";
 export { default as Timetable } from "./Timetable";
 export { default as Book } from "./Book";
-export { default as LibraryMember } from "./LibraryMember";
 export { default as BookIssue } from "./BookIssue";
 export { default as Vehicle } from "./Vehicle";
 export { default as Route } from "./Route";
