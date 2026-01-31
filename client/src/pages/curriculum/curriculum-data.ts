@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { type Curriculum, type Exam, type Result, type InsertCurriculum, type InsertExam, type InsertResult } from "@shared/schema";
+import { type Curriculum, type Exam, type Result, type InsertCurriculum, type InsertExam, type InsertResult, type Staff } from "@shared/schema";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import {
   LayoutDashboard,
@@ -21,13 +21,18 @@ export function useCurriculumData() {
   const { data: curriculum = [], isLoading: curriculumLoading, error: curriculumError } = useQuery<Curriculum[]>({
     queryKey: ['/api/curriculums']
   });
-  
+
   const { data: exams = [], isLoading: examsLoading, error: examsError } = useQuery<Exam[]>({
     queryKey: ['/api/exams']
   });
-  
+
   const { data: results = [], isLoading: resultsLoading, error: resultsError } = useQuery<Result[]>({
     queryKey: ['/api/results']
+  });
+
+  // Fetch teachers from HR module
+  const { data: staff = [], isLoading: staffLoading } = useQuery<Staff[]>({
+    queryKey: ['/api/staff']
   });
 
   const createCurriculumMutation = useMutation({
@@ -106,18 +111,20 @@ export function useCurriculumData() {
     queryClient.invalidateQueries({ queryKey: ['/api/results'] });
   };
 
-  return { 
-    curriculum, 
-    exams, 
-    results, 
-    addCurriculum, 
-    updateCurriculum, 
+  return {
+    curriculum,
+    exams,
+    results,
+    staff,
+    teachers: staff.filter(s => s.designation?.toLowerCase().includes('teacher') || s.designation?.toLowerCase().includes('professor') || s.designation?.toLowerCase().includes('instructor')),
+    addCurriculum,
+    updateCurriculum,
     addExam,
-    updateExam, 
-    addResult, 
+    updateExam,
+    addResult,
     updateResult,
     refreshResults,
-    isLoading: curriculumLoading || examsLoading || resultsLoading,
+    isLoading: curriculumLoading || examsLoading || resultsLoading || staffLoading,
     error: curriculumError ?? examsError ?? resultsError,
     isPending: createCurriculumMutation.isPending || updateCurriculumMutation.isPending || createExamMutation.isPending || updateExamMutation.isPending || createResultMutation.isPending || updateResultMutation.isPending
   };

@@ -132,35 +132,45 @@ export function ModuleLayout({ module, navItems, children }: ModuleLayoutProps) 
     "--sidebar-width-icon": "3rem",
   };
 
+  const layoutContent = (
+    <SidebarProvider style={sidebarStyle as React.CSSProperties}>
+      <div className="flex h-screen w-full">
+        <AppSidebar module={module} navItems={navItems} onLogout={handleLogout} />
+
+        <div className="flex flex-col flex-1 min-w-0">
+          <header className="h-16 border-b flex items-center justify-between gap-4 px-4 lg:px-6 bg-background sticky top-0 z-30">
+            <div className="flex items-center gap-4">
+              <SidebarTrigger data-testid="button-sidebar-toggle" />
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground" data-testid="text-module-breadcrumb">{config.shortName}</span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                <span className="font-medium" data-testid="text-page-breadcrumb">{currentPage}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {module !== "library" && <NotificationBell />}
+              <ThemeToggle />
+            </div>
+          </header>
+
+          <main className="flex-1 overflow-auto p-4 lg:p-6">
+            {children}
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
+  );
+
+  // Only wrap with NotificationProvider for non-library modules
+  // This completely disables all notification API calls, WebSocket connections, and polling for library module
+  if (module === "library") {
+    return layoutContent;
+  }
+
   return (
     <NotificationProvider module={module}>
-      <SidebarProvider style={sidebarStyle as React.CSSProperties}>
-        <div className="flex h-screen w-full">
-          <AppSidebar module={module} navItems={navItems} onLogout={handleLogout} />
-
-          <div className="flex flex-col flex-1 min-w-0">
-            <header className="h-16 border-b flex items-center justify-between gap-4 px-4 lg:px-6 bg-background sticky top-0 z-30">
-              <div className="flex items-center gap-4">
-                <SidebarTrigger data-testid="button-sidebar-toggle" />
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="text-muted-foreground" data-testid="text-module-breadcrumb">{config.shortName}</span>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                  <span className="font-medium" data-testid="text-page-breadcrumb">{currentPage}</span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <NotificationBell />
-                <ThemeToggle />
-              </div>
-            </header>
-
-            <main className="flex-1 overflow-auto p-4 lg:p-6">
-              {children}
-            </main>
-          </div>
-        </div>
-      </SidebarProvider>
+      {layoutContent}
     </NotificationProvider>
   );
 }

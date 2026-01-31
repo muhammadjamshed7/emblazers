@@ -1,10 +1,9 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { type Book, type LibraryMember, type BookIssue, type InsertBook, type InsertLibraryMember, type InsertBookIssue } from "@shared/schema";
+import { type Book, type BookIssue, type InsertBook, type InsertBookIssue, type Student, type Staff, type BookCategory, type InsertBookCategory } from "@shared/schema";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import {
   LayoutDashboard,
   BookOpen,
-  Users,
   BookMarked,
   FileText,
 } from "lucide-react";
@@ -12,7 +11,6 @@ import {
 export const libraryNavItems = [
   { label: "Dashboard", path: "/library/dashboard", icon: LayoutDashboard },
   { label: "Books", path: "/library/books", icon: BookOpen },
-  { label: "Members", path: "/library/members", icon: Users },
   { label: "Issue / Return", path: "/library/issue", icon: BookMarked },
   { label: "Reports", path: "/library/reports", icon: FileText },
 ];
@@ -21,13 +19,25 @@ export function useLibraryData() {
   const { data: books = [], isLoading: booksLoading, error: booksError } = useQuery<Book[]>({
     queryKey: ['/api/books']
   });
-  
-  const { data: members = [], isLoading: membersLoading, error: membersError } = useQuery<LibraryMember[]>({
-    queryKey: ['/api/library-members']
+
+  const { data: categories = [], isLoading: categoriesLoading } = useQuery<BookCategory[]>({
+    queryKey: ['/api/book-categories']
   });
-  
+
   const { data: issues = [], isLoading: issuesLoading, error: issuesError } = useQuery<BookIssue[]>({
     queryKey: ['/api/book-issues']
+  });
+
+  const { data: statistics } = useQuery<{
+    totalBooks: number;
+    issuedBooks: number;
+    availableBooks: number;
+    overdueBooks: number;
+    totalFines: number;
+    pendingFines: number;
+    categoryCounts: { category: string; count: number }[];
+  }>({
+    queryKey: ['/api/library/statistics']
   });
 
   const createBookMutation = useMutation({
@@ -35,7 +45,10 @@ export function useLibraryData() {
       const res = await apiRequest('POST', '/api/books', data);
       return res.json() as Promise<Book>;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/books'] })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/books'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/library/statistics'] });
+    }
   });
 
   const updateBookMutation = useMutation({
@@ -43,15 +56,18 @@ export function useLibraryData() {
       const res = await apiRequest('PATCH', `/api/books/${id}`, updates);
       return res.json() as Promise<Book>;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/books'] })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/books'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/library/statistics'] });
+    }
   });
 
-  const createMemberMutation = useMutation({
-    mutationFn: async (data: InsertLibraryMember) => {
-      const res = await apiRequest('POST', '/api/library-members', data);
-      return res.json() as Promise<LibraryMember>;
+  const createCategoryMutation = useMutation({
+    mutationFn: async (data: InsertBookCategory) => {
+      const res = await apiRequest('POST', '/api/book-categories', data);
+      return res.json() as Promise<BookCategory>;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/library-members'] })
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/book-categories'] })
   });
 
   const createIssueMutation = useMutation({
@@ -62,6 +78,7 @@ export function useLibraryData() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/book-issues'] });
       queryClient.invalidateQueries({ queryKey: ['/api/books'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/library/statistics'] });
     }
   });
 
@@ -73,6 +90,7 @@ export function useLibraryData() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/book-issues'] });
       queryClient.invalidateQueries({ queryKey: ['/api/books'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/library/statistics'] });
     }
   });
 
@@ -84,45 +102,62 @@ export function useLibraryData() {
     await updateBookMutation.mutateAsync({ id, updates });
   };
 
-  const addMember = async (member: InsertLibraryMember): Promise<LibraryMember> => {
-    return await createMemberMutation.mutateAsync(member);
+  const addCategory = async (category: InsertBookCategory): Promise<BookCategory> => {
+    return await createCategoryMutation.mutateAsync(category);
   };
 
   const issueBook = async (issue: InsertBookIssue): Promise<BookIssue> => {
     return await createIssueMutation.mutateAsync(issue);
   };
 
-  const returnBook = async (issueId: string) => {
-    const issue = issues.find((i) => i.id === issueId);
-    if (issue) {
-      const returnDate = new Date().toISOString().split("T")[0];
-      await updateIssueMutation.mutateAsync({ 
-        id: issueId, 
-        updates: { returnDate, status: "Returned" } 
-      });
-    }
+  const returnBook = async (issueId: string, returnDate: string) => {
+    await updateIssueMutation.mutateAsync({
+      id: issueId,
+      updates: { returnDate }
+    });
   };
 
   const getBook = (id: string) => books.find((b) => b.id === id);
-  const getMember = (id: string) => members.find((m) => m.id === id);
 
-  return { 
-    books, 
-    members, 
-    issues, 
-    addBook, 
-    updateBook, 
-    addMember, 
-    issueBook, 
-    returnBook, 
-    getBook, 
-    getMember,
-    isLoading: booksLoading || membersLoading || issuesLoading,
-    error: booksError ?? membersError ?? issuesError,
-    isPending: createBookMutation.isPending || updateBookMutation.isPending || createMemberMutation.isPending || createIssueMutation.isPending || updateIssueMutation.isPending
+  return {
+    books,
+    categories,
+    issues,
+    statistics,
+    addBook,
+    updateBook,
+    addCategory,
+    issueBook,
+    returnBook,
+    getBook,
+    isLoading: booksLoading || issuesLoading || categoriesLoading,
+    error: booksError ?? issuesError,
+    isPending: createBookMutation.isPending || updateBookMutation.isPending || createIssueMutation.isPending || updateIssueMutation.isPending || createCategoryMutation.isPending
   };
 }
 
-export const categories = ["Mathematics", "English", "Science", "Social Studies", "Islamic", "Computer", "Urdu", "History", "General"];
+// Search functions for students and staff
+export async function searchStudents(query: string): Promise<Student[]> {
+  const token = localStorage.getItem("token");
+  const res = await fetch(`/api/library/search-students?query=${encodeURIComponent(query)}`, {
+    headers: {
+      "Authorization": `Bearer ${token}`
+    }
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function searchStaff(query: string): Promise<Staff[]> {
+  const token = localStorage.getItem("token");
+  const res = await fetch(`/api/library/search-staff?query=${encodeURIComponent(query)}`, {
+    headers: {
+      "Authorization": `Bearer ${token}`
+    }
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
 export const memberTypes = ["Student", "Staff"] as const;
 export const issueStatuses = ["Issued", "Returned", "Overdue"] as const;

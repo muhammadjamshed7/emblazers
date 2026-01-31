@@ -6,12 +6,13 @@ import { libraryNavItems, useLibraryData } from "./library-data";
 import { BookOpen, Users, BookMarked, AlertTriangle } from "lucide-react";
 
 export default function LibraryDashboard() {
-  const { books, members, issues } = useLibraryData();
+  const { books, issues } = useLibraryData();
 
   const totalBooks = books.length;
-  const totalMembers = members.length;
+  const availableBooks = books.filter((b) => (b.availableCopies || 0) > 0).length;
   const issuedBooks = books.filter((b) => b.status === "Issued").length;
   const overdueBooks = issues.filter((i) => i.status === "Overdue").length;
+  const totalFines = issues.reduce((acc, i) => acc + (i.fine || 0), 0);
 
   const recentIssues = issues
     .filter((i) => i.status !== "Returned")
@@ -23,7 +24,7 @@ export default function LibraryDashboard() {
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl lg:text-3xl font-semibold" data-testid="text-page-title">Library Dashboard</h1>
-          <p className="text-muted-foreground mt-1">Manage books, members, and book issues</p>
+          <p className="text-muted-foreground mt-1">Manage books and track book issues</p>
         </div>
 
         <StatsGrid>
@@ -34,16 +35,16 @@ export default function LibraryDashboard() {
             iconColor="text-amber-500"
           />
           <StatsCard
-            title="Total Members"
-            value={totalMembers}
-            icon={Users}
-            iconColor="text-blue-500"
+            title="Available Books"
+            value={availableBooks}
+            icon={BookOpen}
+            iconColor="text-green-500"
           />
           <StatsCard
             title="Books Issued"
             value={issuedBooks}
             icon={BookMarked}
-            iconColor="text-green-500"
+            iconColor="text-blue-500"
           />
           <StatsCard
             title="Overdue Books"

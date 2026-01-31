@@ -9,22 +9,29 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { curriculumNavItems, useCurriculumData, classes, subjects, topicStatuses } from "./curriculum-data";
-import { CheckCircle2, Circle, Clock, Plus, Trash2 } from "lucide-react";
+import { CheckCircle2, Circle, Clock, Plus, Trash2, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { type InsertCurriculum } from "@shared/schema";
 
 type TopicEntry = { topic: string; status: "Not Started" | "In Progress" | "Completed" };
 
 export default function Syllabus() {
-  const { curriculum, addCurriculum, isPending } = useCurriculumData();
+  const { curriculum, teachers, addCurriculum, isPending } = useCurriculumData();
   const { toast } = useToast();
   const [selectedClass, setSelectedClass] = useState("Class 5");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [formData, setFormData] = useState<{ class: string; subject: string; topics: TopicEntry[] }>({
+  const [formData, setFormData] = useState<{
+    class: string;
+    subject: string;
+    topics: TopicEntry[];
+    assignedTeachers: string[]; // Array of teacher IDs
+  }>({
     class: "",
     subject: "",
     topics: [{ topic: "", status: "Not Started" }],
+    assignedTeachers: [],
   });
 
   const filteredCurriculum = curriculum.filter((c) => c.class === selectedClass);
@@ -41,7 +48,7 @@ export default function Syllabus() {
   };
 
   const resetForm = () => {
-    setFormData({ class: "", subject: "", topics: [{ topic: "", status: "Not Started" }] });
+    setFormData({ class: "", subject: "", topics: [{ topic: "", status: "Not Started" }], assignedTeachers: [] });
   };
 
   const handleAddTopic = () => {
@@ -67,6 +74,15 @@ export default function Syllabus() {
     }));
   };
 
+  const handleTeacherToggle = (teacherId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      assignedTeachers: prev.assignedTeachers.includes(teacherId)
+        ? prev.assignedTeachers.filter(id => id !== teacherId)
+        : [...prev.assignedTeachers, teacherId]
+    }));
+  };
+
   const handleSave = async () => {
     if (!formData.class || !formData.subject) {
       toast({ title: "Error", description: "Please fill all required fields", variant: "destructive" });
@@ -82,6 +98,14 @@ export default function Syllabus() {
         class: formData.class,
         subject: formData.subject,
         topics: validTopics.map((t) => ({ topic: t.topic, status: t.status })),
+        assignedTeachers: formData.assignedTeachers.map(teacherId => {
+          const teacher = teachers.find(t => t.id === teacherId);
+          return {
+            teacherId,
+            teacherName: teacher?.name || "Unknown",
+            assignedAt: new Date().toISOString()
+          };
+        })
       };
       await addCurriculum(data);
       toast({ title: "Success", description: "Curriculum saved successfully" });
@@ -143,6 +167,23 @@ export default function Syllabus() {
                       </li>
                     ))}
                   </ul>
+
+                  {/* Display Assigned Teachers */}
+                  {item.assignedTeachers && item.assignedTeachers.length > 0 && (
+                    <div className="mt-4 pt-4 border-t">
+                      <div className="flex items-center gap-2 mb-2">
+                        <User className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground font-medium">Teachers:</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {item.assignedTeachers.map((teacher, idx) => (
+                          <Badge key={idx} variant="secondary" className="text-xs">
+                            {teacher.teacherName}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             );
@@ -225,6 +266,45 @@ export default function Syllabus() {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Teacher Assignment Section */}
+            <div className="space-y-2 pt-4 border-t">
+              <Label>Assign Teachers (Optional)</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Select teachers from HR module who will teach this subject
+              </p>
+              {teachers.length > 0 ? (
+                <div className="space-y-2 max-h-48 overflow-y-auto border rounded-md p-3">
+                  {teachers.map((teacher) => (
+                    <div key={teacher.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`teacher-${teacher.id}`}
+                        checked={formData.assignedTeachers.includes(teacher.id)}
+                        onCheckedChange={() => handleTeacherToggle(teacher.id)}
+                      />
+                      <label
+                        htmlFor={`teacher-${teacher.id}`}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                      >
+                        {teacher.name}
+                        <span className="text-xs text-muted-foreground ml-2">
+                          ({teacher.designation})
+                        </span>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground border rounded-md p-4 text-center">
+                  No teachers found in HR module. Please add teachers first.
+                </div>
+              )}
+              {formData.assignedTeachers.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Selected: {formData.assignedTeachers.length} teacher(s)
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter>

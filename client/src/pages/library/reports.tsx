@@ -2,14 +2,16 @@ import { ModuleLayout } from "@/components/layout/module-layout";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatsCard, StatsGrid } from "@/components/shared/stats-card";
 import { RecentTable } from "@/components/shared/recent-table";
-import { libraryNavItems, useLibraryData, categories } from "./library-data";
+import { libraryNavItems, useLibraryData } from "./library-data";
 import { BookOpen, Users, BookMarked, AlertTriangle, FileDown, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { exportToPDF, exportToExcel } from "@/lib/export-utils";
 import type { Column } from "@/components/shared/data-table";
 
+const categories = ["General", "Fiction", "Non-Fiction", "Reference", "Textbook", "Science", "History", "Biography", "Children"];
+
 export default function LibraryReports() {
-  const { books, members, issues } = useLibraryData();
+  const { books, issues } = useLibraryData();
 
   const totalBooks = books.length;
   const issuedBooks = books.filter((b) => b.status === "Issued").length;

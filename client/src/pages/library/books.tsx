@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { libraryNavItems, useLibraryData, categories } from "./library-data";
+import { libraryNavItems, useLibraryData } from "./library-data";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit } from "lucide-react";
 
+const categories = ["General", "Fiction", "Non-Fiction", "Reference", "Textbook", "Science", "History", "Biography", "Children"];
 const bookStatuses = ["Available", "Issued"] as const;
 
 export default function Books() {
@@ -19,7 +20,7 @@ export default function Books() {
   const [isOpen, setIsOpen] = useState(false);
   const [editingBook, setEditingBook] = useState<typeof books[0] | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  
+
   const [accessionNo, setAccessionNo] = useState("");
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
@@ -48,7 +49,16 @@ export default function Books() {
         await updateBook(editingBook.id, { accessionNo, title, author, category, isbn, status });
         toast({ title: "Success", description: "Book updated successfully" });
       } else {
-        await addBook({ accessionNo, title, author, category, isbn, status });
+        await addBook({
+          accessionNo,
+          title,
+          author,
+          category,
+          isbn,
+          status,
+          totalCopies: 1,
+          availableCopies: status === "Available" ? 1 : 0
+        });
         toast({ title: "Success", description: "Book added successfully" });
       }
       setIsOpen(false);
@@ -70,8 +80,8 @@ export default function Books() {
     setIsOpen(true);
   };
 
-  const filteredBooks = categoryFilter === "all" 
-    ? books 
+  const filteredBooks = categoryFilter === "all"
+    ? books
     : books.filter(b => b.category === categoryFilter);
 
   const availableBooks = books.filter(b => b.status === "Available").length;
@@ -114,38 +124,38 @@ export default function Books() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Accession No *</Label>
-                      <Input 
-                        value={accessionNo} 
-                        onChange={(e) => setAccessionNo(e.target.value)} 
-                        placeholder="e.g., ACC001" 
+                      <Input
+                        value={accessionNo}
+                        onChange={(e) => setAccessionNo(e.target.value)}
+                        placeholder="e.g., ACC001"
                         data-testid="input-accession-no"
                       />
                     </div>
                     <div className="space-y-2">
                       <Label>ISBN</Label>
-                      <Input 
-                        value={isbn} 
-                        onChange={(e) => setIsbn(e.target.value)} 
-                        placeholder="e.g., 978-3-16-148410-0" 
+                      <Input
+                        value={isbn}
+                        onChange={(e) => setIsbn(e.target.value)}
+                        placeholder="e.g., 978-3-16-148410-0"
                         data-testid="input-isbn"
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
                     <Label>Title *</Label>
-                    <Input 
-                      value={title} 
-                      onChange={(e) => setTitle(e.target.value)} 
-                      placeholder="Book title" 
+                    <Input
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="Book title"
                       data-testid="input-title"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label>Author *</Label>
-                    <Input 
-                      value={author} 
-                      onChange={(e) => setAuthor(e.target.value)} 
-                      placeholder="Author name" 
+                    <Input
+                      value={author}
+                      onChange={(e) => setAuthor(e.target.value)}
+                      placeholder="Author name"
                       data-testid="input-author"
                     />
                   </div>

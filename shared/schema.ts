@@ -524,6 +524,11 @@ export const curriculumSchema = z.object({
   class: z.string(),
   subject: z.string(),
   topics: z.array(syllabusTopicSchema),
+  assignedTeachers: z.array(z.object({
+    teacherId: z.string(),
+    teacherName: z.string(),
+    assignedAt: z.string().optional(),
+  })).optional().default([]),
 });
 
 export const insertCurriculumSchema = curriculumSchema.omit({ id: true });
@@ -596,6 +601,17 @@ export type InsertSale = z.infer<typeof insertSaleSchema>;
 export type SaleItem = z.infer<typeof saleItemSchema>;
 
 // ============== LIBRARY MODULE ==============
+export const bookCategorySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  isDefault: z.boolean().default(false),
+  createdAt: z.string().optional(),
+});
+
+export const insertBookCategorySchema = bookCategorySchema.omit({ id: true });
+export type BookCategory = z.infer<typeof bookCategorySchema>;
+export type InsertBookCategory = z.infer<typeof insertBookCategorySchema>;
+
 export const bookSchema = z.object({
   id: z.string(),
   accessionNo: z.string(),
@@ -603,7 +619,11 @@ export const bookSchema = z.object({
   author: z.string(),
   category: z.string(),
   isbn: z.string(),
-  status: z.enum(["Available", "Issued"]),
+  edition: z.string().optional(),
+  publisher: z.string().optional(),
+  totalCopies: z.number().default(1),
+  availableCopies: z.number().default(1),
+  status: z.enum(["Available", "Issued", "Out of Stock"]),
 });
 
 export const insertBookSchema = bookSchema.omit({ id: true });
@@ -627,12 +647,17 @@ export const bookIssueSchema = z.object({
   id: z.string(),
   bookId: z.string(),
   bookTitle: z.string(),
+  accessionNo: z.string(),
   memberId: z.string(),
   memberName: z.string(),
+  memberType: z.enum(["Student", "Staff"]),
+  class: z.string().optional(),
+  section: z.string().optional(),
   issueDate: z.string(),
   dueDate: z.string(),
   returnDate: z.string().optional(),
-  fine: z.number(),
+  fine: z.number().default(0),
+  finePaid: z.boolean().default(false),
   status: z.enum(["Issued", "Returned", "Overdue"]),
 });
 

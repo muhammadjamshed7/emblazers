@@ -60,6 +60,8 @@ import TimetableCreate from "@/pages/timetable/create";
 import DateSheetDashboard from "@/pages/datesheet/dashboard";
 import DateSheetList from "@/pages/datesheet/list";
 import DateSheetCreate from "@/pages/datesheet/create";
+import DateSheetEdit from "@/pages/datesheet/edit";
+import DateSheetView from "@/pages/datesheet/view";
 
 import CurriculumDashboard from "@/pages/curriculum/dashboard";
 import CurriculumSyllabus from "@/pages/curriculum/syllabus";
@@ -75,7 +77,6 @@ import PosReports from "@/pages/pos/reports";
 
 import LibraryDashboard from "@/pages/library/dashboard";
 import LibraryBooks from "@/pages/library/books";
-import LibraryMembers from "@/pages/library/members";
 import LibraryIssue from "@/pages/library/issue";
 import LibraryReports from "@/pages/library/reports";
 
@@ -151,6 +152,8 @@ function Router() {
       <Route path="/datesheet/dashboard" component={DateSheetDashboard} />
       <Route path="/datesheet/list" component={DateSheetList} />
       <Route path="/datesheet/create" component={DateSheetCreate} />
+      <Route path="/datesheet/edit/:id" component={DateSheetEdit} />
+      <Route path="/datesheet/view/:id" component={DateSheetView} />
 
       <Route path="/curriculum/dashboard" component={CurriculumDashboard} />
       <Route path="/curriculum/syllabus" component={CurriculumSyllabus} />
@@ -166,7 +169,6 @@ function Router() {
 
       <Route path="/library/dashboard" component={LibraryDashboard} />
       <Route path="/library/books" component={LibraryBooks} />
-      <Route path="/library/members" component={LibraryMembers} />
       <Route path="/library/issue" component={LibraryIssue} />
       <Route path="/library/reports" component={LibraryReports} />
 

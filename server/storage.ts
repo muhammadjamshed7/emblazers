@@ -1494,6 +1494,19 @@ const mongoStorage = new MongoStorage();
 export const storage: IStorage = new Proxy({} as IStorage, {
   get(_target, prop: keyof IStorage) {
     const activeStorage = isDBConnected() ? mongoStorage : memStorage;
-    return (activeStorage as any)[prop].bind(activeStorage);
+    const method = (activeStorage as any)[prop];
+
+    // Check if the property exists
+    if (method === undefined) {
+      throw new Error(`Missing storage method: ${String(prop)}`);
+    }
+
+    // If it's a function, bind it to the active storage
+    if (typeof method === 'function') {
+      return method.bind(activeStorage);
+    }
+
+    // Otherwise return the property as-is
+    return method;
   }
 });

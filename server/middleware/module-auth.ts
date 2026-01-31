@@ -31,6 +31,10 @@ const routeToModulesMap: Record<string, ModuleType[]> = {
   "/api/books": ["library"],
   "/api/library-members": ["library"],
   "/api/book-issues": ["library"],
+  "/api/book-categories": ["library"],
+  "/api/library/statistics": ["library"],
+  "/api/library/search-students": ["library"],
+  "/api/library/search-staff": ["library"],
   "/api/routes": ["transport"],
   "/api/vehicles": ["transport"],
   "/api/drivers": ["transport"],
@@ -65,11 +69,20 @@ const publicRoutes = [
 ];
 
 function getBaseRoute(path: string): string {
-  const parts = path.split("/").slice(0, 4);
-  if (parts[2] === "bulk") {
-    return parts.slice(0, 4).join("/");
+  const parts = path.split("/").filter(p => p); // Remove empty parts
+
+  // Handle bulk routes: /api/bulk/students -> /api/bulk/students
+  if (parts[1] === "bulk") {
+    return "/" + parts.slice(0, 3).join("/");
   }
-  return parts.slice(0, 3).join("/");
+
+  // Handle library subroutes: /api/library/statistics -> /api/library/statistics
+  if (parts[1] === "library" && parts.length > 2) {
+    return "/" + parts.slice(0, 3).join("/");
+  }
+
+  // Default: /api/books -> /api/books
+  return "/" + parts.slice(0, 2).join("/");
 }
 
 export function moduleAuthMiddleware(req: Request, res: Response, next: NextFunction) {
@@ -106,14 +119,14 @@ export function moduleAuthMiddleware(req: Request, res: Response, next: NextFunc
 
     if (!allowedModules) {
       console.warn(`[Security] Unmapped route accessed: ${req.path} by module ${decoded.module}`);
-      return res.status(403).json({ 
+      return res.status(403).json({
         error: "Access denied: This resource is not accessible",
         path: req.path
       });
     }
 
     if (!allowedModules.includes(decoded.module)) {
-      return res.status(403).json({ 
+      return res.status(403).json({
         error: "Access denied: You do not have permission to access this resource",
         currentModule: decoded.module,
         requiredModules: allowedModules,

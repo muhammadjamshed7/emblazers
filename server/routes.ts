@@ -40,6 +40,7 @@ import {
   insertPosItemSchema,
   insertSaleSchema,
   insertBookSchema,
+  insertBookCategorySchema,
   insertLibraryMemberSchema,
   insertBookIssueSchema,
   insertRouteSchema,
@@ -897,45 +898,95 @@ export async function registerRoutes(
     res.json({ success: true });
   });
 
-  app.get("/api/library-members", async (_req, res) => {
-    const members = await storage.getLibraryMembers();
-    res.json(members);
+  // Book Category Routes
+  app.get("/api/book-categories", async (_req, res) => {
+    const categories = await storage.getBookCategories();
+    res.json(categories);
   });
 
-  app.get("/api/library-members/:id", async (req, res) => {
-    const member = await storage.getLibraryMember(req.params.id);
-    if (!member) return res.status(404).json({ error: "Not found" });
-    res.json(member);
+  app.get("/api/book-categories/:id", async (req, res) => {
+    const category = await storage.getBookCategory(req.params.id);
+    if (!category) return res.status(404).json({ error: "Not found" });
+    res.json(category);
   });
 
-  app.post("/api/library-members", async (req, res) => {
-    const parsed = insertLibraryMemberSchema.safeParse(req.body);
+  app.post("/api/book-categories", async (req, res) => {
+    const parsed = insertBookCategorySchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
-    const member = await storage.createLibraryMember(parsed.data);
-    res.status(201).json(member);
+    const category = await storage.createBookCategory(parsed.data);
+    res.status(201).json(category);
   });
 
-  app.patch("/api/library-members/:id", async (req, res) => {
+  app.patch("/api/book-categories/:id", async (req, res) => {
     const { id, ...updates } = req.body;
-    const parsed = insertLibraryMemberSchema.partial().safeParse(updates);
+    const parsed = insertBookCategorySchema.partial().safeParse(updates);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
-    const member = await storage.updateLibraryMember(req.params.id, parsed.data);
-    if (!member) return res.status(404).json({ error: "Not found" });
-    res.json(member);
+    const category = await storage.updateBookCategory(req.params.id, parsed.data);
+    if (!category) return res.status(404).json({ error: "Not found" });
+    res.json(category);
   });
 
-  app.delete("/api/library-members/:id", async (req, res) => {
-    const validation = await checkLibraryMemberReferences(req.params.id);
-    if (!validation.canDelete) {
-      return res.status(409).json({ error: validation.errorMessage, references: validation.references });
+  app.delete("/api/book-categories/:id", async (req, res) => {
+    const category = await storage.getBookCategory(req.params.id);
+    if (!category) return res.status(404).json({ error: "Not found" });
+    if (category.isDefault) {
+      return res.status(400).json({ error: "Cannot delete default categories" });
     }
-    const deleted = await storage.deleteLibraryMember(req.params.id);
+    const deleted = await storage.deleteBookCategory(req.params.id);
     if (!deleted) return res.status(404).json({ error: "Not found" });
     res.json({ success: true });
   });
 
+  // DEPRECATED: Members functionality removed - use Student/Staff search instead
+  // app.get("/api/library-members", async (_req, res) => {
+  //   const members = await storage.getLibraryMembers();
+  //   res.json(members);
+  // });
+
+  // app.get("/api/library-members/:id", async (req, res) => {
+  //   const member = await storage.getLibraryMember(req.params.id);
+  //   if (!member) return res.status(404).json({ error: "Not found" });
+  //   res.json(member);
+  // });
+
+  // app.post("/api/library-members", async (req, res) => {
+  //   const parsed = insertLibraryMemberSchema.safeParse(req.body);
+  //   if (!parsed.success) return res.status(400).json({ error: parsed.error });
+  //   const member = await storage.createLibraryMember(parsed.data);
+  //   res.status(201).json(member);
+  // });
+
+  // app.patch("/api/library-members/:id", async (req, res) => {
+  //   const { id, ...updates } = req.body;
+  //   const parsed = insertLibraryMemberSchema.partial().safeParse(updates);
+  //   if (!parsed.success) return res.status(400).json({ error: parsed.error });
+  //   const member = await storage.updateLibraryMember(req.params.id, parsed.data);
+  //   if (!member) return res.status(404).json({ error: "Not found" });
+  //   res.json(member);
+  // });
+
+  // app.delete("/api/library-members/:id", async (req, res) => {
+  //   const validation = await checkLibraryMemberReferences(req.params.id);
+  //   if (!validation.canDelete) {
+  //     return res.status(409).json({ error: validation.errorMessage, references: validation.references });
+  //   }
+  //   const deleted = await storage.deleteLibraryMember(req.params.id);
+  //   if (!deleted) return res.status(404).json({ error: "Not found" });
+  //   res.json({ success: true });
+  // });
+
   app.get("/api/book-issues", async (_req, res) => {
     const issues = await storage.getBookIssues();
+
+    // Update overdue status automatically
+    const now = new Date();
+    for (const issue of issues) {
+      if (issue.status === "Issued" && new Date(issue.dueDate) < now) {
+        await storage.updateBookIssue(issue.id, { status: "Overdue" });
+        issue.status = "Overdue";
+      }
+    }
+
     res.json(issues);
   });
 
@@ -948,7 +999,26 @@ export async function registerRoutes(
   app.post("/api/book-issues", async (req, res) => {
     const parsed = insertBookIssueSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
+
+    // Check book availability
+    const book = await storage.getBook(parsed.data.bookId);
+    if (!book) return res.status(404).json({ error: "Book not found" });
+
+    if (book.availableCopies <= 0) {
+      return res.status(400).json({ error: "Book is not available for issue" });
+    }
+
+    // Create issue
     const issue = await storage.createBookIssue(parsed.data);
+
+    // Update book availability
+    const newAvailable = book.availableCopies - 1;
+    const newStatus = newAvailable === 0 ? "Out of Stock" : book.status;
+    await storage.updateBook(book.id, {
+      availableCopies: newAvailable,
+      status: newStatus
+    });
+
     res.status(201).json(issue);
   });
 
@@ -956,15 +1026,136 @@ export async function registerRoutes(
     const { id, ...updates } = req.body;
     const parsed = insertBookIssueSchema.partial().safeParse(updates);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
-    const issue = await storage.updateBookIssue(req.params.id, parsed.data);
+
+    const issue = await storage.getBookIssue(req.params.id);
     if (!issue) return res.status(404).json({ error: "Not found" });
-    res.json(issue);
+
+    // If returning a book
+    if (updates.returnDate && !issue.returnDate) {
+      // Calculate fine if overdue
+      const dueDate = new Date(issue.dueDate);
+      const returnDate = new Date(updates.returnDate);
+
+      if (returnDate > dueDate) {
+        const daysOverdue = Math.ceil((returnDate.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+        const finePerDay = 5; // $5 per day
+        updates.fine = daysOverdue * finePerDay;
+      } else {
+        updates.fine = 0;
+      }
+
+      updates.status = "Returned";
+
+      // Update book availability
+      const book = await storage.getBook(issue.bookId);
+      if (book) {
+        const newAvailable = book.availableCopies + 1;
+        await storage.updateBook(book.id, {
+          availableCopies: newAvailable,
+          status: newAvailable > 0 ? "Available" : book.status
+        });
+      }
+    }
+
+    const updatedIssue = await storage.updateBookIssue(req.params.id, parsed.data);
+    if (!updatedIssue) return res.status(404).json({ error: "Not found" });
+    res.json(updatedIssue);
   });
 
   app.delete("/api/book-issues/:id", async (req, res) => {
     const deleted = await storage.deleteBookIssue(req.params.id);
     if (!deleted) return res.status(404).json({ error: "Not found" });
     res.json({ success: true });
+  });
+
+  // Library Statistics Endpoint
+  app.get("/api/library/statistics", async (_req, res) => {
+    const books = await storage.getBooks();
+    const issues = await storage.getBookIssues();
+
+    const totalBooks = books.reduce((sum, book) => sum + (book.totalCopies || 1), 0);
+    const availableBooks = books.reduce((sum, book) => sum + (book.availableCopies || (book.status === "Available" ? 1 : 0)), 0);
+    const issuedBooks = issues.filter(i => i.status === "Issued" || i.status === "Overdue").length;
+
+    const now = new Date();
+    const overdueBooks = issues.filter(i =>
+      (i.status === "Issued" || i.status === "Overdue") &&
+      new Date(i.dueDate) < now
+    ).length;
+
+    const totalFines = issues.reduce((sum, i) => sum + (i.fine || 0), 0);
+    const pendingFines = issues.filter(i => (i.fine || 0) > 0 && !i.finePaid).reduce((sum, i) => sum + (i.fine || 0), 0);
+
+    // Category counts
+    const categoryCounts: { [key: string]: number } = {};
+    books.forEach(book => {
+      categoryCounts[book.category] = (categoryCounts[book.category] || 0) + (book.totalCopies || 1);
+    });
+
+    const categoryData = Object.entries(categoryCounts).map(([category, count]) => ({
+      category,
+      count
+    }));
+
+    res.json({
+      totalBooks,
+      issuedBooks,
+      availableBooks,
+      overdueBooks,
+      totalFines,
+      pendingFines,
+      categoryCounts: categoryData
+    });
+  });
+
+  // Library Student Search Endpoint
+  app.get("/api/library/search-students", async (req, res) => {
+    const { query } = req.query;
+
+    if (!query || typeof query !== 'string') {
+      return res.status(400).json({ error: "Search query is required" });
+    }
+
+    // Get all students from the Student module
+    const allStudents = await storage.getStudents();
+
+    // Search by ID or name (case-insensitive, partial match)
+    const searchLower = query.toLowerCase().trim();
+
+    const results = allStudents.filter(student => {
+      const studentIdMatch = student.studentId?.toLowerCase().includes(searchLower);
+      const nameMatch = student.name?.toLowerCase().includes(searchLower);
+
+      return studentIdMatch || nameMatch;
+    });
+
+    // Return full student details
+    res.json(results);
+  });
+
+  // Library Staff Search Endpoint
+  app.get("/api/library/search-staff", async (req, res) => {
+    const { query } = req.query;
+
+    if (!query || typeof query !== 'string') {
+      return res.status(400).json({ error: "Search query is required" });
+    }
+
+    // Get all staff from the HR/Staff module
+    const allStaff = await storage.getStaff();
+
+    // Search by ID or name (case-insensitive, partial match)
+    const searchLower = query.toLowerCase().trim();
+
+    const results = allStaff.filter(staff => {
+      const staffIdMatch = staff.staffId?.toLowerCase().includes(searchLower);
+      const nameMatch = staff.name?.toLowerCase().includes(searchLower);
+
+      return staffIdMatch || nameMatch;
+    });
+
+    // Return full staff details
+    res.json(results);
   });
 
   app.get("/api/routes", async (_req, res) => {
