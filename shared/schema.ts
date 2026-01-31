@@ -630,19 +630,6 @@ export const insertBookSchema = bookSchema.omit({ id: true });
 export type Book = z.infer<typeof bookSchema>;
 export type InsertBook = z.infer<typeof insertBookSchema>;
 
-export const libraryMemberSchema = z.object({
-  id: z.string(),
-  memberId: z.string(),
-  name: z.string(),
-  type: z.enum(["Student", "Staff"]),
-  contact: z.string(),
-  referenceId: z.string(),
-});
-
-export const insertLibraryMemberSchema = libraryMemberSchema.omit({ id: true, memberId: true });
-export type LibraryMember = z.infer<typeof libraryMemberSchema>;
-export type InsertLibraryMember = z.infer<typeof insertLibraryMemberSchema>;
-
 export const bookIssueSchema = z.object({
   id: z.string(),
   bookId: z.string(),

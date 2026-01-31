@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Briefcase, Clock, Users, CheckCircle } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function ApplyPage() {
   const { id } = useParams<{ id: string }>();
@@ -30,20 +31,14 @@ export default function ApplyPage() {
   const { data: vacancy, isLoading, error } = useQuery<Vacancy>({
     queryKey: ["/api/public/vacancies", id],
     queryFn: async () => {
-      const res = await fetch(`/api/public/vacancies/${id}`);
-      if (!res.ok) throw new Error("Failed to fetch vacancy");
+      const res = await apiRequest("GET", `/api/public/vacancies/${id}`);
       return res.json();
     },
   });
 
   const applyMutation = useMutation({
     mutationFn: async (data: InsertApplicant) => {
-      const res = await fetch("/api/public/applications", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error("Failed to submit application");
+      const res = await apiRequest("POST", "/api/public/applications", data);
       return res.json();
     },
     onSuccess: () => {

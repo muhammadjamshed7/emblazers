@@ -16,7 +16,6 @@ import {
   checkVehicleReferences,
   checkHostelRoomReferences,
   checkBookReferences,
-  checkLibraryMemberReferences,
   checkExamReferences,
   checkVacancyReferences,
   checkHostelResidentReferences,
@@ -41,7 +40,6 @@ import {
   insertSaleSchema,
   insertBookSchema,
   insertBookCategorySchema,
-  insertLibraryMemberSchema,
   insertBookIssueSchema,
   insertRouteSchema,
   insertVehicleSchema,
@@ -279,8 +277,20 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/students", async (_req, res) => {
+  app.get("/api/students", async (req, res) => {
     const students = await storage.getStudents();
+    const { query } = req.query;
+
+    if (query && typeof query === "string") {
+      const searchLower = query.toLowerCase().trim();
+      const results = students.filter(student => {
+        const studentIdMatch = student.studentId?.toLowerCase().includes(searchLower);
+        const nameMatch = student.name?.toLowerCase().includes(searchLower);
+        return studentIdMatch || nameMatch;
+      });
+      return res.json(results);
+    }
+
     res.json(students);
   });
 
@@ -328,8 +338,20 @@ export async function registerRoutes(
     res.json({ success: true });
   });
 
-  app.get("/api/staff", async (_req, res) => {
+  app.get("/api/staff", async (req, res) => {
     const staff = await storage.getStaff();
+    const { query } = req.query;
+
+    if (query && typeof query === "string") {
+      const searchLower = query.toLowerCase().trim();
+      const results = staff.filter(member => {
+        const staffIdMatch = member.staffId?.toLowerCase().includes(searchLower);
+        const nameMatch = member.name?.toLowerCase().includes(searchLower);
+        return staffIdMatch || nameMatch;
+      });
+      return res.json(results);
+    }
+
     res.json(staff);
   });
 
@@ -937,44 +959,6 @@ export async function registerRoutes(
     res.json({ success: true });
   });
 
-  // DEPRECATED: Members functionality removed - use Student/Staff search instead
-  // app.get("/api/library-members", async (_req, res) => {
-  //   const members = await storage.getLibraryMembers();
-  //   res.json(members);
-  // });
-
-  // app.get("/api/library-members/:id", async (req, res) => {
-  //   const member = await storage.getLibraryMember(req.params.id);
-  //   if (!member) return res.status(404).json({ error: "Not found" });
-  //   res.json(member);
-  // });
-
-  // app.post("/api/library-members", async (req, res) => {
-  //   const parsed = insertLibraryMemberSchema.safeParse(req.body);
-  //   if (!parsed.success) return res.status(400).json({ error: parsed.error });
-  //   const member = await storage.createLibraryMember(parsed.data);
-  //   res.status(201).json(member);
-  // });
-
-  // app.patch("/api/library-members/:id", async (req, res) => {
-  //   const { id, ...updates } = req.body;
-  //   const parsed = insertLibraryMemberSchema.partial().safeParse(updates);
-  //   if (!parsed.success) return res.status(400).json({ error: parsed.error });
-  //   const member = await storage.updateLibraryMember(req.params.id, parsed.data);
-  //   if (!member) return res.status(404).json({ error: "Not found" });
-  //   res.json(member);
-  // });
-
-  // app.delete("/api/library-members/:id", async (req, res) => {
-  //   const validation = await checkLibraryMemberReferences(req.params.id);
-  //   if (!validation.canDelete) {
-  //     return res.status(409).json({ error: validation.errorMessage, references: validation.references });
-  //   }
-  //   const deleted = await storage.deleteLibraryMember(req.params.id);
-  //   if (!deleted) return res.status(404).json({ error: "Not found" });
-  //   res.json({ success: true });
-  // });
-
   app.get("/api/book-issues", async (_req, res) => {
     const issues = await storage.getBookIssues();
 
@@ -1106,56 +1090,6 @@ export async function registerRoutes(
       pendingFines,
       categoryCounts: categoryData
     });
-  });
-
-  // Library Student Search Endpoint
-  app.get("/api/library/search-students", async (req, res) => {
-    const { query } = req.query;
-
-    if (!query || typeof query !== 'string') {
-      return res.status(400).json({ error: "Search query is required" });
-    }
-
-    // Get all students from the Student module
-    const allStudents = await storage.getStudents();
-
-    // Search by ID or name (case-insensitive, partial match)
-    const searchLower = query.toLowerCase().trim();
-
-    const results = allStudents.filter(student => {
-      const studentIdMatch = student.studentId?.toLowerCase().includes(searchLower);
-      const nameMatch = student.name?.toLowerCase().includes(searchLower);
-
-      return studentIdMatch || nameMatch;
-    });
-
-    // Return full student details
-    res.json(results);
-  });
-
-  // Library Staff Search Endpoint
-  app.get("/api/library/search-staff", async (req, res) => {
-    const { query } = req.query;
-
-    if (!query || typeof query !== 'string') {
-      return res.status(400).json({ error: "Search query is required" });
-    }
-
-    // Get all staff from the HR/Staff module
-    const allStaff = await storage.getStaff();
-
-    // Search by ID or name (case-insensitive, partial match)
-    const searchLower = query.toLowerCase().trim();
-
-    const results = allStaff.filter(staff => {
-      const staffIdMatch = staff.staffId?.toLowerCase().includes(searchLower);
-      const nameMatch = staff.name?.toLowerCase().includes(searchLower);
-
-      return staffIdMatch || nameMatch;
-    });
-
-    // Return full staff details
-    res.json(results);
   });
 
   app.get("/api/routes", async (_req, res) => {

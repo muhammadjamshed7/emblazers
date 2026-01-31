@@ -6,6 +6,7 @@ import {
   type PermissionAction,
   rolePermissions
 } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
 
 const TOKEN_KEY = "emblazers_token";
 const SESSION_KEY = "emblazers_session";
@@ -53,16 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (module: ModuleType, email: string, password: string): Promise<boolean> => {
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ module, email, password }),
-      });
-
-      if (!response.ok) {
-        return false;
-      }
-
+      const response = await apiRequest("POST", "/api/auth/login", { module, email, password });
       const data = await response.json();
 
       if (data.success && data.token) {

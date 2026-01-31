@@ -30,8 +30,7 @@ export function NotificationProvider({ children, module }: NotificationProviderP
     queryKey,
     queryFn: async () => {
       const url = module ? `/api/notifications?module=${module}` : "/api/notifications";
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("Failed to fetch notifications");
+      const response = await apiRequest("GET", url);
       return response.json();
     },
   });
@@ -40,8 +39,7 @@ export function NotificationProvider({ children, module }: NotificationProviderP
     queryKey: countQueryKey,
     queryFn: async () => {
       const url = module ? `/api/notifications/unread-count?module=${module}` : "/api/notifications/unread-count";
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("Failed to fetch unread count");
+      const response = await apiRequest("GET", url);
       return response.json();
     },
   });

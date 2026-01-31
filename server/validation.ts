@@ -33,13 +33,9 @@ export async function checkStudentReferences(studentId: string): Promise<Validat
     references.push({ module: "Exams", count: resultCount, description: `${resultCount} exam result(s)` });
   }
 
-  const libraryMembers = await storage.getLibraryMembers();
-  const memberRecord = libraryMembers.find(m => m.type === "Student" && m.referenceId === studentId);
-  if (memberRecord) {
-    const issueCount = bookIssues.filter(i => i.memberId === memberRecord.id && i.status === "Issued").length;
-    if (issueCount > 0) {
-      references.push({ module: "Library", count: issueCount, description: `${issueCount} active book issue(s)` });
-    }
+  const issueCount = bookIssues.filter(i => i.memberType === "Student" && i.memberId === studentId && i.status === "Issued").length;
+  if (issueCount > 0) {
+    references.push({ module: "Library", count: issueCount, description: `${issueCount} active book issue(s)` });
   }
 
   const transportCount = studentTransports.filter(t => t.studentId === studentId).length;
@@ -63,10 +59,11 @@ export async function checkStudentReferences(studentId: string): Promise<Validat
 export async function checkStaffReferences(staffId: string): Promise<ValidationResult> {
   const references: { module: string; count: number; description: string }[] = [];
 
-  const [payrolls, timetables, dateSheets] = await Promise.all([
+  const [payrolls, timetables, dateSheets, bookIssues] = await Promise.all([
     storage.getPayrolls(),
     storage.getTimetables(),
     storage.getDateSheets(),
+    storage.getBookIssues(),
   ]);
 
   const payrollCount = payrolls.filter(p => p.staffId === staffId).length;
@@ -92,14 +89,9 @@ export async function checkStaffReferences(staffId: string): Promise<ValidationR
     references.push({ module: "DateSheet", count: invigilatorCount, description: `${invigilatorCount} exam invigilator assignment(s)` });
   }
 
-  const libraryMembers = await storage.getLibraryMembers();
-  const memberRecord = libraryMembers.find(m => m.type === "Staff" && m.referenceId === staffId);
-  if (memberRecord) {
-    const bookIssues = await storage.getBookIssues();
-    const issueCount = bookIssues.filter(i => i.memberId === memberRecord.id && i.status === "Issued").length;
-    if (issueCount > 0) {
-      references.push({ module: "Library", count: issueCount, description: `${issueCount} active book issue(s)` });
-    }
+  const issueCount = bookIssues.filter(i => i.memberType === "Staff" && i.memberId === staffId && i.status === "Issued").length;
+  if (issueCount > 0) {
+    references.push({ module: "Library", count: issueCount, description: `${issueCount} active book issue(s)` });
   }
 
   const canDelete = references.length === 0;
@@ -209,23 +201,6 @@ export async function checkBookReferences(bookId: string): Promise<ValidationRes
   const errorMessage = canDelete
     ? undefined
     : `Cannot delete book: Referenced by ${references.map(r => r.description).join(", ")}`;
-
-  return { canDelete, references, errorMessage };
-}
-
-export async function checkLibraryMemberReferences(memberId: string): Promise<ValidationResult> {
-  const references: { module: string; count: number; description: string }[] = [];
-
-  const bookIssues = await storage.getBookIssues();
-  const issueCount = bookIssues.filter(i => i.memberId === memberId && i.status === "Issued").length;
-  if (issueCount > 0) {
-    references.push({ module: "Library", count: issueCount, description: `${issueCount} active book issue(s)` });
-  }
-
-  const canDelete = references.length === 0;
-  const errorMessage = canDelete
-    ? undefined
-    : `Cannot delete library member: Referenced by ${references.map(r => r.description).join(", ")}`;
 
   return { canDelete, references, errorMessage };
 }

@@ -5,13 +5,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Briefcase, MapPin, Clock, Users, ArrowRight } from "lucide-react";
 import { Link } from "wouter";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function CareersPage() {
   const { data: vacancies = [], isLoading } = useQuery<Vacancy[]>({
     queryKey: ["/api/public/vacancies"],
     queryFn: async () => {
-      const res = await fetch("/api/public/vacancies");
-      if (!res.ok) throw new Error("Failed to fetch vacancies");
+      const res = await apiRequest("GET", "/api/public/vacancies");
       return res.json();
     },
   });
