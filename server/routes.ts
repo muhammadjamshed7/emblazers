@@ -279,8 +279,20 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/students", async (_req, res) => {
+  app.get("/api/students", async (req, res) => {
     const students = await storage.getStudents();
+    const { query } = req.query;
+
+    if (query && typeof query === "string") {
+      const searchLower = query.toLowerCase().trim();
+      const results = students.filter(student => {
+        const studentIdMatch = student.studentId?.toLowerCase().includes(searchLower);
+        const nameMatch = student.name?.toLowerCase().includes(searchLower);
+        return studentIdMatch || nameMatch;
+      });
+      return res.json(results);
+    }
+
     res.json(students);
   });
 
@@ -328,8 +340,20 @@ export async function registerRoutes(
     res.json({ success: true });
   });
 
-  app.get("/api/staff", async (_req, res) => {
+  app.get("/api/staff", async (req, res) => {
     const staff = await storage.getStaff();
+    const { query } = req.query;
+
+    if (query && typeof query === "string") {
+      const searchLower = query.toLowerCase().trim();
+      const results = staff.filter(member => {
+        const staffIdMatch = member.staffId?.toLowerCase().includes(searchLower);
+        const nameMatch = member.name?.toLowerCase().includes(searchLower);
+        return staffIdMatch || nameMatch;
+      });
+      return res.json(results);
+    }
+
     res.json(staff);
   });
 

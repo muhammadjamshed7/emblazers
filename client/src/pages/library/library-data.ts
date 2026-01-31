@@ -138,23 +138,13 @@ export function useLibraryData() {
 
 // Search functions for students and staff
 export async function searchStudents(query: string): Promise<Student[]> {
-  const token = localStorage.getItem("token");
-  const res = await fetch(`/api/library/search-students?query=${encodeURIComponent(query)}`, {
-    headers: {
-      "Authorization": `Bearer ${token}`
-    }
-  });
+  const res = await apiRequest("GET", `/api/students?query=${encodeURIComponent(query)}`);
   if (!res.ok) return [];
   return res.json();
 }
 
 export async function searchStaff(query: string): Promise<Staff[]> {
-  const token = localStorage.getItem("token");
-  const res = await fetch(`/api/library/search-staff?query=${encodeURIComponent(query)}`, {
-    headers: {
-      "Authorization": `Bearer ${token}`
-    }
-  });
+  const res = await apiRequest("GET", `/api/staff?query=${encodeURIComponent(query)}`);
   if (!res.ok) return [];
   return res.json();
 }
