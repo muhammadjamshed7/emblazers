@@ -81,6 +81,7 @@ export default function StudentProfile() {
                 </TabsList>
 
                 <TabsContent value="profile" className="mt-6 space-y-4">
+                  <InfoRow label="Student ID" value={student.studentId} />
                   <InfoRow label="Full Name" value={student.name} />
                   <InfoRow label="Gender" value={student.gender} />
                   <InfoRow label="Date of Birth" value={student.dob} />

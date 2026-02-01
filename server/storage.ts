@@ -648,13 +648,38 @@ export class MemStorage implements IStorage {
     return this.students.get(id);
   }
 
+  private generateSequentialId(type: "Student" | "Staff", dateStr: string): string {
+    const year = new Date(dateStr).getFullYear();
+    const prefix = "EMB";
+    const pattern = new RegExp(`^${prefix}-${year}-(\\d{3})$`);
+
+    let maxSeq = 0;
+    const items = type === "Student" ? Array.from(this.students.values()) : Array.from(this.staff.values());
+
+    // Check existing items for the generated ID is studentId or staffId
+    items.forEach((item: any) => {
+      const idToCheck = type === "Student" ? item.studentId : item.staffId;
+      if (idToCheck) {
+        const match = idToCheck.match(pattern);
+        if (match) {
+          const seq = parseInt(match[1], 10);
+          if (seq > maxSeq) maxSeq = seq;
+        }
+      }
+    });
+
+    const nextSeq = (maxSeq + 1).toString().padStart(3, '0');
+    return `${prefix}-${year}-${nextSeq}`;
+  }
+
   async createStudent(student: InsertStudent): Promise<Student> {
     const existing = Array.from(this.students.values()).find(s => s.bform === student.bform);
     if (existing) {
       throw new Error("Student with this B-Form already exists");
     }
     const id = randomUUID();
-    const newStudent: Student = { ...student, id };
+    const studentId = this.generateSequentialId("Student", student.admissionDate);
+    const newStudent: Student = { ...student, id, studentId };
     this.students.set(id, newStudent);
     return newStudent;
   }
@@ -712,7 +737,8 @@ export class MemStorage implements IStorage {
 
   async createStaff(staff: InsertStaff): Promise<Staff> {
     const id = randomUUID();
-    const newStaff: Staff = { ...staff, id };
+    const staffId = this.generateSequentialId("Staff", staff.joiningDate);
+    const newStaff: Staff = { ...staff, id, staffId };
     this.staff.set(id, newStaff);
     return newStaff;
   }
