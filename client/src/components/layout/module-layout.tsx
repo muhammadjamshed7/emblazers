@@ -6,7 +6,6 @@ import { moduleConfigs } from "@/lib/module-config";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NotificationBell } from "@/components/ui/notification-bell";
 import { NotificationProvider } from "@/lib/notifications";
-import { Button } from "@/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
@@ -109,7 +108,7 @@ function AppSidebar({ module, navItems, onLogout }: { module: ModuleType; navIte
 
 export function ModuleLayout({ module, navItems, children }: ModuleLayoutProps) {
   const [location, setLocation] = useLocation();
-  const { logout, isAuthenticated, session, token } = useAuth();
+  const { logout, isAuthenticated } = useAuth();
   const config = moduleConfigs[module];
 
   // Only redirect if not authenticated - don't check localStorage directly

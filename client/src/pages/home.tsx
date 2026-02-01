@@ -3,8 +3,12 @@ import { allModules } from "@/lib/module-config";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { GraduationCap, ArrowRight } from "lucide-react";
+import { useAuth } from "@/lib/auth";
+import { type ModuleType } from "@shared/schema";
 
 export default function Home() {
+  const { isAuthenticated } = useAuth();
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <header className="border-b sticky top-0 z-50 bg-background">
@@ -40,8 +44,10 @@ export default function Home() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
               {allModules.map((module) => {
                 const Icon = module.icon;
+                const moduleKey = module.id as ModuleType;
+                const targetPath = isAuthenticated(moduleKey) ? module.dashboardPath : module.loginPath;
                 return (
-                  <Link key={module.id} href={module.loginPath} data-testid={`link-module-${module.id}`}>
+                  <Link key={module.id} href={targetPath} data-testid={`link-module-${module.id}`}>
                     <Card className="h-full hover-elevate active-elevate-2 cursor-pointer transition-all duration-200 group" data-testid={`card-module-${module.id}`}>
                       <CardHeader className="pb-2">
                         <div className="flex items-start justify-between gap-4">
