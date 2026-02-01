@@ -17,22 +17,22 @@ import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 
 export default function MarkAttendance() {
-  const { addRecord } = useAttendanceData();
+  const { markBatchAttendance } = useAttendanceData();
   const { students, isLoading } = useStudentData();
   const { toast } = useToast();
 
   const [selectedClass, setSelectedClass] = useState("");
   const [selectedSection, setSelectedSection] = useState("");
   const [attendance, setAttendance] = useState<Record<string, typeof attendanceStatuses[number]>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [viewStudent, setViewStudent] = useState<Student | null>(null);
 
   const filteredStudents = students.filter(
     (s) => s.class === selectedClass && s.section === selectedSection && s.status === "Active"
   );
 
-  // Fetch existing attendance for the selected class/section/date
   const today = new Date().toISOString().split("T")[0];
-  const { data: existingAttendance } = useQuery({
+  const { data: existingAttendance, refetch: refetchExisting } = useQuery({
     queryKey: ['/api/attendance-records', { date: today, class: selectedClass, section: selectedSection }],
     queryFn: async () => {
       if (!selectedClass || !selectedSection) return [];
@@ -42,44 +42,30 @@ export default function MarkAttendance() {
     enabled: !!selectedClass && !!selectedSection,
   });
 
-  // Update local state when existing records are fetched
-  useEffect(() => {
-    if (existingAttendance && filteredStudents.length > 0) {
-      const newAttendance: typeof attendance = {};
-      // Default all to Present first if needed, or better, just leave undefined to show as not marked? 
-      // Requirement says "previously marked attendance should appear by default".
-      // Current logic defaults to "Present" only on submit if not in state.
-      // But UI shows "default" variant if in state.
+  const isAlreadyMarked = existingAttendance && existingAttendance.length > 0;
 
-      // Let's populate state with existing records.
+  useEffect(() => {
+    if (selectedClass && selectedSection) {
+      const newAttendance: Record<string, typeof attendanceStatuses[number]> = {};
+      
       filteredStudents.forEach(student => {
-        const record = existingAttendance.find((r: any) => r.studentId === student.studentId);
+        const record = existingAttendance?.find((r: any) => r.studentId === student.studentId);
         if (record) {
           newAttendance[student.id] = record.status;
         } else {
-          // If no record exists, we can leave it empty (user hasn't marked it yet)
-          // Or default to Present?
-          // The prompt says "if opened again, previously marked... should appear". 
-          // If it wasn't marked, it won't be in database.
+          // Default to Absent as per requirement "default unmarked/absent until set"
+          newAttendance[student.id] = "Absent";
         }
       });
       setAttendance(newAttendance);
-    } else {
-      // If query returns empty or class changes, we might want to reset.
-      // But useEffect dependencies need care.
     }
-  }, [existingAttendance, filteredStudents, selectedClass, selectedSection]); // filteredStudents changes when class/section changes
-
-  // Reset attendance when class/section changes (handled by filteredStudents changing above effectively, but explicit reset is safer)
-  useEffect(() => {
-    setAttendance({});
-  }, [selectedClass, selectedSection]);
+  }, [existingAttendance, filteredStudents, selectedClass, selectedSection]);
 
   const markStatus = (studentId: string, status: typeof attendanceStatuses[number]) => {
     setAttendance((prev) => ({ ...prev, [studentId]: status }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedClass || !selectedSection) {
       toast({ title: "Error", description: "Please select class and section", variant: "destructive" });
       return;
@@ -90,24 +76,28 @@ export default function MarkAttendance() {
       return;
     }
 
-    const today = new Date().toISOString().split("T")[0];
-    let count = 0;
-
-    filteredStudents.forEach((student) => {
-      const status = attendance[student.id] || "Present";
-      addRecord({
-        date: today,
+    setIsSubmitting(true);
+    try {
+      const batchRecords = filteredStudents.map((student) => ({
         studentId: student.studentId,
         studentName: student.name,
+        status: attendance[student.id] || "Absent",
+      }));
+
+      await markBatchAttendance({
+        date: today,
         class: selectedClass,
         section: selectedSection,
-        status,
+        records: batchRecords,
       });
-      count++;
-    });
 
-    toast({ title: "Success", description: `Attendance marked for ${count} students` });
-    setAttendance({});
+      toast({ title: "Success", description: `Attendance ${isAlreadyMarked ? 'updated' : 'marked'} successfully` });
+      refetchExisting();
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to save attendance", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -162,11 +152,23 @@ export default function MarkAttendance() {
 
         {selectedClass && selectedSection && (
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-4">
-              <CardTitle>Students - {selectedClass} {selectedSection}</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <CardTitle>Students - {selectedClass} {selectedSection}</CardTitle>
+                {isAlreadyMarked && (
+                  <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 border-green-200">
+                    Already Marked
+                  </Badge>
+                )}
+              </div>
               {filteredStudents.length > 0 && (
-                <Button onClick={handleSubmit} data-testid="button-save-attendance">
-                  Save Attendance
+                <Button 
+                  onClick={handleSubmit} 
+                  disabled={isSubmitting}
+                  data-testid="button-save-attendance"
+                >
+                  {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  {isAlreadyMarked ? "Update Attendance" : "Save Attendance"}
                 </Button>
               )}
             </CardHeader>

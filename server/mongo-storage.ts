@@ -477,11 +477,14 @@ export class MongoStorage implements IStorage {
       const recordIndex = existing.records.findIndex(r => r.entityId === record.studentId);
       if (recordIndex >= 0) {
         existing.records[recordIndex].status = record.status;
+        existing.records[recordIndex].remarks = record.remarks;
+        existing.records[recordIndex].entityName = record.studentName;
       } else {
         existing.records.push({
           entityId: record.studentId,
           entityName: record.studentName,
           status: record.status,
+          remarks: record.remarks,
         });
       }
       await existing.save();
@@ -501,6 +504,7 @@ export class MongoStorage implements IStorage {
           entityId: record.studentId,
           entityName: record.studentName,
           status: record.status,
+          remarks: record.remarks,
         }],
       });
       return {

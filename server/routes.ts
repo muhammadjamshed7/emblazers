@@ -640,6 +640,37 @@ export async function registerRoutes(
     res.json(record);
   });
 
+  app.post("/api/attendance-records/batch", async (req, res) => {
+    try {
+      const { date, class: className, section, records, type = "student" } = req.body;
+      
+      if (!date || !records || !Array.isArray(records)) {
+        return res.status(400).json({ error: "Date and records array are required" });
+      }
+
+      const results = [];
+      for (const record of records) {
+        const attendanceRecord = {
+          date,
+          class: className || "",
+          section: section || "",
+          studentId: record.studentId,
+          studentName: record.studentName,
+          status: record.status,
+          remarks: record.remarks || "",
+        };
+        
+        const result = await storage.createAttendanceRecord(attendanceRecord);
+        results.push(result);
+      }
+      
+      res.status(201).json(results);
+    } catch (error) {
+      console.error("Batch attendance error:", error);
+      res.status(500).json({ error: "Failed to save attendance" });
+    }
+  });
+
   app.post("/api/attendance-records", async (req, res) => {
     const parsed = insertAttendanceRecordSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });

@@ -48,14 +48,27 @@ export function useAttendanceData() {
     queryClient.invalidateQueries({ queryKey: ['/api/attendance-records'] });
   };
 
+  const batchMutation = useMutation({
+    mutationFn: async (data: { date: string, class: string, section: string, records: any[] }) => {
+      const res = await apiRequest('POST', '/api/attendance-records/batch', data);
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/attendance-records'] })
+  });
+
+  const markBatchAttendance = async (data: { date: string, class: string, section: string, records: any[] }) => {
+    return await batchMutation.mutateAsync(data);
+  };
+
   return { 
     records, 
     addRecord, 
     updateRecord,
+    markBatchAttendance,
     refreshRecords,
     isLoading,
     error,
-    isPending: createMutation.isPending || updateMutation.isPending
+    isPending: createMutation.isPending || updateMutation.isPending || batchMutation.isPending
   };
 }
 
