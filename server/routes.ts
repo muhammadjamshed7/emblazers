@@ -170,7 +170,7 @@ export async function registerRoutes(
           const token = jwt.sign(
             { userId: dbUser._id.toString(), email: dbUser.email, role: dbUser.role, module: moduleType },
             jwtSecret,
-            { expiresIn: "30d" } // 30 days - practically permanent, no automatic logout
+            { expiresIn: "3d" } // 3 days session validity
           );
           return res.json({
             success: true,
@@ -189,7 +189,7 @@ export async function registerRoutes(
         const token = jwt.sign(
           { userId: `${moduleType}-admin`, email: defaultCreds.email, role: defaultCreds.role, module: moduleType },
           jwtSecret,
-          { expiresIn: "30d" } // 30 days - practically permanent, no automatic logout
+          { expiresIn: "3d" } // 3 days session validity
         );
         return res.json({
           success: true,
