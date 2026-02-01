@@ -7,7 +7,6 @@ import {
   Bus,
   Users,
   UserCheck,
-  FileText,
 } from "lucide-react";
 
 export const transportNavItems = [
@@ -16,7 +15,6 @@ export const transportNavItems = [
   { label: "Vehicles", path: "/transport/vehicles", icon: Bus },
   { label: "Drivers", path: "/transport/drivers", icon: Users },
   { label: "Student Allocation", path: "/transport/allocation", icon: UserCheck },
-  { label: "Reports", path: "/transport/reports", icon: FileText },
 ];
 
 export function useTransportData() {

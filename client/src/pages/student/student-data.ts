@@ -6,7 +6,6 @@ import {
   Users,
   UserPlus,
   GraduationCap,
-  FileText,
 } from "lucide-react";
 
 export const studentNavItems = [
@@ -14,7 +13,6 @@ export const studentNavItems = [
   { label: "Student List", path: "/student/list", icon: Users },
   { label: "Add Student", path: "/student/add", icon: UserPlus },
   { label: "Alumni", path: "/student/alumni", icon: GraduationCap },
-  { label: "Reports", path: "/student/reports", icon: FileText },
 ];
 
 export function useStudentData() {

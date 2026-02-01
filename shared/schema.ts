@@ -15,6 +15,7 @@ export const moduleCredentials = {
   library: { email: "library@emblazers.com", password: "12345678" },
   transport: { email: "transport@emblazers.com", password: "12345678" },
   hostel: { email: "hostel@emblazers.com", password: "12345678" },
+  reports: { email: "reports@emblazers.com", password: "12345678" },
 } as const;
 
 export type ModuleType = keyof typeof moduleCredentials;
@@ -779,6 +780,7 @@ export const moduleUserCredentials: Record<ModuleType, { email: string; password
   library: { email: "library@emblazers.com", password: "12345678", role: "admin", name: "Library Admin" },
   transport: { email: "transport@emblazers.com", password: "12345678", role: "admin", name: "Transport Admin" },
   hostel: { email: "hostel@emblazers.com", password: "12345678", role: "admin", name: "Hostel Admin" },
+  reports: { email: "reports@emblazers.com", password: "12345678", role: "admin", name: "Reports Admin" },
 };
 
 // Demo users with different roles for testing permissions

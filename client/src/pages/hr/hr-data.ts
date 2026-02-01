@@ -7,7 +7,6 @@ import {
   UserPlus,
   Briefcase,
   UserCheck,
-  FileText,
 } from "lucide-react";
 
 export const hrNavItems = [
@@ -16,7 +15,6 @@ export const hrNavItems = [
   { label: "Add Staff", path: "/hr/add", icon: UserPlus },
   { label: "Vacancies", path: "/hr/vacancies", icon: Briefcase },
   { label: "Applicants", path: "/hr/applicants", icon: UserCheck },
-  { label: "HR Reports", path: "/hr/reports", icon: FileText },
 ];
 
 export function useHRData() {

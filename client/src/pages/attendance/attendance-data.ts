@@ -5,14 +5,12 @@ import {
   LayoutDashboard,
   CheckSquare,
   List,
-  FileText,
 } from "lucide-react";
 
 export const attendanceNavItems = [
   { label: "Dashboard", path: "/attendance/dashboard", icon: LayoutDashboard },
   { label: "Mark Attendance", path: "/attendance/mark", icon: CheckSquare },
   { label: "Records", path: "/attendance/records", icon: List },
-  { label: "Reports", path: "/attendance/reports", icon: FileText },
 ];
 
 export function useAttendanceData() {

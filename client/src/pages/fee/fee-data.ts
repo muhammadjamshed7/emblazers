@@ -5,7 +5,6 @@ import {
   LayoutDashboard,
   Receipt,
   FilePlus,
-  FileText,
   Settings,
   CreditCard,
   Percent,
@@ -20,7 +19,6 @@ export const feeNavItems = [
   { label: "Payments", path: "/fee/payments", icon: CreditCard },
   { label: "Generate Voucher", path: "/fee/generate", icon: FilePlus },
   { label: "Vouchers", path: "/fee/vouchers", icon: Calendar },
-  { label: "Reports", path: "/fee/reports", icon: FileText },
 ];
 
 export function useFeeData() {

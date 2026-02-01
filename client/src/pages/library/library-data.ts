@@ -6,7 +6,6 @@ import {
   BookOpen,
   Users,
   BookMarked,
-  FileText,
 } from "lucide-react";
 
 export const libraryNavItems = [
@@ -14,7 +13,6 @@ export const libraryNavItems = [
   { label: "Books", path: "/library/books", icon: BookOpen },
   { label: "Members", path: "/library/members", icon: Users },
   { label: "Issue / Return", path: "/library/issue", icon: BookMarked },
-  { label: "Reports", path: "/library/reports", icon: FileText },
 ];
 
 export function useLibraryData() {

@@ -6,7 +6,6 @@ import {
   Bed,
   Users,
   CreditCard,
-  FileText,
 } from "lucide-react";
 
 export const hostelNavItems = [
@@ -14,7 +13,6 @@ export const hostelNavItems = [
   { label: "Rooms", path: "/hostel/rooms", icon: Bed },
   { label: "Residents", path: "/hostel/residents", icon: Users },
   { label: "Hostel Fee", path: "/hostel/fees", icon: CreditCard },
-  { label: "Reports", path: "/hostel/reports", icon: FileText },
 ];
 
 export function useHostelData() {

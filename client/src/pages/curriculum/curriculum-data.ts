@@ -6,7 +6,6 @@ import {
   BookOpen,
   GraduationCap,
   FileEdit,
-  FileText,
 } from "lucide-react";
 
 export const curriculumNavItems = [
@@ -14,7 +13,6 @@ export const curriculumNavItems = [
   { label: "Curriculum", path: "/curriculum/syllabus", icon: BookOpen },
   { label: "Exams", path: "/curriculum/exams", icon: GraduationCap },
   { label: "Result Entry", path: "/curriculum/entry", icon: FileEdit },
-  { label: "Result Reports", path: "/curriculum/reports", icon: FileText },
 ];
 
 export function useCurriculumData() {

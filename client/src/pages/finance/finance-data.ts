@@ -19,7 +19,6 @@ import {
   LayoutDashboard,
   BookOpen,
   Receipt,
-  FileText,
   Users,
   CreditCard,
   TrendingDown,
@@ -33,7 +32,6 @@ export const financeNavItems = [
   { label: "Expenses", path: "/finance/expenses", icon: TrendingDown },
   { label: "Vendors", path: "/finance/vendors", icon: Users },
   { label: "Vouchers", path: "/finance/vouchers", icon: Receipt },
-  { label: "Reports", path: "/finance/reports", icon: FileText },
 ];
 
 export function useFinanceData() {

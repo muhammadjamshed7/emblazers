@@ -6,7 +6,6 @@ import {
   List,
   Plus,
   Package,
-  FileText,
 } from "lucide-react";
 
 export const posNavItems = [
@@ -14,7 +13,6 @@ export const posNavItems = [
   { label: "Sales", path: "/pos/sales", icon: List },
   { label: "New Sale", path: "/pos/new", icon: Plus },
   { label: "Items", path: "/pos/items", icon: Package },
-  { label: "Reports", path: "/pos/reports", icon: FileText },
 ];
 
 export function usePosData() {

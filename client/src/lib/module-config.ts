@@ -12,6 +12,7 @@ import {
   Library,
   Bus,
   Home,
+  BarChart3,
   type LucideIcon,
 } from "lucide-react";
 
@@ -184,6 +185,18 @@ export const moduleConfigs: Record<string, ModuleConfig> = {
     loginPath: "/hostel/login",
     dashboardPath: "/hostel/dashboard",
     description: "Manage hostel rooms, residents, and fees",
+  },
+  reports: {
+    id: "reports",
+    name: "Reports & Analytics",
+    shortName: "Reports",
+    icon: BarChart3,
+    color: "text-slate-600 dark:text-slate-400",
+    bgColor: "bg-slate-500",
+    borderColor: "border-slate-500",
+    loginPath: "/reports/login",
+    dashboardPath: "/reports/dashboard",
+    description: "Centralized reporting and cross-module analytics",
   },
 };
 

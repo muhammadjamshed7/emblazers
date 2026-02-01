@@ -5,14 +5,12 @@ import {
   LayoutDashboard,
   Users,
   FilePlus,
-  FileText,
 } from "lucide-react";
 
 export const payrollNavItems = [
   { label: "Dashboard", path: "/payroll/dashboard", icon: LayoutDashboard },
   { label: "Payroll List", path: "/payroll/list", icon: Users },
   { label: "Generate Payroll", path: "/payroll/generate", icon: FilePlus },
-  { label: "Reports", path: "/payroll/reports", icon: FileText },
 ];
 
 export function usePayrollData() {
