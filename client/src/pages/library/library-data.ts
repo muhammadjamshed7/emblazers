@@ -17,16 +17,23 @@ export const libraryNavItems = [
 ];
 
 export function useLibraryData() {
+  // Use staleTime: 0 to always fetch fresh data for library operations
   const { data: books = [], isLoading: booksLoading, error: booksError } = useQuery<Book[]>({
-    queryKey: ['/api/books']
+    queryKey: ['/api/books'],
+    staleTime: 0,
+    refetchOnMount: true
   });
 
   const { data: categories = [], isLoading: categoriesLoading } = useQuery<BookCategory[]>({
-    queryKey: ['/api/book-categories']
+    queryKey: ['/api/book-categories'],
+    staleTime: 0,
+    refetchOnMount: true
   });
 
   const { data: issues = [], isLoading: issuesLoading, error: issuesError } = useQuery<BookIssue[]>({
-    queryKey: ['/api/book-issues']
+    queryKey: ['/api/book-issues'],
+    staleTime: 0,
+    refetchOnMount: true
   });
 
   const { data: statistics } = useQuery<{
@@ -38,7 +45,9 @@ export function useLibraryData() {
     pendingFines: number;
     categoryCounts: { category: string; count: number }[];
   }>({
-    queryKey: ['/api/library/statistics']
+    queryKey: ['/api/library/statistics'],
+    staleTime: 0,
+    refetchOnMount: true
   });
 
   const createBookMutation = useMutation({
@@ -140,24 +149,66 @@ export function useLibraryData() {
 // Search functions for students and staff
 export async function searchStudents(query: string): Promise<Student[]> {
   const token = getAuthToken();
-  const res = await fetch(`/api/library/search-students?query=${encodeURIComponent(query)}`, {
-    headers: {
-      "Authorization": `Bearer ${token}`
+
+  if (!token) {
+    console.error("[Library] No auth token found for student search");
+    return [];
+  }
+
+  try {
+    const res = await fetch(`/api/library/search-students?query=${encodeURIComponent(query)}`, {
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      credentials: "include"
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text().catch(() => "Unknown error");
+      console.error(`[Library] Student search failed: ${res.status} ${res.statusText}`, errorText);
+      return [];
     }
-  });
-  if (!res.ok) return [];
-  return res.json();
+
+    const data = await res.json();
+    console.log(`[Library] Student search returned ${data?.length || 0} results for query: "${query}"`);
+    return data || [];
+  } catch (error) {
+    console.error("[Library] Student search error:", error);
+    return [];
+  }
 }
 
 export async function searchStaff(query: string): Promise<Staff[]> {
   const token = getAuthToken();
-  const res = await fetch(`/api/library/search-staff?query=${encodeURIComponent(query)}`, {
-    headers: {
-      "Authorization": `Bearer ${token}`
+
+  if (!token) {
+    console.error("[Library] No auth token found for staff search");
+    return [];
+  }
+
+  try {
+    const res = await fetch(`/api/library/search-staff?query=${encodeURIComponent(query)}`, {
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      credentials: "include"
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text().catch(() => "Unknown error");
+      console.error(`[Library] Staff search failed: ${res.status} ${res.statusText}`, errorText);
+      return [];
     }
-  });
-  if (!res.ok) return [];
-  return res.json();
+
+    const data = await res.json();
+    console.log(`[Library] Staff search returned ${data?.length || 0} results for query: "${query}"`);
+    return data || [];
+  } catch (error) {
+    console.error("[Library] Staff search error:", error);
+    return [];
+  }
 }
 
 export const memberTypes = ["Student", "Staff"] as const;

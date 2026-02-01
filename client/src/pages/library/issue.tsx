@@ -17,7 +17,7 @@ import type { Student, Staff } from "@shared/schema";
 type MemberType = "Student" | "Staff";
 
 export default function IssueReturn() {
-  const { books, issues, issueBook, returnBook, isPending } = useLibraryData();
+  const { books, issues, issueBook, returnBook, isPending, isLoading } = useLibraryData();
   const { toast } = useToast();
 
   // Issue Dialog State

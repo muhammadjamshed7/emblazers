@@ -84,6 +84,7 @@ export default function StudentProfile() {
                   <InfoRow label="Full Name" value={student.name} />
                   <InfoRow label="Gender" value={student.gender} />
                   <InfoRow label="Date of Birth" value={student.dob} />
+                  <InfoRow label="B-Form" value={student.bform} />
                   <InfoRow label="Admission Date" value={student.admissionDate} />
                   <InfoRow label="Status" value={student.status} />
                 </TabsContent>

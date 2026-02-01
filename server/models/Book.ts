@@ -6,7 +6,9 @@ export interface IBook extends Document {
   author: string;
   category: string;
   isbn: string;
-  status: "Available" | "Issued";
+  totalCopies: number;
+  availableCopies: number;
+  status: "Available" | "Issued" | "Out of Stock";
 }
 
 const BookSchema = new Schema<IBook>(
@@ -16,7 +18,9 @@ const BookSchema = new Schema<IBook>(
     author: { type: String, required: true },
     category: { type: String, required: true },
     isbn: { type: String, default: "" },
-    status: { type: String, enum: ["Available", "Issued"], default: "Available" },
+    totalCopies: { type: Number, default: 1 },
+    availableCopies: { type: Number, default: 1 },
+    status: { type: String, enum: ["Available", "Issued", "Out of Stock"], default: "Available" },
   },
   { timestamps: true }
 );

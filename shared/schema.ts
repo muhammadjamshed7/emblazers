@@ -40,6 +40,7 @@ export const studentSchema = z.object({
   status: z.enum(["Active", "Inactive", "Alumni", "Left"]),
   photo: z.string().optional(),
   notes: z.string().optional(),
+  bform: z.string(),
 });
 
 export const insertStudentSchema = studentSchema

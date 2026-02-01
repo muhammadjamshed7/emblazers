@@ -359,16 +359,16 @@ export class MemStorage implements IStorage {
 
   private seedDummyData() {
     const studentData: Student[] = [
-      { id: "1", studentId: "STU001", name: "Ahmad Khan", gender: "Male", dob: "2010-05-15", parentName: "Mohammad Khan", parentContact: "+92 300 1234567", parentEmail: "mkhan@email.com", address: "123 Main Street, Lahore", class: "Class 5", section: "A", admissionDate: "2024-03-15", status: "Active" },
-      { id: "2", studentId: "STU002", name: "Fatima Ali", gender: "Female", dob: "2011-08-22", parentName: "Ali Hassan", parentContact: "+92 301 2345678", parentEmail: "ahassan@email.com", address: "456 Oak Avenue, Karachi", class: "Class 4", section: "B", admissionDate: "2024-01-10", status: "Active" },
-      { id: "3", studentId: "STU003", name: "Zain Ahmed", gender: "Male", dob: "2012-02-10", parentName: "Ahmed Raza", parentContact: "+92 302 3456789", parentEmail: "araza@email.com", address: "789 Pine Road, Islamabad", class: "Class 3", section: "A", admissionDate: "2023-09-01", status: "Active" },
-      { id: "4", studentId: "STU004", name: "Ayesha Malik", gender: "Female", dob: "2010-11-30", parentName: "Malik Tariq", parentContact: "+92 303 4567890", parentEmail: "mtariq@email.com", address: "321 Elm Street, Lahore", class: "Class 5", section: "B", admissionDate: "2022-04-20", status: "Active" },
-      { id: "5", studentId: "STU005", name: "Hassan Raza", gender: "Male", dob: "2013-07-08", parentName: "Raza Ali", parentContact: "+92 304 5678901", parentEmail: "rali@email.com", address: "654 Maple Lane, Faisalabad", class: "Class 2", section: "A", admissionDate: "2024-02-14", status: "Active" },
-      { id: "6", studentId: "STU006", name: "Sara Khan", gender: "Female", dob: "2009-04-25", parentName: "Khan Abdul", parentContact: "+92 305 6789012", parentEmail: "kabdul@email.com", address: "987 Cedar Blvd, Multan", class: "Class 6", section: "A", admissionDate: "2020-08-01", status: "Alumni" },
-      { id: "7", studentId: "STU007", name: "Usman Shah", gender: "Male", dob: "2011-12-03", parentName: "Shah Nawaz", parentContact: "+92 306 7890123", parentEmail: "snawaz@email.com", address: "147 Birch Ave, Peshawar", class: "Class 4", section: "A", admissionDate: "2023-06-15", status: "Active" },
-      { id: "8", studentId: "STU008", name: "Maryam Bibi", gender: "Female", dob: "2012-09-18", parentName: "Bibi Khadija", parentContact: "+92 307 8901234", parentEmail: "bkhadija@email.com", address: "258 Walnut St, Quetta", class: "Class 3", section: "B", admissionDate: "2024-01-05", status: "Active" },
-      { id: "9", studentId: "STU009", name: "Bilal Ahmed", gender: "Male", dob: "2014-01-12", parentName: "Ahmed Bilal Sr", parentContact: "+92 308 9012345", parentEmail: "abilal@email.com", address: "369 Spruce Rd, Rawalpindi", class: "Class 1", section: "A", admissionDate: "2024-03-01", status: "Active" },
-      { id: "10", studentId: "STU010", name: "Hina Parveen", gender: "Female", dob: "2010-06-20", parentName: "Parveen Akhtar", parentContact: "+92 309 0123456", parentEmail: "pakhtar@email.com", address: "741 Ash Street, Sialkot", class: "Class 5", section: "A", admissionDate: "2021-07-10", status: "Left" },
+      { id: "1", studentId: "STU001", name: "Ahmad Khan", gender: "Male", dob: "2010-05-15", parentName: "Mohammad Khan", parentContact: "+92 300 1234567", parentEmail: "mkhan@email.com", address: "123 Main Street, Lahore", class: "Class 5", section: "A", admissionDate: "2024-03-15", status: "Active", bform: "35202-1234567-1" },
+      { id: "2", studentId: "STU002", name: "Fatima Ali", gender: "Female", dob: "2011-08-22", parentName: "Ali Hassan", parentContact: "+92 301 2345678", parentEmail: "ahassan@email.com", address: "456 Oak Avenue, Karachi", class: "Class 4", section: "B", admissionDate: "2024-01-10", status: "Active", bform: "35202-1234567-2" },
+      { id: "3", studentId: "STU003", name: "Zain Ahmed", gender: "Male", dob: "2012-02-10", parentName: "Ahmed Raza", parentContact: "+92 302 3456789", parentEmail: "araza@email.com", address: "789 Pine Road, Islamabad", class: "Class 3", section: "A", admissionDate: "2023-09-01", status: "Active", bform: "35202-1234567-3" },
+      { id: "4", studentId: "STU004", name: "Ayesha Malik", gender: "Female", dob: "2010-11-30", parentName: "Malik Tariq", parentContact: "+92 303 4567890", parentEmail: "mtariq@email.com", address: "321 Elm Street, Lahore", class: "Class 5", section: "B", admissionDate: "2022-04-20", status: "Active", bform: "35202-1234567-4" },
+      { id: "5", studentId: "STU005", name: "Hassan Raza", gender: "Male", dob: "2013-07-08", parentName: "Raza Ali", parentContact: "+92 304 5678901", parentEmail: "rali@email.com", address: "654 Maple Lane, Faisalabad", class: "Class 2", section: "A", admissionDate: "2024-02-14", status: "Active", bform: "35202-1234567-5" },
+      { id: "6", studentId: "STU006", name: "Sara Khan", gender: "Female", dob: "2009-04-25", parentName: "Khan Abdul", parentContact: "+92 305 6789012", parentEmail: "kabdul@email.com", address: "987 Cedar Blvd, Multan", class: "Class 6", section: "A", admissionDate: "2020-08-01", status: "Alumni", bform: "35202-1234567-6" },
+      { id: "7", studentId: "STU007", name: "Usman Shah", gender: "Male", dob: "2011-12-03", parentName: "Shah Nawaz", parentContact: "+92 306 7890123", parentEmail: "snawaz@email.com", address: "147 Birch Ave, Peshawar", class: "Class 4", section: "A", admissionDate: "2023-06-15", status: "Active", bform: "35202-1234567-7" },
+      { id: "8", studentId: "STU008", name: "Maryam Bibi", gender: "Female", dob: "2012-09-18", parentName: "Bibi Khadija", parentContact: "+92 307 8901234", parentEmail: "bkhadija@email.com", address: "258 Walnut St, Quetta", class: "Class 3", section: "B", admissionDate: "2024-01-05", status: "Active", bform: "35202-1234567-8" },
+      { id: "9", studentId: "STU009", name: "Bilal Ahmed", gender: "Male", dob: "2014-01-12", parentName: "Ahmed Bilal Sr", parentContact: "+92 308 9012345", parentEmail: "abilal@email.com", address: "369 Spruce Rd, Rawalpindi", class: "Class 1", section: "A", admissionDate: "2024-03-01", status: "Active", bform: "35202-1234567-9" },
+      { id: "10", studentId: "STU010", name: "Hina Parveen", gender: "Female", dob: "2010-06-20", parentName: "Parveen Akhtar", parentContact: "+92 309 0123456", parentEmail: "pakhtar@email.com", address: "741 Ash Street, Sialkot", class: "Class 5", section: "A", admissionDate: "2021-07-10", status: "Left", bform: "35202-1234567-10" },
     ];
     studentData.forEach(s => this.students.set(s.id, s));
 
@@ -649,6 +649,10 @@ export class MemStorage implements IStorage {
   }
 
   async createStudent(student: InsertStudent): Promise<Student> {
+    const existing = Array.from(this.students.values()).find(s => s.bform === student.bform);
+    if (existing) {
+      throw new Error("Student with this B-Form already exists");
+    }
     const id = randomUUID();
     const newStudent: Student = { ...student, id };
     this.students.set(id, newStudent);
@@ -658,6 +662,14 @@ export class MemStorage implements IStorage {
   async updateStudent(id: string, updates: Partial<Student>): Promise<Student | undefined> {
     const existing = this.students.get(id);
     if (!existing) return undefined;
+
+    if (updates.bform) {
+      const duplicate = Array.from(this.students.values()).find(s => s.bform === updates.bform && s.id !== id);
+      if (duplicate) {
+        throw new Error("Student with this B-Form already exists");
+      }
+    }
+
     const updated = { ...existing, ...updates, id };
     this.students.set(id, updated);
 
@@ -1482,6 +1494,63 @@ export class MemStorage implements IStorage {
     };
     this.activityLogs.set(id, newLog);
     return newLog;
+  }
+
+  // POS Methods
+  async getPosItems(): Promise<PosItem[]> {
+    return Array.from(this.posItems.values());
+  }
+
+  async getPosItem(id: string): Promise<PosItem | undefined> {
+    return this.posItems.get(id);
+  }
+
+  async createPosItem(item: InsertPosItem): Promise<PosItem> {
+    const id = randomUUID();
+    const seq = this.posItems.size + 1;
+    const itemCode = `ITEM${String(seq).padStart(3, '0')}`;
+    const newItem: PosItem = { ...item, itemCode, id };
+    this.posItems.set(id, newItem);
+    return newItem;
+  }
+
+  async updatePosItem(id: string, updates: Partial<PosItem>): Promise<PosItem | undefined> {
+    const item = this.posItems.get(id);
+    if (!item) return undefined;
+    const updated = { ...item, ...updates };
+    this.posItems.set(id, updated);
+    return updated;
+  }
+
+  async deletePosItem(id: string): Promise<boolean> {
+    return this.posItems.delete(id);
+  }
+
+  async getSales(): Promise<Sale[]> {
+    return Array.from(this.sales.values());
+  }
+
+  async getSale(id: string): Promise<Sale | undefined> {
+    return this.sales.get(id);
+  }
+
+  async createSale(sale: InsertSale): Promise<Sale> {
+    const id = randomUUID();
+    const newSale: Sale = { ...sale, id };
+    this.sales.set(id, newSale);
+    return newSale;
+  }
+
+  async updateSale(id: string, updates: Partial<Sale>): Promise<Sale | undefined> {
+    const sale = this.sales.get(id);
+    if (!sale) return undefined;
+    const updated = { ...sale, ...updates };
+    this.sales.set(id, updated);
+    return updated;
+  }
+
+  async deleteSale(id: string): Promise<boolean> {
+    return this.sales.delete(id);
   }
 }
 

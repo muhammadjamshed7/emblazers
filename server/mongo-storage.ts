@@ -1,5 +1,6 @@
 import {
   type Student, type InsertStudent,
+  type BookCategory, type InsertBookCategory,
   type Staff, type InsertStaff,
   type Vacancy, type InsertVacancy,
   type Applicant, type InsertApplicant,
@@ -60,6 +61,8 @@ import {
   ExamResult as ExamResultModel,
   POSItem as POSItemModel,
   Sale as SaleModel,
+  Counter as CounterModel,
+
   Book as BookModel,
   LibraryMember as LibraryMemberModel,
   BookIssue as BookIssueModel,
@@ -72,6 +75,7 @@ import {
   HostelFee as HostelFeeModel,
   ActivityLog as ActivityLogModel,
   Notification as NotificationModel,
+  BookCategory as BookCategoryModel,
 } from "./models";
 import { FeeStructure as FeeStructureModel } from "./models/FeeStructure";
 import { DiscountRule as DiscountRuleModel } from "./models/DiscountRule";
@@ -759,7 +763,13 @@ export class MongoStorage implements IStorage {
 
   async getBooks(): Promise<Book[]> {
     const docs = await BookModel.find().sort({ title: 1 });
-    return toDTOArray<Book>(docs);
+    const books = toDTOArray<Book>(docs);
+    // Ensure defaults for existing records
+    return books.map(b => ({
+      ...b,
+      totalCopies: b.totalCopies ?? 1,
+      availableCopies: b.availableCopies ?? 1
+    }));
   }
 
   async getBook(id: string): Promise<Book | undefined> {
@@ -779,6 +789,32 @@ export class MongoStorage implements IStorage {
 
   async deleteBook(id: string): Promise<boolean> {
     const result = await BookModel.findByIdAndDelete(id);
+    return !!result;
+  }
+
+  // Book Category Methods
+  async getBookCategories(): Promise<BookCategory[]> {
+    const docs = await BookCategoryModel.find().sort({ name: 1 });
+    return toDTOArray<BookCategory>(docs);
+  }
+
+  async getBookCategory(id: string): Promise<BookCategory | undefined> {
+    const doc = await BookCategoryModel.findById(id);
+    return doc ? toDTO<BookCategory>(doc) : undefined;
+  }
+
+  async createBookCategory(category: InsertBookCategory): Promise<BookCategory> {
+    const doc = await BookCategoryModel.create(category);
+    return toDTO<BookCategory>(doc);
+  }
+
+  async updateBookCategory(id: string, updates: Partial<BookCategory>): Promise<BookCategory | undefined> {
+    const doc = await BookCategoryModel.findByIdAndUpdate(id, updates, { new: true });
+    return doc ? toDTO<BookCategory>(doc) : undefined;
+  }
+
+  async deleteBookCategory(id: string): Promise<boolean> {
+    const result = await BookCategoryModel.findByIdAndDelete(id);
     return !!result;
   }
 
@@ -1391,6 +1427,76 @@ export class MongoStorage implements IStorage {
 
   async deleteJournalEntry(id: string): Promise<boolean> {
     const result = await JournalEntryModel.findByIdAndDelete(id);
+    return !!result;
+  }
+
+  // POS Methods
+  async getPosItems(): Promise<PosItem[]> {
+    const docs = await POSItemModel.find().sort({ name: 1 });
+    return toDTOArray<PosItem>(docs);
+  }
+
+  async getPosItem(id: string): Promise<PosItem | undefined> {
+    const doc = await POSItemModel.findById(id);
+    return doc ? toDTO<PosItem>(doc) : undefined;
+  }
+
+  async createPosItem(item: InsertPosItem): Promise<PosItem> {
+    let counter = await CounterModel.findByIdAndUpdate(
+      "pos_items",
+      { $inc: { seq: 1 } },
+      { new: true, upsert: true }
+    );
+    let seq = counter.seq;
+    let itemCode = `ITEM${String(seq).padStart(3, '0')}`;
+
+    // Ensure uniqueness against legacy data
+    while (await POSItemModel.exists({ itemCode })) {
+      counter = await CounterModel.findByIdAndUpdate(
+        "pos_items",
+        { $inc: { seq: 1 } },
+        { new: true }
+      );
+      seq = counter.seq;
+      itemCode = `ITEM${String(seq).padStart(3, '0')}`;
+    }
+
+    const doc = await POSItemModel.create({ ...item, itemCode });
+    return toDTO<PosItem>(doc);
+  }
+
+  async updatePosItem(id: string, updates: Partial<PosItem>): Promise<PosItem | undefined> {
+    const doc = await POSItemModel.findByIdAndUpdate(id, updates, { new: true });
+    return doc ? toDTO<PosItem>(doc) : undefined;
+  }
+
+  async deletePosItem(id: string): Promise<boolean> {
+    const result = await POSItemModel.findByIdAndDelete(id);
+    return !!result;
+  }
+
+  async getSales(): Promise<Sale[]> {
+    const docs = await SaleModel.find().sort({ createdAt: -1 });
+    return toDTOArray<Sale>(docs);
+  }
+
+  async getSale(id: string): Promise<Sale | undefined> {
+    const doc = await SaleModel.findById(id);
+    return doc ? toDTO<Sale>(doc) : undefined;
+  }
+
+  async createSale(sale: InsertSale): Promise<Sale> {
+    const doc = await SaleModel.create(sale);
+    return toDTO<Sale>(doc);
+  }
+
+  async updateSale(id: string, updates: Partial<Sale>): Promise<Sale | undefined> {
+    const doc = await SaleModel.findByIdAndUpdate(id, updates, { new: true });
+    return doc ? toDTO<Sale>(doc) : undefined;
+  }
+
+  async deleteSale(id: string): Promise<boolean> {
+    const result = await SaleModel.findByIdAndDelete(id);
     return !!result;
   }
 }

@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit } from "lucide-react";
 
 const categories = ["General", "Fiction", "Non-Fiction", "Reference", "Textbook", "Science", "History", "Biography", "Children"];
-const bookStatuses = ["Available", "Issued"] as const;
+const bookStatuses = ["Available", "Issued", "Out of Stock"] as const;
 
 export default function Books() {
   const { books, addBook, updateBook, isPending } = useLibraryData();
@@ -27,6 +27,7 @@ export default function Books() {
   const [category, setCategory] = useState<string>(categories[0]);
   const [isbn, setIsbn] = useState("");
   const [status, setStatus] = useState<typeof bookStatuses[number]>("Available");
+  const [totalCopies, setTotalCopies] = useState(1);
 
   const resetForm = () => {
     setAccessionNo("");
@@ -35,6 +36,7 @@ export default function Books() {
     setCategory(categories[0]);
     setIsbn("");
     setStatus("Available");
+    setTotalCopies(1);
     setEditingBook(null);
   };
 
@@ -56,8 +58,8 @@ export default function Books() {
           category,
           isbn,
           status,
-          totalCopies: 1,
-          availableCopies: status === "Available" ? 1 : 0
+          totalCopies: totalCopies,
+          availableCopies: status === "Available" ? totalCopies : 0
         });
         toast({ title: "Success", description: "Book added successfully" });
       }
@@ -77,6 +79,7 @@ export default function Books() {
     setCategory(book.category);
     setIsbn(book.isbn || "");
     setStatus(book.status);
+    // Note: totalCopies not editable here to avoid consistency issues
     setIsOpen(true);
   };
 
@@ -93,6 +96,7 @@ export default function Books() {
     { key: "author" as const, label: "Author" },
     { key: "category" as const, label: "Category" },
     { key: "isbn" as const, label: "ISBN" },
+    { key: "totalCopies" as const, label: "Copies", render: (item: typeof books[0]) => `${item.availableCopies}/${item.totalCopies || 1}` },
     { key: "status" as const, label: "Status", render: (item: typeof books[0]) => <StatusBadge status={item.status} /> },
   ];
 
@@ -173,19 +177,33 @@ export default function Books() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-2">
-                      <Label>Status</Label>
-                      <Select value={status} onValueChange={(v) => setStatus(v as typeof status)}>
-                        <SelectTrigger data-testid="select-status">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {bookStatuses.map((s) => (
-                            <SelectItem key={s} value={s}>{s}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    {!editingBook && (
+                      <div className="space-y-2">
+                        <Label>Total Copies</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          value={totalCopies}
+                          onChange={(e) => setTotalCopies(parseInt(e.target.value) || 1)}
+                          data-testid="input-total-copies"
+                        />
+                      </div>
+                    )}
+                    {editingBook && (
+                      <div className="space-y-2">
+                        <Label>Status</Label>
+                        <Select value={status} onValueChange={(v) => setStatus(v as typeof status)}>
+                          <SelectTrigger data-testid="select-status">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {bookStatuses.map((s) => (
+                              <SelectItem key={s} value={s}>{s}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                   </div>
                   <div className="flex justify-end gap-2 pt-4">
                     <Button variant="outline" onClick={() => { setIsOpen(false); resetForm(); }}>Cancel</Button>

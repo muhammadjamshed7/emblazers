@@ -288,7 +288,8 @@ export async function registerRoutes(
       const results = students.filter(student => {
         const studentIdMatch = student.studentId?.toLowerCase().includes(searchLower);
         const nameMatch = student.name?.toLowerCase().includes(searchLower);
-        return studentIdMatch || nameMatch;
+        const bformMatch = student.bform?.toLowerCase().includes(searchLower);
+        return studentIdMatch || nameMatch || bformMatch;
       });
       return res.json(results);
     }
@@ -315,19 +316,30 @@ export async function registerRoutes(
       if (!parsed.success) return res.status(400).json({ error: parsed.error });
       const student = await storage.createStudent(parsed.data);
       res.status(201).json(student);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message === "Student with this B-Form already exists") {
+        return res.status(409).json({ error: error.message });
+      }
       console.error("Failed to create student:", error);
       res.status(500).json({ error: "Failed to create student" });
     }
   });
 
   app.patch("/api/students/:id", async (req, res) => {
-    const { id, ...updates } = req.body;
-    const parsed = studentSchema.partial().omit({ id: true, studentId: true }).safeParse(updates);
-    if (!parsed.success) return res.status(400).json({ error: parsed.error });
-    const student = await storage.updateStudent(req.params.id, parsed.data);
-    if (!student) return res.status(404).json({ error: "Not found" });
-    res.json(student);
+    try {
+      const { id, ...updates } = req.body;
+      const parsed = studentSchema.partial().omit({ id: true, studentId: true }).safeParse(updates);
+      if (!parsed.success) return res.status(400).json({ error: parsed.error });
+      const student = await storage.updateStudent(req.params.id, parsed.data);
+      if (!student) return res.status(404).json({ error: "Not found" });
+      res.json(student);
+    } catch (error: any) {
+      if (error.message === "Student with this B-Form already exists") {
+        return res.status(409).json({ error: error.message });
+      }
+      console.error("Failed to update student:", error);
+      res.status(500).json({ error: "Failed to update student" });
+    }
   });
 
   app.delete("/api/students/:id", async (req, res) => {
@@ -1055,25 +1067,28 @@ export async function registerRoutes(
     if (!issue) return res.status(404).json({ error: "Not found" });
 
     // If returning a book
-    if (updates.returnDate && !issue.returnDate) {
+    const finalUpdates = { ...parsed.data };
+
+    if (parsed.data.returnDate && !issue.returnDate) {
       // Calculate fine if overdue
       const dueDate = new Date(issue.dueDate);
-      const returnDate = new Date(updates.returnDate);
+      const returnDate = new Date(parsed.data.returnDate);
+
+      // Reset fine to 0 initially
+      finalUpdates.fine = 0;
 
       if (returnDate > dueDate) {
         const daysOverdue = Math.ceil((returnDate.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
         const finePerDay = 5; // $5 per day
-        updates.fine = daysOverdue * finePerDay;
-      } else {
-        updates.fine = 0;
+        finalUpdates.fine = daysOverdue * finePerDay;
       }
 
-      updates.status = "Returned";
+      finalUpdates.status = "Returned";
 
       // Update book availability
       const book = await storage.getBook(issue.bookId);
       if (book) {
-        const newAvailable = book.availableCopies + 1;
+        const newAvailable = (book.availableCopies || 0) + 1;
         await storage.updateBook(book.id, {
           availableCopies: newAvailable,
           status: newAvailable > 0 ? "Available" : book.status
@@ -1081,7 +1096,7 @@ export async function registerRoutes(
       }
     }
 
-    const updatedIssue = await storage.updateBookIssue(req.params.id, parsed.data);
+    const updatedIssue = await storage.updateBookIssue(req.params.id, finalUpdates);
     if (!updatedIssue) return res.status(404).json({ error: "Not found" });
     res.json(updatedIssue);
   });
@@ -2041,6 +2056,60 @@ export async function registerRoutes(
     const success = await storage.deleteJournalEntry(req.params.id);
     if (!success) return res.status(404).json({ error: "Journal entry not found" });
     res.json({ success: true });
+  });
+
+  // ============== POS MODULE ==============
+  app.get("/api/pos-items", async (_req, res) => {
+    const items = await storage.getPosItems();
+    res.json(items);
+  });
+
+  app.get("/api/pos-items/:id", async (req, res) => {
+    const item = await storage.getPosItem(req.params.id);
+    if (!item) return res.status(404).json({ error: "Item not found" });
+    res.json(item);
+  });
+
+  app.post("/api/pos-items", async (req, res) => {
+    const parsed = insertPosItemSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error });
+    const item = await storage.createPosItem(parsed.data);
+    res.status(201).json(item);
+  });
+
+  app.patch("/api/pos-items/:id", async (req, res) => {
+    const item = await storage.updatePosItem(req.params.id, req.body);
+    if (!item) return res.status(404).json({ error: "Item not found" });
+    res.json(item);
+  });
+
+  app.delete("/api/pos-items/:id", async (req, res) => {
+    const success = await storage.deletePosItem(req.params.id);
+    if (!success) return res.status(404).json({ error: "Item not found" });
+    res.json({ success: true });
+  });
+
+  app.get("/api/sales", async (_req, res) => {
+    const sales = await storage.getSales();
+    res.json(sales);
+  });
+
+  app.post("/api/sales", async (req, res) => {
+    const parsed = insertSaleSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error });
+
+    // Deduct stock
+    for (const item of parsed.data.items) {
+      const product = await storage.getPosItem(item.itemId);
+      if (product) {
+        await storage.updatePosItem(product.id, {
+          stock: Math.max(0, product.stock - item.quantity)
+        });
+      }
+    }
+
+    const sale = await storage.createSale(parsed.data);
+    res.status(201).json(sale);
   });
 
   // WebSocket server setup for real-time notifications

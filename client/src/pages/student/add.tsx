@@ -50,6 +50,7 @@ export default function AddStudent() {
       admissionDate: new Date().toISOString().split("T")[0],
       status: "Active",
       notes: "",
+      bform: "",
     },
   });
 
@@ -129,6 +130,19 @@ export default function AddStudent() {
                     <FormLabel>Date of Birth *</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} data-testid="input-dob" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="bform"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>B-Form *</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="xxxxx-xxxxxxx-x" data-testid="input-bform" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

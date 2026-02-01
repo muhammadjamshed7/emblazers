@@ -53,6 +53,7 @@ export default function EditStudent() {
       admissionDate: "",
       status: "Active",
       notes: "",
+      bform: "",
     },
   });
 
@@ -145,6 +146,19 @@ export default function EditStudent() {
                     <FormLabel>Date of Birth *</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} data-testid="input-dob" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="bform"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>B-Form *</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="xxxxx-xxxxxxx-x" data-testid="input-bform" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

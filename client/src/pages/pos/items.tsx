@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { ModuleLayout } from "@/components/layout/module-layout";
 import { PageHeader } from "@/components/shared/page-header";
 import { DataTable } from "@/components/shared/data-table";
@@ -10,22 +10,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { posNavItems, usePosData, categories } from "./pos-data";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit } from "lucide-react";
+import { Plus, Edit, Upload, Eye } from "lucide-react";
+import * as XLSX from 'xlsx';
 
 export default function Items() {
   const { items, addItem, updateItem, isPending } = usePosData();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
+  const [viewOpen, setViewOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<typeof items[0] | null>(null);
-  
-  const [itemCode, setItemCode] = useState("");
+  const [viewingItem, setViewingItem] = useState<typeof items[0] | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [name, setName] = useState("");
   const [category, setCategory] = useState<typeof categories[number]>("Stationery");
   const [price, setPrice] = useState(0);
   const [stock, setStock] = useState(0);
 
   const resetForm = () => {
-    setItemCode("");
     setName("");
     setCategory("Stationery");
     setPrice(0);
@@ -34,17 +36,19 @@ export default function Items() {
   };
 
   const handleSubmit = async () => {
-    if (!itemCode || !name || !price) {
+    if (!name || !price) {
       toast({ title: "Error", description: "Please fill all required fields", variant: "destructive" });
       return;
     }
 
     try {
       if (editingItem) {
-        await updateItem(editingItem.id, { itemCode, name, category, price, stock });
+        // Keep existing code
+        await updateItem(editingItem.id, { itemCode: editingItem.itemCode, name, category, price, stock });
         toast({ title: "Success", description: "Item updated successfully" });
       } else {
-        await addItem({ itemCode, name, category, price, stock });
+        // Backend handles auto-generation
+        await addItem({ itemCode: "AUTO", name, category, price, stock });
         toast({ title: "Success", description: "Item added successfully" });
       }
       setIsOpen(false);
@@ -57,7 +61,6 @@ export default function Items() {
 
   const handleEdit = (item: typeof items[0]) => {
     setEditingItem(item);
-    setItemCode(item.itemCode);
     setName(item.name);
     setCategory(item.category);
     setPrice(item.price);
@@ -65,14 +68,57 @@ export default function Items() {
     setIsOpen(true);
   };
 
+  const handleView = (item: typeof items[0]) => {
+    setViewingItem(item);
+    setViewOpen(true);
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws) as any[];
+
+        let importedCount = 0;
+        for (const row of data) {
+          // Basic validation
+          if (row.name && row.price) {
+            await addItem({
+              itemCode: "AUTO", // Backend generates
+              name: row.name,
+              category: row.category || "Other",
+              price: Number(row.price),
+              stock: Number(row.stock || 0)
+            });
+            importedCount++;
+          }
+        }
+
+        toast({ title: "Success", description: `Imported ${importedCount} items successfully` });
+      } catch (error) {
+        console.error("Import error:", error);
+        toast({ title: "Error", description: "Failed to import items", variant: "destructive" });
+      }
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    };
+    reader.readAsBinaryString(file);
+  };
+
   const columns = [
     { key: "itemCode" as const, label: "Code" },
     { key: "name" as const, label: "Item Name", sortable: true },
     { key: "category" as const, label: "Category", render: (item: typeof items[0]) => <Badge variant="outline">{item.category}</Badge> },
     { key: "price" as const, label: "Price", render: (item: typeof items[0]) => `Rs. ${item.price.toLocaleString()}` },
-    { 
-      key: "stock" as const, 
-      label: "Stock", 
+    {
+      key: "stock" as const,
+      label: "Stock",
       render: (item: typeof items[0]) => (
         <span className={item.stock < 10 ? "text-red-500 font-medium" : ""}>
           {item.stock}
@@ -82,9 +128,14 @@ export default function Items() {
   ];
 
   const actions = (item: typeof items[0]) => (
-    <Button variant="ghost" size="icon" onClick={() => handleEdit(item)} data-testid={`button-edit-${item.id}`}>
-      <Edit className="w-4 h-4" />
-    </Button>
+    <div className="flex gap-2">
+      <Button variant="ghost" size="icon" onClick={() => handleView(item)} title="View Details">
+        <Eye className="w-4 h-4" />
+      </Button>
+      <Button variant="ghost" size="icon" onClick={() => handleEdit(item)} data-testid={`button-edit-${item.id}`} title="Edit">
+        <Edit className="w-4 h-4" />
+      </Button>
+    </div>
   );
 
   return (
@@ -94,82 +145,117 @@ export default function Items() {
           title="Items"
           description="Manage inventory items"
           actions={
-            <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
-              <DialogTrigger asChild>
-                <Button data-testid="button-add-item">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Item
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{editingItem ? "Edit Item" : "Add New Item"}</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 pt-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Item Code *</Label>
-                      <Input 
-                        value={itemCode} 
-                        onChange={(e) => setItemCode(e.target.value)} 
-                        placeholder="e.g., ITM001" 
-                        data-testid="input-item-code"
-                      />
+            <div className="flex gap-2">
+              <div className="hidden">
+                <Input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".xlsx,.xls" />
+              </div>
+              <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                <Upload className="w-4 h-4 mr-2" />
+                Import Excel
+              </Button>
+              <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
+                <DialogTrigger asChild>
+                  <Button data-testid="button-add-item">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Item
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{editingItem ? "Edit Item" : "Add New Item"}</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 pt-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Item Code removed - auto generated */}
+                      <div className="space-y-2">
+                        <Label>Category</Label>
+                        <Select value={category} onValueChange={(v) => setCategory(v as typeof category)}>
+                          <SelectTrigger data-testid="select-category">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categories.map((c) => (
+                              <SelectItem key={c} value={c}>{c}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Item Name *</Label>
+                        <Input
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          placeholder="Enter item name"
+                          data-testid="input-name"
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label>Category</Label>
-                      <Select value={category} onValueChange={(v) => setCategory(v as typeof category)}>
-                        <SelectTrigger data-testid="select-category">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categories.map((c) => (
-                            <SelectItem key={c} value={c}>{c}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Price *</Label>
+                        <Input
+                          type="number"
+                          value={price}
+                          onChange={(e) => setPrice(Number(e.target.value))}
+                          min={0}
+                          data-testid="input-price"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Stock</Label>
+                        <Input
+                          type="number"
+                          value={stock}
+                          onChange={(e) => setStock(Number(e.target.value))}
+                          min={0}
+                          data-testid="input-stock"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2 pt-4">
+                      <Button variant="outline" onClick={() => { setIsOpen(false); resetForm(); }}>Cancel</Button>
+                      <Button onClick={handleSubmit} disabled={isPending} data-testid="button-save-item">
+                        {isPending ? "Saving..." : editingItem ? "Update Item" : "Add Item"}
+                      </Button>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Item Name *</Label>
-                    <Input 
-                      value={name} 
-                      onChange={(e) => setName(e.target.value)} 
-                      placeholder="Enter item name" 
-                      data-testid="input-name"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Price *</Label>
-                      <Input 
-                        type="number" 
-                        value={price} 
-                        onChange={(e) => setPrice(Number(e.target.value))} 
-                        min={0}
-                        data-testid="input-price"
-                      />
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Item Details</DialogTitle>
+                  </DialogHeader>
+                  {viewingItem && (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-muted-foreground">Item Code</Label>
+                          <p className="font-medium">{viewingItem.itemCode}</p>
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground">Category</Label>
+                          <p><Badge variant="outline">{viewingItem.category}</Badge></p>
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground">Name</Label>
+                          <p className="font-medium">{viewingItem.name}</p>
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground">Price</Label>
+                          <p className="font-medium">Rs. {viewingItem.price.toLocaleString()}</p>
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground">Current Stock</Label>
+                          <p className={`font-medium ${viewingItem.stock < 10 ? "text-red-500" : ""}`}>{viewingItem.stock}</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label>Stock</Label>
-                      <Input 
-                        type="number" 
-                        value={stock} 
-                        onChange={(e) => setStock(Number(e.target.value))} 
-                        min={0}
-                        data-testid="input-stock"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex justify-end gap-2 pt-4">
-                    <Button variant="outline" onClick={() => { setIsOpen(false); resetForm(); }}>Cancel</Button>
-                    <Button onClick={handleSubmit} disabled={isPending} data-testid="button-save-item">
-                      {isPending ? "Saving..." : editingItem ? "Update Item" : "Add Item"}
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
+                  )}
+                </DialogContent>
+              </Dialog>
+            </div>
           }
         />
 

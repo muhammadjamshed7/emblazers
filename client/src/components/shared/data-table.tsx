@@ -88,8 +88,8 @@ export function DataTable<T extends Record<string, any>>({
   const [currentPage, setCurrentPage] = useState(1);
 
   const effectiveSearchKeys = searchKey ? [searchKey] : searchKeys;
-  
-  const effectiveFilters: Filter[] = filterKey && filterOptions 
+
+  const effectiveFilters: Filter[] = filterKey && filterOptions
     ? [{ key: filterKey, label: filterKey.charAt(0).toUpperCase() + filterKey.slice(1), options: filterOptions.map(o => ({ value: o, label: o })) }]
     : filters;
 
@@ -189,7 +189,7 @@ export function DataTable<T extends Record<string, any>>({
               </SelectContent>
             </Select>
           ))}
-          
+
           {exportOptions?.enabled && (
             <>
               <Button
@@ -362,6 +362,7 @@ export function StatusBadge({ status }: { status: string }) {
     "Not Started": "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400",
     "In Progress": "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
     Completed: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+    "Out of Stock": "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
   };
 
   return (

@@ -28,3 +28,5 @@ export { default as Vacancy } from "./Vacancy";
 export { default as Applicant } from "./Applicant";
 export { ActivityLog } from "./ActivityLog";
 export { Notification } from "./Notification";
+export { default as BookCategory } from "./BookCategory";
+export { Counter } from "./Counter";
