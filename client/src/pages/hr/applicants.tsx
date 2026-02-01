@@ -26,9 +26,14 @@ export default function Applicants() {
   const { toast } = useToast();
   const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(null);
 
-  const handleStatusChange = (id: string, status: Applicant["status"]) => {
-    updateApplicantStatus(id, status);
-    toast({ title: "Status updated", description: `Applicant status changed to ${status}` });
+  const handleStatusChange = async (id: string, status: Applicant["status"]) => {
+    try {
+      await updateApplicantStatus(id, status);
+      toast({ title: "Status updated", description: `Applicant status changed to ${status}` });
+    } catch (error) {
+      console.error("Failed to update applicant status:", error);
+      toast({ title: "Error", description: "Failed to update applicant status", variant: "destructive" });
+    }
   };
 
   const columns: Column<Applicant>[] = [
@@ -265,22 +270,22 @@ export default function Applicants() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => { handleStatusChange(selectedApplicant.id, "New"); setSelectedApplicant(null); }}>
+                    <DropdownMenuItem onClick={async () => { await handleStatusChange(selectedApplicant.id, "New"); setSelectedApplicant(null); }}>
                       Mark as New
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => { handleStatusChange(selectedApplicant.id, "Shortlisted"); setSelectedApplicant(null); }}>
+                    <DropdownMenuItem onClick={async () => { await handleStatusChange(selectedApplicant.id, "Shortlisted"); setSelectedApplicant(null); }}>
                       Mark as Shortlisted
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => { handleStatusChange(selectedApplicant.id, "Interviewed"); setSelectedApplicant(null); }}>
+                    <DropdownMenuItem onClick={async () => { await handleStatusChange(selectedApplicant.id, "Interviewed"); setSelectedApplicant(null); }}>
                       Mark as Interviewed
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => { handleStatusChange(selectedApplicant.id, "Offered"); setSelectedApplicant(null); }}>
+                    <DropdownMenuItem onClick={async () => { await handleStatusChange(selectedApplicant.id, "Offered"); setSelectedApplicant(null); }}>
                       Mark as Offered
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => { handleStatusChange(selectedApplicant.id, "Hired"); setSelectedApplicant(null); }}>
+                    <DropdownMenuItem onClick={async () => { await handleStatusChange(selectedApplicant.id, "Hired"); setSelectedApplicant(null); }}>
                       Mark as Hired
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => { handleStatusChange(selectedApplicant.id, "Rejected"); setSelectedApplicant(null); }}>
+                    <DropdownMenuItem onClick={async () => { await handleStatusChange(selectedApplicant.id, "Rejected"); setSelectedApplicant(null); }}>
                       Mark as Rejected
                     </DropdownMenuItem>
                   </DropdownMenuContent>
