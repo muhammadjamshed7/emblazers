@@ -122,8 +122,13 @@ export class MongoStorage implements IStorage {
   }
 
   async createStudent(student: InsertStudent): Promise<Student> {
-    const count = await StudentModel.countDocuments();
-    const studentId = `STU${String(count + 1).padStart(4, "0")}`;
+    const lastStudent = await StudentModel.findOne({}, { studentId: 1 }).sort({ studentId: -1 });
+    let nextNum = 1;
+    if (lastStudent?.studentId) {
+      const match = lastStudent.studentId.match(/STU(\d+)/);
+      if (match) nextNum = parseInt(match[1], 10) + 1;
+    }
+    const studentId = `STU${String(nextNum).padStart(4, "0")}`;
     const doc = await StudentModel.create({ ...student, studentId });
     return toDTO<Student>(doc);
   }
@@ -155,8 +160,13 @@ export class MongoStorage implements IStorage {
   }
 
   async createStaff(staff: InsertStaff): Promise<Staff> {
-    const count = await StaffModel.countDocuments();
-    const staffId = `STF${String(count + 1).padStart(4, "0")}`;
+    const lastStaff = await StaffModel.findOne({}, { staffId: 1 }).sort({ staffId: -1 });
+    let nextNum = 1;
+    if (lastStaff?.staffId) {
+      const match = lastStaff.staffId.match(/STF(\d+)/);
+      if (match) nextNum = parseInt(match[1], 10) + 1;
+    }
+    const staffId = `STF${String(nextNum).padStart(4, "0")}`;
     const doc = await StaffModel.create({ ...staff, staffId });
     return toDTO<Staff>(doc);
   }
