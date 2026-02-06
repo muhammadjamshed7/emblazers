@@ -237,7 +237,10 @@ export default function MarkAttendance() {
                             <div className="flex justify-center">
                               <Select 
                                 value={attendance[student.id] || ""} 
-                                onValueChange={(val) => markStatus(student.id, val as any)}
+                                onValueChange={(val) => {
+                                  markStatus(student.id, val as any);
+                                  // Optional: Auto-save on change? No, keep handleSubmit for batch save as per UI
+                                }}
                               >
                                 <SelectTrigger className="w-40" data-testid={`select-status-${student.studentId}`}>
                                   <SelectValue placeholder="Select Status" />

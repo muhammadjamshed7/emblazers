@@ -476,18 +476,23 @@ export class MongoStorage implements IStorage {
       // Update existing record
       const recordIndex = existing.records.findIndex(r => r.entityId === record.studentId);
       if (recordIndex >= 0) {
+        // ALWAYS update the status if it already exists
         existing.records[recordIndex].status = record.status;
-        existing.records[recordIndex].remarks = record.remarks;
-        existing.records[recordIndex].entityName = record.studentName;
+        existing.records[recordIndex].remarks = record.remarks || existing.records[recordIndex].remarks || "";
+        existing.records[recordIndex].entityName = record.studentName || existing.records[recordIndex].entityName;
       } else {
         existing.records.push({
           entityId: record.studentId,
           entityName: record.studentName,
           status: record.status,
-          remarks: record.remarks,
+          remarks: record.remarks || "",
         });
       }
+      
+      // Force Mongoose to recognize the sub-document array change
+      existing.markModified('records');
       await existing.save();
+      
       return {
         id: `${existing._id}_${record.studentId}`,
         ...record,
