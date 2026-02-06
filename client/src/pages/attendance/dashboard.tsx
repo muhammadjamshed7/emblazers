@@ -7,14 +7,16 @@ import { attendanceNavItems, useAttendanceSummary, useAttendanceData } from "./a
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Users, UserCheck, UserX, Clock, GraduationCap } from "lucide-react";
+import { Users, UserCheck, UserX, Clock, GraduationCap, Loader2 } from "lucide-react";
 
 export default function AttendanceDashboard() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
 
-  const { data: studentSummary } = useAttendanceSummary(selectedDate, "STUDENT");
-  const { data: staffSummary } = useAttendanceSummary(selectedDate, "STAFF");
-  const { records } = useAttendanceData({ date: selectedDate });
+  const { data: studentSummary, isLoading: studentLoading } = useAttendanceSummary(selectedDate, "STUDENT");
+  const { data: staffSummary, isLoading: staffLoading } = useAttendanceSummary(selectedDate, "STAFF");
+  const { records, isLoading: recordsLoading } = useAttendanceData({ date: selectedDate });
+
+  const isLoading = studentLoading || staffLoading || recordsLoading;
 
   const totalPresent = (studentSummary?.present || 0) + (staffSummary?.present || 0);
   const totalAbsent = (studentSummary?.absent || 0) + (staffSummary?.absent || 0);
@@ -53,92 +55,109 @@ export default function AttendanceDashboard() {
           />
         </div>
 
-        <StatsGrid>
-          <StatsCard
-            title="Total Marked"
-            value={totalCount}
-            icon={Users}
-            iconColor="text-blue-500"
-          />
-          <StatsCard
-            title="Present"
-            value={totalPresent}
-            icon={UserCheck}
-            iconColor="text-green-500"
-          />
-          <StatsCard
-            title="Absent"
-            value={totalAbsent}
-            icon={UserX}
-            iconColor="text-red-500"
-          />
-          <StatsCard
-            title="On Leave"
-            value={totalLeave}
-            icon={Clock}
-            iconColor="text-orange-500"
-          />
-        </StatsGrid>
+        {isLoading ? (
+          <div className="flex items-center justify-center gap-2 py-8">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span className="text-muted-foreground">Loading attendance data...</span>
+          </div>
+        ) : (
+          <>
+            <StatsGrid>
+              <StatsCard
+                title="Total Marked"
+                value={totalCount}
+                icon={Users}
+                iconColor="text-blue-500"
+              />
+              <StatsCard
+                title="Present"
+                value={totalPresent}
+                icon={UserCheck}
+                iconColor="text-green-500"
+              />
+              <StatsCard
+                title="Absent"
+                value={totalAbsent}
+                icon={UserX}
+                iconColor="text-red-500"
+              />
+              <StatsCard
+                title="On Leave"
+                value={totalLeave}
+                icon={Clock}
+                iconColor="text-orange-500"
+              />
+            </StatsGrid>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card data-testid="card-student-summary">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                <GraduationCap className="w-5 h-5" />
-                Student Attendance
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total</p>
-                  <p className="text-2xl font-bold" data-testid="text-student-total">{studentSummary?.total || 0}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Present</p>
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400" data-testid="text-student-present">{studentSummary?.present || 0}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Absent</p>
-                  <p className="text-2xl font-bold text-red-600 dark:text-red-400" data-testid="text-student-absent">{studentSummary?.absent || 0}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Leave</p>
-                  <p className="text-2xl font-bold text-orange-600 dark:text-orange-400" data-testid="text-student-leave">{studentSummary?.leave || 0}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card data-testid="card-student-summary">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                    <GraduationCap className="w-5 h-5" />
+                    Student Attendance
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {(studentSummary?.total || 0) === 0 ? (
+                    <p className="text-sm text-muted-foreground py-4 text-center">No student attendance marked yet for this date</p>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Total</p>
+                        <p className="text-2xl font-bold" data-testid="text-student-total">{studentSummary?.total || 0}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Present</p>
+                        <p className="text-2xl font-bold text-green-600 dark:text-green-400" data-testid="text-student-present">{studentSummary?.present || 0}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Absent</p>
+                        <p className="text-2xl font-bold text-red-600 dark:text-red-400" data-testid="text-student-absent">{studentSummary?.absent || 0}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Leave</p>
+                        <p className="text-2xl font-bold text-orange-600 dark:text-orange-400" data-testid="text-student-leave">{studentSummary?.leave || 0}</p>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
-          <Card data-testid="card-staff-summary">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                <Users className="w-5 h-5" />
-                Staff Attendance
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total</p>
-                  <p className="text-2xl font-bold" data-testid="text-staff-total">{staffSummary?.total || 0}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Present</p>
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400" data-testid="text-staff-present">{staffSummary?.present || 0}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Absent</p>
-                  <p className="text-2xl font-bold text-red-600 dark:text-red-400" data-testid="text-staff-absent">{staffSummary?.absent || 0}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Leave</p>
-                  <p className="text-2xl font-bold text-orange-600 dark:text-orange-400" data-testid="text-staff-leave">{staffSummary?.leave || 0}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              <Card data-testid="card-staff-summary">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                    <Users className="w-5 h-5" />
+                    Staff Attendance
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {(staffSummary?.total || 0) === 0 ? (
+                    <p className="text-sm text-muted-foreground py-4 text-center">No staff attendance marked yet for this date</p>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Total</p>
+                        <p className="text-2xl font-bold" data-testid="text-staff-total">{staffSummary?.total || 0}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Present</p>
+                        <p className="text-2xl font-bold text-green-600 dark:text-green-400" data-testid="text-staff-present">{staffSummary?.present || 0}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Absent</p>
+                        <p className="text-2xl font-bold text-red-600 dark:text-red-400" data-testid="text-staff-absent">{staffSummary?.absent || 0}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Leave</p>
+                        <p className="text-2xl font-bold text-orange-600 dark:text-orange-400" data-testid="text-staff-leave">{staffSummary?.leave || 0}</p>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </>
+        )}
 
         <RecentTable
           title="Recent Attendance Records"

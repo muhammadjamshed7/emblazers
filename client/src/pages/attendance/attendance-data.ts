@@ -1,6 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { type AttendanceRecord, type AttendanceSummary, type Student, type Staff } from "@shared/schema";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { getAuthToken } from "@/lib/auth";
 import {
   LayoutDashboard,
   GraduationCap,
@@ -19,6 +20,11 @@ export const attendanceNavItems = [
 
 export const classes = ["Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6"];
 export const sections = ["A", "B", "C"];
+
+function authHeaders(): Record<string, string> {
+  const token = getAuthToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 interface AttendanceFilters {
   date?: string;
@@ -48,11 +54,13 @@ export function useAttendanceData(filters: AttendanceFilters = {}) {
     queryFn: async () => {
       const res = await fetch(`/api/attendance-records${queryString ? `?${queryString}` : ''}`, {
         credentials: "include",
+        headers: authHeaders(),
       });
       if (!res.ok) throw new Error("Failed to fetch records");
       return res.json();
     },
     enabled: !!filters.date,
+    staleTime: 0,
   });
 
   return {
@@ -73,11 +81,13 @@ export function useAttendanceSummary(date: string, targetType?: "STUDENT" | "STA
     queryFn: async () => {
       const res = await fetch(`/api/attendance/summary?${queryString}`, {
         credentials: "include",
+        headers: authHeaders(),
       });
       if (!res.ok) throw new Error("Failed to fetch summary");
       return res.json();
     },
     enabled: !!date,
+    staleTime: 0,
   });
 }
 
@@ -95,11 +105,13 @@ export function useAttendanceReport(filters: ReportFilters = {}) {
     queryFn: async () => {
       const res = await fetch(`/api/attendance/report?${queryString}`, {
         credentials: "include",
+        headers: authHeaders(),
       });
       if (!res.ok) throw new Error("Failed to fetch report");
       return res.json();
     },
     enabled: !!filters.startDate && !!filters.endDate,
+    staleTime: 0,
   });
 }
 
