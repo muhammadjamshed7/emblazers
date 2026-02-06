@@ -642,7 +642,7 @@ export async function registerRoutes(
 
   app.post("/api/attendance-records/batch", async (req, res) => {
     try {
-      const { date, class: className, section, records, type = "student" } = req.body;
+      const { date, class: className, section, records } = req.body;
       
       if (!date || !records || !Array.isArray(records)) {
         return res.status(400).json({ error: "Date and records array are required" });
@@ -664,7 +664,7 @@ export async function registerRoutes(
         results.push(result);
       }
       
-      res.status(201).json(results);
+      res.status(200).json(results);
     } catch (error) {
       console.error("Batch attendance error:", error);
       res.status(500).json({ error: "Failed to save attendance" });

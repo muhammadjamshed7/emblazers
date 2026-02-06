@@ -103,7 +103,8 @@ export default function MarkAttendance() {
         records: batchRecords,
       });
 
-      toast({ title: "Success", description: `Attendance saved successfully for ${selectedDate}` });
+      toast({ title: "Success", description: "Attendance saved successfully" });
+      // Invalidate and refetch
       refetchExisting();
     } catch (error) {
       toast({ title: "Error", description: "Failed to save attendance", variant: "destructive" });
