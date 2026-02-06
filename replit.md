@@ -10,12 +10,27 @@ The system is built as a full-stack TypeScript application using React for the f
 
 Preferred communication style: Simple, everyday language.
 
+## Deployment
+
+- **Status:** Public (Production)
+- **Domain:** https://emblazers.replit.app
+- **Deployment Target:** Autoscale
+- **Build:** `npm run build` (Vite for client, esbuild for server)
+- **Run:** `node dist/index.cjs`
+- **Access:** Public, module-based authentication required ({module}@emblazers.com / 12345678 default credentials)
+
 ## Recent Changes (February 2026)
+
+### Production Deployment & Bug Fixes
+- App deployed publicly at https://emblazers.replit.app
+- Fixed duplicate key errors in attendance records by switching MongoDB indexes from sparse to partialFilterExpression
+- Fixed staff/student ID generation to use highest existing ID instead of document count (prevents collisions after deletions)
+- Fixed notification 401 errors by adding auth headers to fetch requests
 
 ### Attendance Module Rebuilt
 - Attendance module fully rebuilt from scratch with complete CRUD operations
 - System now operates with 13 modules: Student, HR, Fee, Payroll, Finance, Attendance, Timetable, DateSheet, Curriculum, POS, Library, Transport, Hostel
-- Mongoose model with unique compound indexes (studentId+date, staffId+date) for UPSERT behavior
+- Mongoose model with unique compound indexes (studentId+date, staffId+date) using partialFilterExpression for UPSERT behavior
 - Supports both STUDENT and STAFF attendance with foreign key references
 - Status options: PRESENT, ABSENT, LEAVE
 - Backend: API routes for CRUD, bulk upsert, daily summary, and date-range reporting
