@@ -17,7 +17,6 @@ const moduleTypes = [
   "fee",
   "payroll",
   "finance",
-  "attendance",
   "timetable",
   "datesheet",
   "curriculum",

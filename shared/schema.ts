@@ -7,7 +7,6 @@ export const moduleCredentials = {
   fee: { email: "fee@emblazers.com", password: "12345678" },
   payroll: { email: "payroll@emblazers.com", password: "12345678" },
   finance: { email: "finance@emblazers.com", password: "12345678" },
-  attendance: { email: "attendance@emblazers.com", password: "12345678" },
   timetable: { email: "timetable@emblazers.com", password: "12345678" },
   datesheet: { email: "datesheet@emblazers.com", password: "12345678" },
   curriculum: { email: "curriculum@emblazers.com", password: "12345678" },
@@ -448,21 +447,6 @@ export const insertJournalEntrySchema = journalEntrySchema.omit({ id: true, jour
 export type JournalEntry = z.infer<typeof journalEntrySchema>;
 export type InsertJournalEntry = z.infer<typeof insertJournalEntrySchema>;
 
-// ============== ATTENDANCE MODULE ==============
-export const attendanceRecordSchema = z.object({
-  id: z.string(),
-  date: z.string(),
-  studentId: z.string(),
-  studentName: z.string(),
-  class: z.string(),
-  section: z.string(),
-  status: z.enum(["Present", "Absent", "Late", "Leave"]),
-  remarks: z.string().optional(),
-});
-
-export const insertAttendanceRecordSchema = attendanceRecordSchema.omit({ id: true });
-export type AttendanceRecord = z.infer<typeof attendanceRecordSchema>;
-export type InsertAttendanceRecord = z.infer<typeof insertAttendanceRecordSchema>;
 
 // ============== TIMETABLE MODULE ==============
 export const timetableSlotSchema = z.object({
@@ -799,7 +783,6 @@ export const moduleUserCredentials: Record<ModuleType, { email: string; password
   fee: { email: "fee@emblazers.com", password: "12345678", role: "admin", name: "Fee Admin" },
   payroll: { email: "payroll@emblazers.com", password: "12345678", role: "admin", name: "Payroll Admin" },
   finance: { email: "finance@emblazers.com", password: "12345678", role: "admin", name: "Finance Admin" },
-  attendance: { email: "attendance@emblazers.com", password: "12345678", role: "admin", name: "Attendance Admin" },
   timetable: { email: "timetable@emblazers.com", password: "12345678", role: "admin", name: "Timetable Admin" },
   datesheet: { email: "datesheet@emblazers.com", password: "12345678", role: "admin", name: "DateSheet Admin" },
   curriculum: { email: "curriculum@emblazers.com", password: "12345678", role: "admin", name: "Curriculum Admin" },
@@ -869,7 +852,6 @@ export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;
 export const notificationTypeSchema = z.enum([
   "fee_due",
   "fee_overdue",
-  "attendance_alert",
   "payroll_pending",
   "payroll_processed",
   "low_stock",

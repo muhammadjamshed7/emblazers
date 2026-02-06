@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const notificationSchema = new mongoose.Schema({
   type: { 
     type: String, 
-    enum: ["fee_due", "fee_overdue", "attendance_alert", "payroll_pending", "payroll_processed", "low_stock", "library_overdue", "system", "action_log"],
+    enum: ["fee_due", "fee_overdue", "payroll_pending", "payroll_processed", "low_stock", "library_overdue", "system", "action_log"],
     required: true 
   },
   title: { type: String, required: true },

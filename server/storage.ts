@@ -7,7 +7,6 @@ import {
   type Payroll, type InsertPayroll,
   type Account, type InsertAccount,
   type FinanceVoucher, type InsertFinanceVoucher,
-  type AttendanceRecord, type InsertAttendanceRecord,
   type Timetable, type InsertTimetable,
   type DateSheet, type InsertDateSheet,
   type Curriculum, type InsertCurriculum,
@@ -102,14 +101,6 @@ export interface IStorage {
   createFinanceVoucher(voucher: InsertFinanceVoucher): Promise<FinanceVoucher>;
   updateFinanceVoucher(id: string, updates: Partial<FinanceVoucher>): Promise<FinanceVoucher | undefined>;
   deleteFinanceVoucher(id: string): Promise<boolean>;
-
-  getAttendanceRecords(): Promise<AttendanceRecord[]>;
-  getStudentAttendance(studentId: string): Promise<AttendanceRecord[]>;
-  getAttendanceByClassAndDate(className: string, section: string, date: string): Promise<AttendanceRecord[]>;
-  getAttendanceRecord(id: string): Promise<AttendanceRecord | undefined>;
-  createAttendanceRecord(record: InsertAttendanceRecord): Promise<AttendanceRecord>;
-  updateAttendanceRecord(id: string, updates: Partial<AttendanceRecord>): Promise<AttendanceRecord | undefined>;
-  deleteAttendanceRecord(id: string): Promise<boolean>;
 
   getTimetables(): Promise<Timetable[]>;
   getTimetable(id: string): Promise<Timetable | undefined>;
@@ -303,7 +294,6 @@ export class MemStorage implements IStorage {
   private payrolls: Map<string, Payroll>;
   private accounts: Map<string, Account>;
   private financeVouchers: Map<string, FinanceVoucher>;
-  private attendanceRecords: Map<string, AttendanceRecord>;
   private timetables: Map<string, Timetable>;
   private dateSheets: Map<string, DateSheet>;
   private curriculums: Map<string, Curriculum>;
@@ -333,7 +323,6 @@ export class MemStorage implements IStorage {
     this.payrolls = new Map();
     this.accounts = new Map();
     this.financeVouchers = new Map();
-    this.attendanceRecords = new Map();
     this.timetables = new Map();
     this.dateSheets = new Map();
     this.curriculums = new Map();
@@ -422,14 +411,6 @@ export class MemStorage implements IStorage {
     ];
     financeVoucherData.forEach(f => this.financeVouchers.set(f.id, f));
 
-    const attendanceData: AttendanceRecord[] = [
-      { id: "1", date: "2024-12-07", studentId: "1", studentName: "Ahmad Khan", class: "Class 5", section: "A", status: "Present" },
-      { id: "2", date: "2024-12-07", studentId: "2", studentName: "Fatima Ali", class: "Class 4", section: "B", status: "Present" },
-      { id: "3", date: "2024-12-07", studentId: "3", studentName: "Zain Ahmed", class: "Class 3", section: "A", status: "Absent", remarks: "Sick leave" },
-      { id: "4", date: "2024-12-07", studentId: "4", studentName: "Ayesha Malik", class: "Class 5", section: "B", status: "Late" },
-      { id: "5", date: "2024-12-07", studentId: "5", studentName: "Hassan Raza", class: "Class 2", section: "A", status: "Present" },
-    ];
-    attendanceData.forEach(a => this.attendanceRecords.set(a.id, a));
 
     const timetableData: Timetable[] = [
       {
@@ -588,12 +569,12 @@ export class MemStorage implements IStorage {
 
     const notificationData: Notification[] = [
       { id: "1", type: "fee_due", title: "Fee Payment Reminder", message: "Fee payment for Fatima Ali (FV002) is due on December 10, 2024. Amount: Rs. 5,000", module: "fee", priority: "high", read: false, createdAt: new Date().toISOString() },
-      { id: "2", type: "attendance_alert", title: "Absence Alert", message: "Zain Ahmed (Class 3-A) was marked absent today with sick leave.", module: "attendance", priority: "medium", read: false, createdAt: new Date(Date.now() - 3600000).toISOString() },
+      { id: "2", type: "system", title: "System Notice", message: "All modules are running smoothly. No issues detected.", module: undefined, priority: "medium", read: false, createdAt: new Date(Date.now() - 3600000).toISOString() },
       { id: "3", type: "payroll_pending", title: "Pending Salary", message: "Salary for Kamran Ali (November 2024) is still pending. Net amount: Rs. 63,250", module: "payroll", priority: "high", read: false, createdAt: new Date(Date.now() - 7200000).toISOString() },
       { id: "4", type: "library_overdue", title: "Book Overdue Soon", message: "Mathematics for Beginners issued to Ahmad Khan is due on December 15, 2024.", module: "library", priority: "low", read: true, createdAt: new Date(Date.now() - 86400000).toISOString() },
       { id: "5", type: "system", title: "Welcome to Emblazers", message: "Your school management system is ready. Explore all 14+ modules to manage your school efficiently.", module: undefined, priority: "low", read: true, createdAt: new Date(Date.now() - 172800000).toISOString() },
       { id: "6", type: "system", title: "New Student Enrolled", message: "A new student Maryam Bibi has been enrolled in Class 3-B.", module: "student", priority: "medium", read: false, createdAt: new Date(Date.now() - 1800000).toISOString() },
-      { id: "7", type: "attendance_alert", title: "Low Attendance Alert", message: "Student Hassan Raza has attendance below 75% this month.", module: "student", priority: "high", read: false, createdAt: new Date(Date.now() - 900000).toISOString() },
+      { id: "7", type: "system", title: "Student Alert", message: "Student Hassan Raza requires attention from the administration.", module: "student", priority: "high", read: false, createdAt: new Date(Date.now() - 900000).toISOString() },
     ];
     notificationData.forEach(n => this.notifications.set(n.id, n));
   }
@@ -698,27 +679,6 @@ export class MemStorage implements IStorage {
     const updated = { ...existing, ...updates, id };
     this.students.set(id, updated);
 
-    // Cascade updates to attendance records if relevant fields changed
-    const fieldsToSync = ['name', 'class', 'section'];
-    const hasRelevantChanges = fieldsToSync.some(field =>
-      updates[field as keyof Student] !== undefined &&
-      updates[field as keyof Student] !== existing[field as keyof Student]
-    );
-
-    if (hasRelevantChanges) {
-      // Update all attendance records for this student
-      for (const [recordId, record] of this.attendanceRecords.entries()) {
-        if (record.studentId === existing.studentId) {
-          const updatedRecord = {
-            ...record,
-            studentName: updated.name,
-            class: updated.class,
-            section: updated.section,
-          };
-          this.attendanceRecords.set(recordId, updatedRecord);
-        }
-      }
-    }
 
     return updated;
   }
@@ -917,44 +877,6 @@ export class MemStorage implements IStorage {
     return this.financeVouchers.delete(id);
   }
 
-  async getAttendanceRecords(): Promise<AttendanceRecord[]> {
-    return Array.from(this.attendanceRecords.values()).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }
-
-  async getStudentAttendance(studentId: string): Promise<AttendanceRecord[]> {
-    return Array.from(this.attendanceRecords.values())
-      .filter(record => record.studentId === studentId)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }
-
-  async getAttendanceByClassAndDate(className: string, section: string, date: string): Promise<AttendanceRecord[]> {
-    return Array.from(this.attendanceRecords.values()).filter(
-      r => r.class === className && r.section === section && r.date === date
-    );
-  }
-
-  async getAttendanceRecord(id: string): Promise<AttendanceRecord | undefined> {
-    return this.attendanceRecords.get(id);
-  }
-
-  async createAttendanceRecord(record: InsertAttendanceRecord): Promise<AttendanceRecord> {
-    const id = randomUUID();
-    const newRecord: AttendanceRecord = { ...record, id };
-    this.attendanceRecords.set(id, newRecord);
-    return newRecord;
-  }
-
-  async updateAttendanceRecord(id: string, updates: Partial<AttendanceRecord>): Promise<AttendanceRecord | undefined> {
-    const existing = this.attendanceRecords.get(id);
-    if (!existing) return undefined;
-    const updated = { ...existing, ...updates, id };
-    this.attendanceRecords.set(id, updated);
-    return updated;
-  }
-
-  async deleteAttendanceRecord(id: string): Promise<boolean> {
-    return this.attendanceRecords.delete(id);
-  }
 
   async getTimetables(): Promise<Timetable[]> {
     return Array.from(this.timetables.values());

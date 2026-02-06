@@ -2,7 +2,7 @@
 
 ## Overview
 
-Emblazers is a comprehensive school management system designed to handle 14+ administrative modules across student management, HR, finance, academics, and facilities. The application follows a modular architecture where each department (Students, HR, Fees, Payroll, Finance, Attendance, Timetable, Library, Transport, Hostel, etc.) operates as an independent module with its own authentication, dashboard, and feature set.
+Emblazers is a comprehensive school management system designed to handle 12 administrative modules across student management, HR, finance, academics, and facilities. The application follows a modular architecture where each department (Students, HR, Fees, Payroll, Finance, Timetable, DateSheet, Curriculum, POS, Library, Transport, Hostel) operates as an independent module with its own authentication, dashboard, and feature set.
 
 The system is built as a full-stack TypeScript application using React for the frontend and Express for the backend, with a focus on creating a professional, information-dense admin interface suitable for school administrators.
 
@@ -10,7 +10,15 @@ The system is built as a full-stack TypeScript application using React for the f
 
 Preferred communication style: Simple, everyday language.
 
-## Recent Changes (January 2026)
+## Recent Changes (February 2026)
+
+### Attendance Module Removal
+- Attendance module has been completely removed from the codebase (frontend pages, backend routes, storage methods, models, schemas, middleware, seed data)
+- System now operates with 12 modules: Student, HR, Fee, Payroll, Finance, Timetable, DateSheet, Curriculum, POS, Library, Transport, Hostel
+- Student and Staff profile pages updated to remove attendance tabs
+- Validation references cleaned up in checkStudentReferences
+
+## Previous Changes (January 2026)
 
 ### Module CRUD Fixes
 The following modules have been updated with working dialog-based CRUD operations:

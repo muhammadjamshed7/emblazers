@@ -47,10 +47,6 @@ import FinanceVendors from "@/pages/finance/vendors";
 import FinanceVouchers from "@/pages/finance/vouchers";
 import FinanceReports from "@/pages/finance/reports";
 
-import AttendanceDashboard from "@/pages/attendance/dashboard";
-import AttendanceMark from "@/pages/attendance/mark";
-import AttendanceRecords from "@/pages/attendance/records";
-import AttendanceReports from "@/pages/attendance/reports";
 
 import TimetableDashboard from "@/pages/timetable/dashboard";
 import TimetableClass from "@/pages/timetable/class";
@@ -139,10 +135,6 @@ function Router() {
       <Route path="/finance/vouchers" component={FinanceVouchers} />
       <Route path="/finance/reports" component={FinanceReports} />
 
-      <Route path="/attendance/dashboard" component={AttendanceDashboard} />
-      <Route path="/attendance/mark" component={AttendanceMark} />
-      <Route path="/attendance/records" component={AttendanceRecords} />
-      <Route path="/attendance/reports" component={AttendanceReports} />
 
       <Route path="/timetable/dashboard" component={TimetableDashboard} />
       <Route path="/timetable/class" component={TimetableClass} />

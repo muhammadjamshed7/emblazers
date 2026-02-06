@@ -31,7 +31,6 @@ import {
   insertPayrollSchema,
   insertAccountSchema,
   insertFinanceVoucherSchema,
-  insertAttendanceRecordSchema,
   insertTimetableSchema,
   insertDateSheetSchema,
   insertCurriculumSchema,
@@ -303,12 +302,6 @@ export async function registerRoutes(
     res.json(student);
   });
 
-  app.get("/api/students/:id/attendance", async (req, res) => {
-    const student = await storage.getStudent(req.params.id);
-    if (!student) return res.status(404).json({ error: "Student not found" });
-    const records = await storage.getStudentAttendance(student.studentId);
-    res.json(records);
-  });
 
   app.post("/api/students", async (req, res) => {
     try {
@@ -612,86 +605,6 @@ export async function registerRoutes(
     res.json({ success: true });
   });
 
-  app.get("/api/attendance-records", async (req, res) => {
-    const { date, class: className, section } = req.query;
-
-    if (date && className && section) {
-      const records = await storage.getAttendanceByClassAndDate(
-        className as string,
-        section as string,
-        date as string
-      );
-      return res.json(records);
-    }
-
-    const { studentId } = req.query;
-    if (studentId) {
-      const records = await storage.getStudentAttendance(studentId as string);
-      return res.json(records);
-    }
-
-    const records = await storage.getAttendanceRecords();
-    res.json(records);
-  });
-
-  app.get("/api/attendance-records/:id", async (req, res) => {
-    const record = await storage.getAttendanceRecord(req.params.id);
-    if (!record) return res.status(404).json({ error: "Not found" });
-    res.json(record);
-  });
-
-  app.post("/api/attendance-records/batch", async (req, res) => {
-    try {
-      const { date, class: className, section, records } = req.body;
-      
-      if (!date || !records || !Array.isArray(records)) {
-        return res.status(400).json({ error: "Date and records array are required" });
-      }
-
-      const results = [];
-      for (const record of records) {
-        const attendanceRecord = {
-          date,
-          class: className || "",
-          section: section || "",
-          studentId: record.studentId,
-          studentName: record.studentName,
-          status: record.status,
-          remarks: record.remarks || "",
-        };
-        
-        const result = await storage.createAttendanceRecord(attendanceRecord);
-        results.push(result);
-      }
-      
-      res.status(200).json(results);
-    } catch (error) {
-      console.error("Batch attendance error:", error);
-      res.status(500).json({ error: "Failed to save attendance" });
-    }
-  });
-
-  app.post("/api/attendance-records", async (req, res) => {
-    const parsed = insertAttendanceRecordSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: parsed.error });
-    const record = await storage.createAttendanceRecord(parsed.data);
-    res.status(201).json(record);
-  });
-
-  app.patch("/api/attendance-records/:id", async (req, res) => {
-    const { id, ...updates } = req.body;
-    const parsed = insertAttendanceRecordSchema.partial().safeParse(updates);
-    if (!parsed.success) return res.status(400).json({ error: parsed.error });
-    const record = await storage.updateAttendanceRecord(req.params.id, parsed.data);
-    if (!record) return res.status(404).json({ error: "Not found" });
-    res.json(record);
-  });
-
-  app.delete("/api/attendance-records/:id", async (req, res) => {
-    const deleted = await storage.deleteAttendanceRecord(req.params.id);
-    if (!deleted) return res.status(404).json({ error: "Not found" });
-    res.json({ success: true });
-  });
 
   app.get("/api/timetables", async (_req, res) => {
     const timetables = await storage.getTimetables();
@@ -1637,47 +1550,6 @@ export async function registerRoutes(
     res.json(results);
   });
 
-  // Bulk attendance marking
-  app.post("/api/bulk/attendance", async (req, res) => {
-    const { records } = req.body;
-    if (!Array.isArray(records)) {
-      return res.status(400).json({ success: 0, failed: 0, errors: [{ row: 0, message: "Records array required" }] });
-    }
-
-    const results = { success: 0, failed: 0, errors: [] as { row: number; message: string }[] };
-    const validStatuses = ["Present", "Absent", "Late", "Leave"];
-
-    for (let i = 0; i < records.length; i++) {
-      // Normalize status to proper casing
-      let normalizedStatus = records[i].status;
-      if (typeof normalizedStatus === "string") {
-        const statusLower = normalizedStatus.trim().toLowerCase();
-        const matchedStatus = validStatuses.find(s => s.toLowerCase() === statusLower);
-        normalizedStatus = matchedStatus || normalizedStatus;
-      }
-
-      const normalizedRecord = {
-        ...records[i],
-        status: normalizedStatus,
-      };
-
-      const parsed = insertAttendanceRecordSchema.safeParse(normalizedRecord);
-      if (!parsed.success) {
-        results.failed++;
-        results.errors.push({ row: i + 1, message: parsed.error.errors.map(e => e.message).join(", ") });
-      } else {
-        try {
-          await storage.createAttendanceRecord(parsed.data);
-          results.success++;
-        } catch (err) {
-          results.failed++;
-          results.errors.push({ row: i + 1, message: String(err) });
-        }
-      }
-    }
-
-    res.json(results);
-  });
 
   // Bulk result entry
   app.post("/api/bulk/results", async (req, res) => {

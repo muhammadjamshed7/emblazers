@@ -15,7 +15,6 @@ const userRoles = [
   "Fee",
   "Payroll",
   "Finance",
-  "Attendance",
   "Timetable",
   "Datesheet",
   "Curriculum",

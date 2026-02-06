@@ -152,16 +152,6 @@ export const studentCSVColumns: CSVColumn[] = [
     !v || ["active", "inactive", "alumni", "left"].includes(v.trim().toLowerCase()) ? null : "Status must be Active, Inactive, Alumni, or Left" },
 ];
 
-export const attendanceCSVColumns: CSVColumn[] = [
-  { key: "date", label: "Date", required: true },
-  { key: "studentId", label: "Student ID", required: true },
-  { key: "studentName", label: "Student Name", required: true },
-  { key: "class", label: "Class", required: true },
-  { key: "section", label: "Section", required: true },
-  { key: "status", label: "Status", required: true, validate: (v) => 
-    ["present", "absent", "late", "leave"].includes(v.trim().toLowerCase()) ? null : "Status must be Present, Absent, Late, or Leave" },
-  { key: "remarks", label: "Remarks" },
-];
 
 export const resultCSVColumns: CSVColumn[] = [
   { key: "studentId", label: "Student ID", required: true },

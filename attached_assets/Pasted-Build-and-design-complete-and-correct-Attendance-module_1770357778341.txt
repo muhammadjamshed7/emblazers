@@ -1,0 +1,64 @@
+Build and design complete and correct Attendance module for a School Management System with the following behaviour and flow.
+1) Attendance Dashboard (Top Summary)
+When the Attendance dashboard is opened, show a summary at the top for the selected date (default: today):
+•	Total students in the whole school
+•	Total present
+•	Total absent
+•	Total on leave
+(Do not include late in summary)
+This data must be calculated from attendance records of the selected date.
+2) Mark Attendance Section
+Below the summary, show a section to mark attendance.
+First, ask:
+•	Whose attendance do you want to mark?
+o	Student
+o	Staff
+If Student is selected:
+•	Render only student data
+•	Filter by class/section
+•	Allow search by student ID or name
+If Staff is selected:
+•	Render only staff data
+•	Allow search by staff ID or name
+Only the selected type (student or staff) must be rendered, never both together.
+3) Attendance Marking Rules
+•	Attendance must be saved per person per date
+•	Each record must include:
+o	person_id (student_id or staff_id)
+o	date (YYYY-MM-DD, school timezone)
+o	status (dropdown: Present, Absent, Leave)
+•	Attendance must reset daily automatically because it is date-based
+4) Editable Attendance (Very Important)
+•	Attendance must always be editable for the same date
+•	If attendance is already marked and the user changes:
+o	Absent → Present
+o	Present → Leave
+•	The system must UPDATE the existing record, not block it
+•	“Already marked” must never stop editing
+5) Duplicate Handling
+•	Do NOT allow duplicate records for the same person and date
+•	Use a unique rule: (person_id + date)
+•	If the record exists:
+o	Update it
+•	If it does not exist:
+o	Create it
+6) Attendance Records & Reports
+•	Store complete attendance history
+•	Provide:
+o	Individual student attendance record
+o	Weekly attendance summary
+o	Monthly attendance summary
+•	Counts must include Present, Absent, Leave
+•	Data must be accurate and filterable by date range
+7) Expected Result
+•	Attendance page always loads correctly
+•	Dashboard shows correct daily counts
+•	Staff and student attendance are clearly separated
+•	Attendance can be searched, marked, and updated
+•	No “already marked” blocking issue
+•	Full historical attendance records are maintained
+This module must be reliable, editable, date-based, and production-ready.
+
+design should be same like the other modules
+
+

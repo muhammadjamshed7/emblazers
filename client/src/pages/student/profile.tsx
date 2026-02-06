@@ -7,8 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Pencil, User, Users, BookOpen, Clock, DollarSign, FileText } from "lucide-react";
-import { StudentAttendanceHistory } from "@/components/shared/student-attendance-history";
+import { ArrowLeft, Pencil, User, Users, BookOpen, DollarSign, FileText } from "lucide-react";
 
 export default function StudentProfile() {
   const { id } = useParams<{ id: string }>();
@@ -75,7 +74,6 @@ export default function StudentProfile() {
                   <TabsTrigger value="profile" className="text-xs"><User className="w-3 h-3 mr-1" />Profile</TabsTrigger>
                   <TabsTrigger value="family" className="text-xs"><Users className="w-3 h-3 mr-1" />Family</TabsTrigger>
                   <TabsTrigger value="academics" className="text-xs"><BookOpen className="w-3 h-3 mr-1" />Academics</TabsTrigger>
-                  <TabsTrigger value="attendance" className="text-xs"><Clock className="w-3 h-3 mr-1" />Attendance</TabsTrigger>
                   <TabsTrigger value="fees" className="text-xs"><DollarSign className="w-3 h-3 mr-1" />Fees</TabsTrigger>
                   <TabsTrigger value="notes" className="text-xs"><FileText className="w-3 h-3 mr-1" />Notes</TabsTrigger>
                 </TabsList>
@@ -107,9 +105,6 @@ export default function StudentProfile() {
                   <p className="text-muted-foreground mt-4">Academic records will be shown here when available in the Curriculum module.</p>
                 </TabsContent>
 
-                <TabsContent value="attendance" className="mt-6">
-                  <StudentAttendanceHistory student={student} />
-                </TabsContent>
 
                 <TabsContent value="fees" className="mt-6">
                   <p className="text-muted-foreground">Fee records will be shown here when available in the Fee module.</p>

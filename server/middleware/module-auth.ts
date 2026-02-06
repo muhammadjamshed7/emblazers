@@ -9,18 +9,17 @@ interface AuthPayload {
   module: ModuleType;
 }
 
-const allModules: ModuleType[] = ["student", "hr", "fee", "payroll", "finance", "attendance", "timetable", "datesheet", "curriculum", "pos", "library", "transport", "hostel"];
+const allModules: ModuleType[] = ["student", "hr", "fee", "payroll", "finance", "timetable", "datesheet", "curriculum", "pos", "library", "transport", "hostel"];
 
 const routeToModulesMap: Record<string, ModuleType[]> = {
-  "/api/students": ["student", "fee", "attendance", "hostel", "transport", "library"],
-  "/api/staff": ["hr", "payroll", "attendance", "timetable", "library"],
+  "/api/students": ["student", "fee", "hostel", "transport", "library"],
+  "/api/staff": ["hr", "payroll", "timetable", "library"],
   "/api/vacancies": ["hr"],
   "/api/applicants": ["hr"],
   "/api/fee-vouchers": ["fee"],
   "/api/payrolls": ["payroll", "finance"],
   "/api/accounts": ["finance"],
   "/api/finance-vouchers": ["finance"],
-  "/api/attendance-records": ["attendance"],
   "/api/timetables": ["timetable"],
   "/api/date-sheets": ["datesheet"],
   "/api/curriculums": ["curriculum"],
@@ -46,7 +45,6 @@ const routeToModulesMap: Record<string, ModuleType[]> = {
   "/api/activity-logs": allModules,
   "/api/bulk/students": ["student"],
   "/api/bulk/fee-vouchers": ["fee"],
-  "/api/bulk/attendance": ["attendance"],
   "/api/bulk/results": ["datesheet", "curriculum"],
   "/api/fee-structures": ["fee", "finance"],
   "/api/discount-rules": ["fee", "finance"],

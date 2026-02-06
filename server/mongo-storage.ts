@@ -8,7 +8,6 @@ import {
   type Payroll, type InsertPayroll,
   type Account, type InsertAccount,
   type FinanceVoucher, type InsertFinanceVoucher,
-  type AttendanceRecord, type InsertAttendanceRecord,
   type Timetable, type InsertTimetable,
   type DateSheet, type InsertDateSheet,
   type Curriculum, type InsertCurriculum,
@@ -53,7 +52,6 @@ import {
   Payroll as PayrollModel,
   Account as AccountModel,
   FinanceVoucher as FinanceVoucherModel,
-  Attendance as AttendanceModel,
   Timetable as TimetableModel,
   Datesheet as DatesheetModel,
   Curriculum as CurriculumModel,
@@ -134,47 +132,6 @@ export class MongoStorage implements IStorage {
     const doc = await StudentModel.findByIdAndUpdate(id, updates, { new: true });
     if (!doc) return undefined;
 
-    // Cascade updates to attendance records if relevant fields changed
-    const fieldsToSync = ['name', 'class', 'section'];
-    const hasRelevantChanges = fieldsToSync.some(field =>
-      updates[field as keyof Student] !== undefined &&
-      updates[field as keyof Student] !== existing[field as keyof Student]
-    );
-
-    if (hasRelevantChanges) {
-      const updatedStudent = toDTO<Student>(doc);
-
-      // Update all attendance records for this student
-      // MongoDB attendance has a batch structure with records array
-      await AttendanceModel.updateMany(
-        { "records.entityId": existing.studentId },
-        {
-          $set: {
-            "records.$[elem].entityName": updatedStudent.name,
-          }
-        },
-        {
-          arrayFilters: [{ "elem.entityId": existing.studentId }]
-        }
-      );
-
-      // If class/section changed, we also need to update the document-level class/section
-      // But this is tricky because each attendance document has class/section
-      // We need to find and update only records where this student appears
-      if (updates.class !== undefined || updates.section !== undefined) {
-        const attendanceDocs = await AttendanceModel.find({
-          "records.entityId": existing.studentId
-        });
-
-        for (const attendanceDoc of attendanceDocs) {
-          // Check if all students in this document have the same class/section
-          // If this student moved classes, they might need to be removed from old attendance
-          // and added to new class attendance - but that's for future enhancement
-          // For now, just update the record name
-          await attendanceDoc.save();
-        }
-      }
-    }
 
     return toDTO<Student>(doc);
   }
@@ -370,194 +327,6 @@ export class MongoStorage implements IStorage {
     return !!result;
   }
 
-  async getAttendanceRecords(): Promise<AttendanceRecord[]> {
-    const docs = await AttendanceModel.find().sort({ date: -1 });
-    // Flatten the records from the batch format
-    const flattened: AttendanceRecord[] = [];
-    for (const doc of docs) {
-      const obj = doc.toObject();
-      for (const record of obj.records || []) {
-        flattened.push({
-          id: `${obj._id}_${record.entityId}`,
-          date: obj.date,
-          studentId: record.entityId,
-          studentName: record.entityName,
-          class: obj.class || "",
-          section: obj.section || "",
-          status: record.status,
-        });
-      }
-    }
-    return flattened;
-  }
-
-  async getStudentAttendance(studentId: string): Promise<AttendanceRecord[]> {
-    const docs = await AttendanceModel.find({ "records.entityId": studentId }).sort({ date: -1 });
-    const flattened: AttendanceRecord[] = [];
-
-    for (const doc of docs) {
-      const obj = doc.toObject();
-      for (const record of obj.records || []) {
-        if (record.entityId === studentId) {
-          flattened.push({
-            id: `${obj._id}_${record.entityId}`,
-            date: obj.date,
-            studentId: record.entityId,
-            studentName: record.entityName,
-            class: obj.class || "",
-            section: obj.section || "",
-            status: record.status,
-          });
-        }
-      }
-    }
-    return flattened;
-  }
-
-  async getAttendanceByClassAndDate(className: string, section: string, date: string): Promise<AttendanceRecord[]> {
-    const doc = await AttendanceModel.findOne({
-      date,
-      class: className,
-      section,
-      type: "student",
-    });
-
-    if (!doc) return [];
-
-    const obj = doc.toObject();
-    return (obj.records || []).map((record) => ({
-      id: `${obj._id}_${record.entityId}`,
-      date: obj.date,
-      studentId: record.entityId,
-      studentName: record.entityName,
-      class: obj.class || "",
-      section: obj.section || "",
-      status: record.status,
-      remarks: record.remarks,
-    }));
-  }
-
-  async getAttendanceRecord(id: string): Promise<AttendanceRecord | undefined> {
-    const docs = await AttendanceModel.find();
-    for (const doc of docs) {
-      const obj = doc.toObject();
-      for (const record of obj.records || []) {
-        if (`${obj._id}_${record.entityId}` === id) {
-          return {
-            id: `${obj._id}_${record.entityId}`,
-            date: obj.date,
-            studentId: record.entityId,
-            studentName: record.entityName,
-            class: obj.class || "",
-            section: obj.section || "",
-            status: record.status,
-          };
-        }
-      }
-    }
-    return undefined;
-  }
-
-  async createAttendanceRecord(record: InsertAttendanceRecord): Promise<AttendanceRecord> {
-    // Find or create attendance document for this date/class/section
-    const existing = await AttendanceModel.findOne({
-      date: record.date,
-      class: record.class,
-      section: record.section,
-      type: "student",
-    });
-
-    if (existing) {
-      // Ensure markedBy field exists (for old records)
-      if (!existing.markedBy) {
-        existing.markedBy = "Attendance Admin";
-      }
-
-      // Update existing record
-      const recordIndex = existing.records.findIndex(r => r.entityId === record.studentId);
-      if (recordIndex >= 0) {
-        // ALWAYS update the status if it already exists
-        existing.records[recordIndex].status = record.status;
-        existing.records[recordIndex].remarks = record.remarks || existing.records[recordIndex].remarks || "";
-        existing.records[recordIndex].entityName = record.studentName || existing.records[recordIndex].entityName;
-      } else {
-        existing.records.push({
-          entityId: record.studentId,
-          entityName: record.studentName,
-          status: record.status,
-          remarks: record.remarks || "",
-        });
-      }
-      
-      // Force Mongoose to recognize the sub-document array change
-      existing.markModified('records');
-      await existing.save();
-      
-      return {
-        id: `${existing._id}_${record.studentId}`,
-        ...record,
-      };
-    } else {
-      // Create new batch attendance document
-      const doc = await AttendanceModel.create({
-        date: record.date,
-        class: record.class,
-        section: record.section,
-        type: "student",
-        markedBy: "Attendance Admin", // Default value
-        records: [{
-          entityId: record.studentId,
-          entityName: record.studentName,
-          status: record.status,
-          remarks: record.remarks,
-        }],
-      });
-      return {
-        id: `${doc._id}_${record.studentId}`,
-        ...record,
-      };
-    }
-  }
-
-  async updateAttendanceRecord(id: string, updates: Partial<AttendanceRecord>): Promise<AttendanceRecord | undefined> {
-    const docs = await AttendanceModel.find();
-    for (const doc of docs) {
-      const recordIndex = doc.records.findIndex(r => `${doc._id}_${r.entityId}` === id);
-      if (recordIndex >= 0) {
-        if (updates.status) {
-          doc.records[recordIndex].status = updates.status;
-        }
-        await doc.save();
-        return {
-          id,
-          date: doc.date,
-          studentId: doc.records[recordIndex].entityId,
-          studentName: doc.records[recordIndex].entityName,
-          class: doc.class || "",
-          section: doc.section || "",
-          status: doc.records[recordIndex].status,
-        };
-      }
-    }
-    return undefined;
-  }
-
-  async deleteAttendanceRecord(id: string): Promise<boolean> {
-    const docs = await AttendanceModel.find();
-    for (const doc of docs) {
-      const recordIndex = doc.records.findIndex(r => `${doc._id}_${r.entityId}` === id);
-      if (recordIndex >= 0) {
-        doc.records.splice(recordIndex, 1);
-        if (doc.records.length === 0) {
-          await doc.deleteOne();
-        } else {
-          await doc.save();
-        }
-        return true;
-      }
-    }
-    return false;
-  }
 
   async getTimetables(): Promise<Timetable[]> {
     const docs = await TimetableModel.find().sort({ createdAt: -1 });

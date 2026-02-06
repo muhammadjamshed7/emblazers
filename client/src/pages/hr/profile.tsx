@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Pencil, User, Briefcase, Clock, DollarSign, FileText, Star } from "lucide-react";
+import { ArrowLeft, Pencil, User, Briefcase, DollarSign, FileText, Star } from "lucide-react";
 
 export default function StaffProfile() {
   const { id } = useParams<{ id: string }>();
@@ -74,7 +74,6 @@ export default function StaffProfile() {
                 <TabsList className="grid grid-cols-3 lg:grid-cols-6 gap-1 h-auto p-1">
                   <TabsTrigger value="profile" className="text-xs"><User className="w-3 h-3 mr-1" />Profile</TabsTrigger>
                   <TabsTrigger value="job" className="text-xs"><Briefcase className="w-3 h-3 mr-1" />Job</TabsTrigger>
-                  <TabsTrigger value="attendance" className="text-xs"><Clock className="w-3 h-3 mr-1" />Attendance</TabsTrigger>
                   <TabsTrigger value="payroll" className="text-xs"><DollarSign className="w-3 h-3 mr-1" />Payroll</TabsTrigger>
                   <TabsTrigger value="performance" className="text-xs"><Star className="w-3 h-3 mr-1" />Performance</TabsTrigger>
                   <TabsTrigger value="documents" className="text-xs"><FileText className="w-3 h-3 mr-1" />Documents</TabsTrigger>
@@ -98,9 +97,6 @@ export default function StaffProfile() {
                   <InfoRow label="Status" value={staffMember.status} />
                 </TabsContent>
 
-                <TabsContent value="attendance" className="mt-6">
-                  <p className="text-muted-foreground">Attendance records will be shown here when available in the Attendance module.</p>
-                </TabsContent>
 
                 <TabsContent value="payroll" className="mt-6">
                   <div className="space-y-4">

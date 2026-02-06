@@ -9,9 +9,8 @@ export interface ValidationResult {
 export async function checkStudentReferences(studentId: string): Promise<ValidationResult> {
   const references: { module: string; count: number; description: string }[] = [];
 
-  const [feeVouchers, attendanceRecords, results, bookIssues, studentTransports, hostelResidents] = await Promise.all([
+  const [feeVouchers, results, bookIssues, studentTransports, hostelResidents] = await Promise.all([
     storage.getFeeVouchers(),
-    storage.getAttendanceRecords(),
     storage.getResults(),
     storage.getBookIssues(),
     storage.getStudentTransports(),
@@ -21,11 +20,6 @@ export async function checkStudentReferences(studentId: string): Promise<Validat
   const feeCount = feeVouchers.filter(v => v.studentId === studentId).length;
   if (feeCount > 0) {
     references.push({ module: "Fees", count: feeCount, description: `${feeCount} fee voucher(s)` });
-  }
-
-  const attendanceCount = attendanceRecords.filter(r => r.studentId === studentId).length;
-  if (attendanceCount > 0) {
-    references.push({ module: "Attendance", count: attendanceCount, description: `${attendanceCount} attendance record(s)` });
   }
 
   const resultCount = results.filter(r => r.studentId === studentId).length;
