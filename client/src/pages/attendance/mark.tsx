@@ -9,12 +9,13 @@ import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { useStudentData } from "../student/student-data";
-import { Loader2, Users, Eye } from "lucide-react";
+import { Loader2, Users, Eye, Calendar as CalendarIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { StudentAttendanceHistory } from "@/components/shared/student-attendance-history";
 import type { Student } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { Input } from "@/components/ui/input";
 
 export default function MarkAttendance() {
   const { markBatchAttendance } = useAttendanceData();
@@ -23,6 +24,7 @@ export default function MarkAttendance() {
 
   const [selectedClass, setSelectedClass] = useState("");
   const [selectedSection, setSelectedSection] = useState("");
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
   const [attendance, setAttendance] = useState<Record<string, typeof attendanceStatuses[number]>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [viewStudent, setViewStudent] = useState<Student | null>(null);
@@ -31,15 +33,14 @@ export default function MarkAttendance() {
     (s) => s.class === selectedClass && s.section === selectedSection && s.status === "Active"
   );
 
-  const today = new Date().toISOString().split("T")[0];
   const { data: existingAttendance, refetch: refetchExisting } = useQuery({
-    queryKey: ['/api/attendance-records', { date: today, class: selectedClass, section: selectedSection }],
+    queryKey: ['/api/attendance-records', { date: selectedDate, class: selectedClass, section: selectedSection }],
     queryFn: async () => {
       if (!selectedClass || !selectedSection) return [];
-      const res = await apiRequest("GET", `/api/attendance-records?date=${today}&class=${selectedClass}&section=${selectedSection}`);
+      const res = await apiRequest("GET", `/api/attendance-records?date=${selectedDate}&class=${selectedClass}&section=${selectedSection}`);
       return res.json();
     },
-    enabled: !!selectedClass && !!selectedSection,
+    enabled: !!selectedClass && !!selectedSection && !!selectedDate,
   });
 
   const isAlreadyMarked = existingAttendance && existingAttendance.length > 0;
@@ -53,21 +54,21 @@ export default function MarkAttendance() {
         if (record) {
           newAttendance[student.id] = record.status;
         } else {
-          // Default to Absent as per requirement "default unmarked/absent until set"
-          newAttendance[student.id] = "Absent";
+          // Default to null/empty so it shows as not marked yet
+          // Requirement: "if none exists, show blank dropdowns"
         }
       });
       setAttendance(newAttendance);
     }
-  }, [existingAttendance, filteredStudents, selectedClass, selectedSection]);
+  }, [existingAttendance, filteredStudents, selectedClass, selectedSection, selectedDate]);
 
   const markStatus = (studentId: string, status: typeof attendanceStatuses[number]) => {
     setAttendance((prev) => ({ ...prev, [studentId]: status }));
   };
 
   const handleSubmit = async () => {
-    if (!selectedClass || !selectedSection) {
-      toast({ title: "Error", description: "Please select class and section", variant: "destructive" });
+    if (!selectedClass || !selectedSection || !selectedDate) {
+      toast({ title: "Error", description: "Please select class, section, and date", variant: "destructive" });
       return;
     }
 
@@ -76,22 +77,33 @@ export default function MarkAttendance() {
       return;
     }
 
+    // Check if all students have a status selected
+    const unmarkedStudents = filteredStudents.filter(s => !attendance[s.id]);
+    if (unmarkedStudents.length > 0) {
+      toast({ 
+        title: "Incomplete", 
+        description: `Please select status for all ${unmarkedStudents.length} students`, 
+        variant: "destructive" 
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const batchRecords = filteredStudents.map((student) => ({
         studentId: student.studentId,
         studentName: student.name,
-        status: attendance[student.id] || "Absent",
+        status: attendance[student.id],
       }));
 
       await markBatchAttendance({
-        date: today,
+        date: selectedDate,
         class: selectedClass,
         section: selectedSection,
         records: batchRecords,
       });
 
-      toast({ title: "Success", description: `Attendance ${isAlreadyMarked ? 'updated' : 'marked'} successfully` });
+      toast({ title: "Success", description: `Attendance ${isAlreadyMarked ? 'updated' : 'marked'} successfully for ${selectedDate}` });
       refetchExisting();
     } catch (error) {
       toast({ title: "Error", description: "Failed to save attendance", variant: "destructive" });
@@ -110,10 +122,22 @@ export default function MarkAttendance() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Select Class</CardTitle>
+            <CardTitle>Session Selection</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label>Date</Label>
+                <div className="relative">
+                  <Input 
+                    type="date" 
+                    value={selectedDate} 
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="pl-10"
+                  />
+                  <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                </div>
+              </div>
               <div className="space-y-2">
                 <Label>Class</Label>
                 <Select value={selectedClass} onValueChange={setSelectedClass}>
@@ -140,11 +164,17 @@ export default function MarkAttendance() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>Date</Label>
-                <div className="h-9 px-3 flex items-center border rounded-md bg-muted/50">
-                  {new Date().toLocaleDateString()}
-                </div>
+              <div className="flex items-end">
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => {
+                    setSelectedDate(new Date().toISOString().split("T")[0]);
+                    refetchExisting();
+                  }}
+                >
+                  Reset to Today
+                </Button>
               </div>
             </div>
           </CardContent>
@@ -157,7 +187,7 @@ export default function MarkAttendance() {
                 <CardTitle>Students - {selectedClass} {selectedSection}</CardTitle>
                 {isAlreadyMarked && (
                   <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 border-green-200">
-                    Already Marked
+                    Already Marked for {selectedDate}
                   </Badge>
                 )}
               </div>
@@ -168,7 +198,7 @@ export default function MarkAttendance() {
                   data-testid="button-save-attendance"
                 >
                   {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  {isAlreadyMarked ? "Update Attendance" : "Save Attendance"}
+                  {isAlreadyMarked ? "Update Records" : "Save Attendance"}
                 </Button>
               )}
             </CardHeader>
@@ -182,43 +212,66 @@ export default function MarkAttendance() {
                   <Users className="h-12 w-12 text-muted-foreground mb-4" />
                   <h3 className="text-lg font-medium">No Students Found</h3>
                   <p className="text-sm text-muted-foreground mt-1">
-                    No active students are enrolled in {selectedClass} {selectedSection}.
+                    No active students found in {selectedClass} {selectedSection}.
                   </p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {filteredStudents.map((student) => (
-                    <div key={student.id} className="flex items-center justify-between p-3 border rounded-md hover:bg-muted/50 transition-colors" data-testid={`row-student-${student.studentId}`}>
-                      <div className="flex items-center gap-4">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setViewStudent(student)}
-                          title="View Attendance History"
-                          className="h-8 w-8"
-                        >
-                          <Eye className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                        <div>
-                          <div className="font-medium">{student.name}</div>
-                          <div className="text-sm text-muted-foreground">{student.studentId}</div>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        {attendanceStatuses.map((status) => (
-                          <Badge
-                            key={status}
-                            variant={attendance[student.id] === status ? "default" : "outline"}
-                            className={`cursor-pointer ${attendance[student.id] === status ? "" : "hover-elevate"}`}
-                            onClick={() => markStatus(student.id, status)}
-                            data-testid={`button-${status.toLowerCase()}-${student.studentId}`}
-                          >
-                            {status}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+                <div className="border rounded-md overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50 border-b">
+                      <tr>
+                        <th className="p-3 text-left font-medium">Student</th>
+                        <th className="p-3 text-center font-medium w-64">Attendance Status</th>
+                        <th className="p-3 text-right font-medium w-24">History</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {filteredStudents.map((student) => (
+                        <tr key={student.id} className="hover:bg-muted/30 transition-colors" data-testid={`row-student-${student.studentId}`}>
+                          <td className="p-3">
+                            <div className="font-medium">{student.name}</div>
+                            <div className="text-xs text-muted-foreground">{student.studentId}</div>
+                          </td>
+                          <td className="p-3">
+                            <div className="flex justify-center">
+                              <Select 
+                                value={attendance[student.id] || ""} 
+                                onValueChange={(val) => markStatus(student.id, val as any)}
+                              >
+                                <SelectTrigger className="w-40" data-testid={`select-status-${student.studentId}`}>
+                                  <SelectValue placeholder="Select Status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {attendanceStatuses.map((status) => (
+                                    <SelectItem key={status} value={status}>
+                                      <div className="flex items-center gap-2">
+                                        <div className={`h-2 w-2 rounded-full ${
+                                          status === 'Present' ? 'bg-green-500' :
+                                          status === 'Absent' ? 'bg-red-500' :
+                                          status === 'Leave' ? 'bg-blue-500' : 'bg-yellow-500'
+                                        }`} />
+                                        {status}
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </td>
+                          <td className="p-3 text-right">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setViewStudent(student)}
+                              className="h-8 w-8"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </CardContent>

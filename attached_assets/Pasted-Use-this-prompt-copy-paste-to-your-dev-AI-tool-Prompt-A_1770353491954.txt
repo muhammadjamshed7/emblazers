@@ -1,0 +1,48 @@
+Use this prompt (copy paste) to your dev/AI tool:
+
+**Prompt: Attendance must be daily (date-scoped) and never block future days**
+
+Build the Attendance module so attendance is **always stored per student per calendar date** (not a single “marked” flag). When a teacher marks attendance for **today**, save records with a **date field** (YYYY-MM-DD) and a **status field**. Tomorrow, the system must treat attendance as **not marked yet**, even if yesterday was marked.
+
+**Core rule**
+
+* “Already marked” must be checked **only for the selected date** (default: today), not globally.
+* Each day has its own attendance session, and records accumulate for **weekly/monthly/yearly reports**.
+
+**Data model requirement**
+
+* Create attendance table/collection with at minimum:
+
+  * student_id, class_id/section_id
+  * date (YYYY-MM-DD, school timezone)
+  * status (dropdown: Present, Absent, Leave, Late)
+  * optional: remarks, marked_by, marked_at
+* Enforce uniqueness: **(student_id, date)** (and include class_id/section_id if needed). This prevents duplicates for the same student on the same date.
+
+**UI/UX requirement**
+
+* Attendance screen must have a **Date selector** (default today).
+* For each student row, provide a **dropdown** to select exactly one status: Present / Absent / Leave / Late.
+* If attendance exists for the selected date, load and show it, and allow update if user has permission.
+
+**Logic**
+
+* On page load: fetch attendance for selected date; if none exists, show blank dropdowns.
+* On save:
+
+  * if record exists for (student_id, date) then update
+  * else insert new
+* “Already marked” warning applies **only** when records exist for that **same selected date**.
+
+**Reporting requirement**
+
+* Provide aggregation:
+
+  * Daily list for a date
+  * Weekly summary (Mon–Sun) per student/class
+  * Monthly summary per student/class (counts of Present/Absent/Leave/Late)
+  * Exportable reports and filters (class, section, student, date range, status)
+
+**Bug to prevent**
+
+* If attendance was marked on February 4, the system must NOT say “already marked” on February 6 unless Feb 6 has records. Only date-specific checks are valid.
