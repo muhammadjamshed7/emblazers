@@ -9,17 +9,20 @@ interface AuthPayload {
   module: ModuleType;
 }
 
-const allModules: ModuleType[] = ["student", "hr", "fee", "payroll", "finance", "timetable", "datesheet", "curriculum", "pos", "library", "transport", "hostel"];
+const allModules: ModuleType[] = ["student", "hr", "fee", "payroll", "finance", "attendance", "timetable", "datesheet", "curriculum", "pos", "library", "transport", "hostel"];
 
 const routeToModulesMap: Record<string, ModuleType[]> = {
-  "/api/students": ["student", "fee", "hostel", "transport", "library"],
-  "/api/staff": ["hr", "payroll", "timetable", "library"],
+  "/api/students": ["student", "fee", "attendance", "hostel", "transport", "library"],
+  "/api/staff": ["hr", "payroll", "attendance", "timetable", "library"],
   "/api/vacancies": ["hr"],
   "/api/applicants": ["hr"],
   "/api/fee-vouchers": ["fee"],
   "/api/payrolls": ["payroll", "finance"],
   "/api/accounts": ["finance"],
   "/api/finance-vouchers": ["finance"],
+  "/api/attendance-records": ["attendance"],
+  "/api/attendance/summary": ["attendance"],
+  "/api/attendance/report": ["attendance"],
   "/api/timetables": ["timetable"],
   "/api/date-sheets": ["datesheet"],
   "/api/curriculums": ["curriculum"],
@@ -76,6 +79,11 @@ function getBaseRoute(path: string): string {
 
   // Handle library subroutes: /api/library/statistics -> /api/library/statistics
   if (parts[1] === "library" && parts.length > 2) {
+    return "/" + parts.slice(0, 3).join("/");
+  }
+
+  // Handle attendance subroutes: /api/attendance/summary -> /api/attendance/summary
+  if (parts[1] === "attendance" && parts.length > 2) {
     return "/" + parts.slice(0, 3).join("/");
   }
 

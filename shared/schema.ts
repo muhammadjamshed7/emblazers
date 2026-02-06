@@ -7,6 +7,7 @@ export const moduleCredentials = {
   fee: { email: "fee@emblazers.com", password: "12345678" },
   payroll: { email: "payroll@emblazers.com", password: "12345678" },
   finance: { email: "finance@emblazers.com", password: "12345678" },
+  attendance: { email: "attendance@emblazers.com", password: "12345678" },
   timetable: { email: "timetable@emblazers.com", password: "12345678" },
   datesheet: { email: "datesheet@emblazers.com", password: "12345678" },
   curriculum: { email: "curriculum@emblazers.com", password: "12345678" },
@@ -447,6 +448,41 @@ export const insertJournalEntrySchema = journalEntrySchema.omit({ id: true, jour
 export type JournalEntry = z.infer<typeof journalEntrySchema>;
 export type InsertJournalEntry = z.infer<typeof insertJournalEntrySchema>;
 
+// ============== ATTENDANCE MODULE ==============
+export const attendanceTargetType = z.enum(["STUDENT", "STAFF"]);
+export type AttendanceTargetType = z.infer<typeof attendanceTargetType>;
+
+export const attendanceStatus = z.enum(["PRESENT", "ABSENT", "LEAVE"]);
+export type AttendanceStatus = z.infer<typeof attendanceStatus>;
+
+export const attendanceRecordSchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  targetType: attendanceTargetType,
+  studentId: z.string().nullable().optional(),
+  staffId: z.string().nullable().optional(),
+  entityName: z.string(),
+  className: z.string().nullable().optional(),
+  section: z.string().nullable().optional(),
+  status: attendanceStatus,
+  markedBy: z.string().optional(),
+  remarks: z.string().optional(),
+  markedAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+});
+
+export const insertAttendanceRecordSchema = attendanceRecordSchema.omit({ id: true, markedAt: true, updatedAt: true });
+export type AttendanceRecord = z.infer<typeof attendanceRecordSchema>;
+export type InsertAttendanceRecord = z.infer<typeof insertAttendanceRecordSchema>;
+
+export const attendanceSummarySchema = z.object({
+  date: z.string(),
+  total: z.number(),
+  present: z.number(),
+  absent: z.number(),
+  leave: z.number(),
+});
+export type AttendanceSummary = z.infer<typeof attendanceSummarySchema>;
 
 // ============== TIMETABLE MODULE ==============
 export const timetableSlotSchema = z.object({
@@ -783,6 +819,7 @@ export const moduleUserCredentials: Record<ModuleType, { email: string; password
   fee: { email: "fee@emblazers.com", password: "12345678", role: "admin", name: "Fee Admin" },
   payroll: { email: "payroll@emblazers.com", password: "12345678", role: "admin", name: "Payroll Admin" },
   finance: { email: "finance@emblazers.com", password: "12345678", role: "admin", name: "Finance Admin" },
+  attendance: { email: "attendance@emblazers.com", password: "12345678", role: "admin", name: "Attendance Admin" },
   timetable: { email: "timetable@emblazers.com", password: "12345678", role: "admin", name: "Timetable Admin" },
   datesheet: { email: "datesheet@emblazers.com", password: "12345678", role: "admin", name: "DateSheet Admin" },
   curriculum: { email: "curriculum@emblazers.com", password: "12345678", role: "admin", name: "Curriculum Admin" },

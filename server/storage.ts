@@ -37,6 +37,8 @@ import {
   type ChartOfAccounts, type InsertChartOfAccounts,
   type LedgerEntry, type InsertLedgerEntry,
   type JournalEntry, type InsertJournalEntry,
+  type AttendanceRecord, type InsertAttendanceRecord,
+  type AttendanceSummary,
   moduleCredentials,
   moduleUserCredentials,
   demoUsers,
@@ -283,6 +285,14 @@ export interface IStorage {
   createJournalEntry(entry: InsertJournalEntry): Promise<JournalEntry>;
   updateJournalEntry(id: string, updates: Partial<JournalEntry>): Promise<JournalEntry | undefined>;
   deleteJournalEntry(id: string): Promise<boolean>;
+
+  getAttendanceRecords(filters?: { date?: string; targetType?: string; className?: string; section?: string }): Promise<AttendanceRecord[]>;
+  getAttendanceRecord(id: string): Promise<AttendanceRecord | undefined>;
+  upsertAttendanceRecord(record: InsertAttendanceRecord): Promise<AttendanceRecord>;
+  updateAttendanceRecord(id: string, updates: Partial<AttendanceRecord>): Promise<AttendanceRecord | undefined>;
+  deleteAttendanceRecord(id: string): Promise<boolean>;
+  getAttendanceSummary(date: string, targetType?: string): Promise<AttendanceSummary>;
+  getAttendanceReport(filters: { targetType: string; startDate: string; endDate: string; className?: string; section?: string }): Promise<AttendanceRecord[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -1499,6 +1509,72 @@ export class MemStorage implements IStorage {
 
   async deleteSale(id: string): Promise<boolean> {
     return this.sales.delete(id);
+  }
+
+  private attendanceRecords: Map<string, AttendanceRecord> = new Map();
+
+  async getAttendanceRecords(filters?: { date?: string; targetType?: string; className?: string; section?: string }): Promise<AttendanceRecord[]> {
+    let records = Array.from(this.attendanceRecords.values());
+    if (filters?.date) records = records.filter(r => r.date === filters.date);
+    if (filters?.targetType) records = records.filter(r => r.targetType === filters.targetType);
+    if (filters?.className) records = records.filter(r => r.className === filters.className);
+    if (filters?.section) records = records.filter(r => r.section === filters.section);
+    return records;
+  }
+
+  async getAttendanceRecord(id: string): Promise<AttendanceRecord | undefined> {
+    return this.attendanceRecords.get(id);
+  }
+
+  async upsertAttendanceRecord(record: InsertAttendanceRecord): Promise<AttendanceRecord> {
+    const existingKey = Array.from(this.attendanceRecords.entries()).find(([_, r]) => {
+      if (record.targetType === "STUDENT") return r.date === record.date && r.studentId === record.studentId;
+      return r.date === record.date && r.staffId === record.staffId;
+    });
+    if (existingKey) {
+      const updated = { ...existingKey[1], ...record, updatedAt: new Date().toISOString() };
+      this.attendanceRecords.set(existingKey[0], updated);
+      return updated;
+    }
+    const id = randomUUID();
+    const now = new Date().toISOString();
+    const newRecord: AttendanceRecord = { ...record, id, markedAt: now, updatedAt: now };
+    this.attendanceRecords.set(id, newRecord);
+    return newRecord;
+  }
+
+  async updateAttendanceRecord(id: string, updates: Partial<AttendanceRecord>): Promise<AttendanceRecord | undefined> {
+    const record = this.attendanceRecords.get(id);
+    if (!record) return undefined;
+    const updated = { ...record, ...updates, updatedAt: new Date().toISOString() };
+    this.attendanceRecords.set(id, updated);
+    return updated;
+  }
+
+  async deleteAttendanceRecord(id: string): Promise<boolean> {
+    return this.attendanceRecords.delete(id);
+  }
+
+  async getAttendanceSummary(date: string, targetType?: string): Promise<AttendanceSummary> {
+    let records = Array.from(this.attendanceRecords.values()).filter(r => r.date === date);
+    if (targetType) records = records.filter(r => r.targetType === targetType);
+    return {
+      date,
+      total: records.length,
+      present: records.filter(r => r.status === "PRESENT").length,
+      absent: records.filter(r => r.status === "ABSENT").length,
+      leave: records.filter(r => r.status === "LEAVE").length,
+    };
+  }
+
+  async getAttendanceReport(filters: { targetType: string; startDate: string; endDate: string; className?: string; section?: string }): Promise<AttendanceRecord[]> {
+    return Array.from(this.attendanceRecords.values()).filter(r => {
+      if (r.targetType !== filters.targetType) return false;
+      if (r.date < filters.startDate || r.date > filters.endDate) return false;
+      if (filters.className && r.className !== filters.className) return false;
+      if (filters.section && r.section !== filters.section) return false;
+      return true;
+    });
   }
 }
 

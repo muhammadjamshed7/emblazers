@@ -38,6 +38,8 @@ import {
   type ChartOfAccounts, type InsertChartOfAccounts,
   type LedgerEntry, type InsertLedgerEntry,
   type JournalEntry, type InsertJournalEntry,
+  type AttendanceRecord, type InsertAttendanceRecord,
+  type AttendanceSummary,
   moduleUserCredentials,
   type ModuleType,
   type UserRole,
@@ -74,6 +76,7 @@ import {
   ActivityLog as ActivityLogModel,
   Notification as NotificationModel,
   BookCategory as BookCategoryModel,
+  AttendanceRecord as AttendanceRecordModel,
 } from "./models";
 import { FeeStructure as FeeStructureModel } from "./models/FeeStructure";
 import { DiscountRule as DiscountRuleModel } from "./models/DiscountRule";
@@ -1276,5 +1279,69 @@ export class MongoStorage implements IStorage {
   async deleteSale(id: string): Promise<boolean> {
     const result = await SaleModel.findByIdAndDelete(id);
     return !!result;
+  }
+
+  async getAttendanceRecords(filters?: { date?: string; targetType?: string; className?: string; section?: string }): Promise<AttendanceRecord[]> {
+    const query: any = {};
+    if (filters?.date) query.date = filters.date;
+    if (filters?.targetType) query.targetType = filters.targetType;
+    if (filters?.className) query.className = filters.className;
+    if (filters?.section) query.section = filters.section;
+    const docs = await AttendanceRecordModel.find(query).sort({ markedAt: -1 });
+    return toDTOArray<AttendanceRecord>(docs);
+  }
+
+  async getAttendanceRecord(id: string): Promise<AttendanceRecord | undefined> {
+    const doc = await AttendanceRecordModel.findById(id);
+    return doc ? toDTO<AttendanceRecord>(doc) : undefined;
+  }
+
+  async upsertAttendanceRecord(record: InsertAttendanceRecord): Promise<AttendanceRecord> {
+    const filter: any = { date: record.date };
+    if (record.targetType === "STUDENT") {
+      filter.studentId = record.studentId;
+    } else {
+      filter.staffId = record.staffId;
+    }
+    const doc = await AttendanceRecordModel.findOneAndUpdate(
+      filter,
+      { $set: { ...record, markedAt: new Date() } },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+    return toDTO<AttendanceRecord>(doc);
+  }
+
+  async updateAttendanceRecord(id: string, updates: Partial<AttendanceRecord>): Promise<AttendanceRecord | undefined> {
+    const doc = await AttendanceRecordModel.findByIdAndUpdate(id, updates, { new: true });
+    return doc ? toDTO<AttendanceRecord>(doc) : undefined;
+  }
+
+  async deleteAttendanceRecord(id: string): Promise<boolean> {
+    const result = await AttendanceRecordModel.findByIdAndDelete(id);
+    return !!result;
+  }
+
+  async getAttendanceSummary(date: string, targetType?: string): Promise<AttendanceSummary> {
+    const query: any = { date };
+    if (targetType) query.targetType = targetType;
+    const records = await AttendanceRecordModel.find(query);
+    return {
+      date,
+      total: records.length,
+      present: records.filter(r => r.status === "PRESENT").length,
+      absent: records.filter(r => r.status === "ABSENT").length,
+      leave: records.filter(r => r.status === "LEAVE").length,
+    };
+  }
+
+  async getAttendanceReport(filters: { targetType: string; startDate: string; endDate: string; className?: string; section?: string }): Promise<AttendanceRecord[]> {
+    const query: any = {
+      targetType: filters.targetType,
+      date: { $gte: filters.startDate, $lte: filters.endDate },
+    };
+    if (filters.className) query.className = filters.className;
+    if (filters.section) query.section = filters.section;
+    const docs = await AttendanceRecordModel.find(query).sort({ date: -1 });
+    return toDTOArray<AttendanceRecord>(docs);
   }
 }

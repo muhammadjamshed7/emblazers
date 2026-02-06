@@ -12,6 +12,7 @@ import {
   Bus,
   Home,
   BarChart3,
+  ClipboardCheck,
   type LucideIcon,
 } from "lucide-react";
 
@@ -88,6 +89,18 @@ export const moduleConfigs: Record<string, ModuleConfig> = {
     loginPath: "/finance/login",
     dashboardPath: "/finance/dashboard",
     description: "Manage accounts, vouchers, and financial reports",
+  },
+  attendance: {
+    id: "attendance",
+    name: "Attendance Module",
+    shortName: "Attendance",
+    icon: ClipboardCheck,
+    color: "text-teal-600 dark:text-teal-400",
+    bgColor: "bg-teal-500",
+    borderColor: "border-teal-500",
+    loginPath: "/attendance/login",
+    dashboardPath: "/attendance/dashboard",
+    description: "Track and manage student and staff attendance",
   },
   timetable: {
     id: "timetable",

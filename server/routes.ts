@@ -62,6 +62,7 @@ import {
   insertChartOfAccountsSchema,
   insertLedgerEntrySchema,
   insertJournalEntrySchema,
+  insertAttendanceRecordSchema,
   type ModuleType,
   type Notification,
   moduleUserCredentials,
@@ -605,6 +606,104 @@ export async function registerRoutes(
     res.json({ success: true });
   });
 
+
+  // ============== ATTENDANCE MODULE ==============
+  app.get("/api/attendance-records", async (req, res) => {
+    try {
+      const { date, targetType, className, section } = req.query;
+      const records = await storage.getAttendanceRecords({
+        date: date as string | undefined,
+        targetType: targetType as string | undefined,
+        className: className as string | undefined,
+        section: section as string | undefined,
+      });
+      res.json(records);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/attendance-records/:id", async (req, res) => {
+    try {
+      const record = await storage.getAttendanceRecord(req.params.id);
+      if (!record) return res.status(404).json({ error: "Not found" });
+      res.json(record);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/attendance-records", async (req, res) => {
+    try {
+      const records = Array.isArray(req.body) ? req.body : [req.body];
+      const results = [];
+      for (const record of records) {
+        const parsed = insertAttendanceRecordSchema.safeParse(record);
+        if (!parsed.success) {
+          return res.status(400).json({ error: parsed.error });
+        }
+        const result = await storage.upsertAttendanceRecord(parsed.data);
+        results.push(result);
+      }
+      res.json(results.length === 1 ? results[0] : results);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.patch("/api/attendance-records/:id", async (req, res) => {
+    try {
+      const { status, remarks } = req.body;
+      const updates: any = {};
+      if (status && ["PRESENT", "ABSENT", "LEAVE"].includes(status)) updates.status = status;
+      if (remarks !== undefined) updates.remarks = remarks;
+      const record = await storage.updateAttendanceRecord(req.params.id, updates);
+      if (!record) return res.status(404).json({ error: "Not found" });
+      res.json(record);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.delete("/api/attendance-records/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteAttendanceRecord(req.params.id);
+      if (!deleted) return res.status(404).json({ error: "Not found" });
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/attendance/summary", async (req, res) => {
+    try {
+      const { date, targetType } = req.query;
+      if (!date) return res.status(400).json({ error: "date query parameter is required" });
+      const summary = await storage.getAttendanceSummary(date as string, targetType as string | undefined);
+      res.json(summary);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/attendance/report", async (req, res) => {
+    try {
+      const { targetType, startDate, endDate, className, section } = req.query;
+      if (!targetType || !startDate || !endDate) {
+        return res.status(400).json({ error: "targetType, startDate, and endDate are required" });
+      }
+      const records = await storage.getAttendanceReport({
+        targetType: targetType as string,
+        startDate: startDate as string,
+        endDate: endDate as string,
+        className: className as string | undefined,
+        section: section as string | undefined,
+      });
+      res.json(records);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
 
   app.get("/api/timetables", async (_req, res) => {
     const timetables = await storage.getTimetables();

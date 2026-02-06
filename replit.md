@@ -2,7 +2,7 @@
 
 ## Overview
 
-Emblazers is a comprehensive school management system designed to handle 12 administrative modules across student management, HR, finance, academics, and facilities. The application follows a modular architecture where each department (Students, HR, Fees, Payroll, Finance, Timetable, DateSheet, Curriculum, POS, Library, Transport, Hostel) operates as an independent module with its own authentication, dashboard, and feature set.
+Emblazers is a comprehensive school management system designed to handle 13 administrative modules across student management, HR, finance, academics, and facilities. The application follows a modular architecture where each department (Students, HR, Fees, Payroll, Finance, Attendance, Timetable, DateSheet, Curriculum, POS, Library, Transport, Hostel) operates as an independent module with its own authentication, dashboard, and feature set.
 
 The system is built as a full-stack TypeScript application using React for the frontend and Express for the backend, with a focus on creating a professional, information-dense admin interface suitable for school administrators.
 
@@ -12,11 +12,16 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (February 2026)
 
-### Attendance Module Removal
-- Attendance module has been completely removed from the codebase (frontend pages, backend routes, storage methods, models, schemas, middleware, seed data)
-- System now operates with 12 modules: Student, HR, Fee, Payroll, Finance, Timetable, DateSheet, Curriculum, POS, Library, Transport, Hostel
-- Student and Staff profile pages updated to remove attendance tabs
-- Validation references cleaned up in checkStudentReferences
+### Attendance Module Rebuilt
+- Attendance module fully rebuilt from scratch with complete CRUD operations
+- System now operates with 13 modules: Student, HR, Fee, Payroll, Finance, Attendance, Timetable, DateSheet, Curriculum, POS, Library, Transport, Hostel
+- Mongoose model with unique compound indexes (studentId+date, staffId+date) for UPSERT behavior
+- Supports both STUDENT and STAFF attendance with foreign key references
+- Status options: PRESENT, ABSENT, LEAVE
+- Backend: API routes for CRUD, bulk upsert, daily summary, and date-range reporting
+- Frontend pages: Dashboard (daily summary), Mark Students (class/section filter), Mark Staff, Records (editable inline), Reports (date range)
+- Module-auth middleware updated with attendance routes and cross-module access to students/staff data
+- Module credentials, seed data, and ModuleUser model updated
 
 ## Previous Changes (January 2026)
 

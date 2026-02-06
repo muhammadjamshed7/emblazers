@@ -3,6 +3,7 @@ export { ModuleUser } from "./ModuleUser";
 export { default as Student } from "./Student";
 export { default as Staff } from "./Staff";
 export { default as FeeVoucher } from "./FeeVoucher";
+export { default as AttendanceRecord } from "./AttendanceRecord";
 export { default as Timetable } from "./Timetable";
 export { default as Book } from "./Book";
 export { default as LibraryMember } from "./LibraryMember";

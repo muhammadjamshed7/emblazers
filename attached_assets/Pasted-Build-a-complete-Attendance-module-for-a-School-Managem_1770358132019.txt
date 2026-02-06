@@ -1,0 +1,119 @@
+Build a complete Attendance module for a School Management System. Everything must be saved to the database (no frontend-only state). Student and Staff data must sync from existing modules, and attendance must be stored daily with full history and editable updates.
+1) Data Sync (Must)
+•	Students list must come from the Students module (admissions/profiles/class/section).
+•	Staff list must come from the HR module (staff profiles/IDs).
+•	Attendance module must only reference these records via foreign keys (student_id/staff_id).
+2) Attendance Dashboard (Daily Summary)
+On opening Attendance dashboard, show summary for selected date (default: today):
+•	Total students (whole school)
+•	Present count
+•	Absent count
+•	Leave count
+No “late” in summary.
+Counts must be calculated from the attendance records of that date.
+3) Mark Attendance Flow
+User selects:
+•	Student Attendance
+•	Staff Attendance
+Student Attendance
+•	Must select Class and Section
+•	Show only students from that class/section
+•	Search by student ID or name (within that class/section)
+Staff Attendance
+•	No class/section filter
+•	Search by staff ID or name (example: “Muhammad Jamshed”)
+•	Show staff row with attendance dropdown
+Only one dataset renders at a time (students OR staff).
+4) Daily Date-Based Logic
+Attendance is always per person per day using a date column (YYYY-MM-DD, school timezone).
+Marking on one day must not block another day.
+5) Status Dropdown
+Each row has dropdown:
+•	Present
+•	Absent
+•	Leave
+Selection must save to DB.
+6) Editable Attendance (Critical)
+If attendance already exists for the selected date, user must be able to change status (Absent → Present etc.). System must UPDATE the existing record, not block it.
+7) No Duplicates, But Allow Updates
+Enforce uniqueness:
+•	For students: one record per (student_id + date)
+•	For staff: one record per (staff_id + date)
+Use UPSERT behaviour:
+•	If exists → UPDATE
+•	Else → INSERT
+8) Reporting
+Store full history and provide:
+•	Individual weekly summary (Present/Absent/Leave)
+•	Individual monthly summary
+•	Class/section monthly report
+________________________________________
+Clear Database Schema (Required)
+A) Reference tables (already exist, used for sync)
+students
+•	id (PK)
+•	name
+•	class_id (FK)
+•	section_id (FK)
+•	status, etc.
+staff
+•	id (PK)
+•	name
+•	department_id etc.
+classes
+•	id (PK)
+•	name
+sections
+•	id (PK)
+•	class_id (FK)
+•	name
+B) Attendance tables (new)
+1) attendance_sessions (optional but recommended)
+Stores one “attendance taking session” per day per group.
+•	id (PK)
+•	date (DATE, school timezone)
+•	target_type (ENUM: 'STUDENT', 'STAFF')
+•	class_id (FK, nullable, only for STUDENT)
+•	section_id (FK, nullable, only for STUDENT)
+•	created_by (FK to users/staff)
+•	created_at, updated_at
+Unique constraints:
+•	STUDENT: (date, target_type, class_id, section_id)
+•	STAFF: (date, target_type)
+2) attendance_records (mandatory)
+Stores actual attendance per person per date.
+•	id (PK)
+•	date (DATE, required)
+•	target_type (ENUM: 'STUDENT', 'STAFF', required)
+•	student_id (FK to students, nullable)
+•	staff_id (FK to staff, nullable)
+•	class_id (FK, nullable, required for STUDENT)
+•	section_id (FK, nullable, required for STUDENT)
+•	status (ENUM: 'PRESENT', 'ABSENT', 'LEAVE', required)
+•	marked_by (FK to users/staff)
+•	marked_at (TIMESTAMP)
+•	updated_at (TIMESTAMP)
+•	remarks (TEXT, optional)
+Constraints:
+•	Exactly one of (student_id, staff_id) must be set depending on target_type.
+•	For STUDENT records: class_id + section_id must be set and match the student.
+•	For STAFF records: class_id/section_id must be NULL.
+Unique constraints (no duplicates):
+•	STUDENT: UNIQUE(date, student_id)
+•	STAFF: UNIQUE(date, staff_id)
+Indexes:
+•	(date)
+•	(class_id, section_id, date)
+•	(student_id, date)
+•	(staff_id, date)
+•	(status, date)
+________________________________________
+Implementation Requirement
+•	The Attendance page must never reload (no full refresh, no route reload).
+•	When a status dropdown changes, send an API request (create or update) and then update the UI using React state.
+•	Use optimistic UI or refetch only the affected record/list after success.
+•	After saving, the summary counts (Present/Absent/Leave/Total) must update instantly from state or by refetching summary data, without reloading the page.
+•	Show loading state on the row being saved, and show a clear error toast if saving fails, while keeping the user on the same page.
+
+Result: Attendance is fully database-driven, daily, editable, non-duplicated, synced with Students and HR modules, and supports weekly/monthly reporting.
+
