@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type Notification, type ModuleType } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { getAuthToken } from "@/lib/auth";
 
 interface NotificationContextType {
   notifications: Notification[];
@@ -30,7 +31,10 @@ export function NotificationProvider({ children, module }: NotificationProviderP
     queryKey,
     queryFn: async () => {
       const url = module ? `/api/notifications?module=${module}` : "/api/notifications";
-      const response = await fetch(url);
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const response = await fetch(url, { headers });
       if (!response.ok) throw new Error("Failed to fetch notifications");
       return response.json();
     },
@@ -40,7 +44,10 @@ export function NotificationProvider({ children, module }: NotificationProviderP
     queryKey: countQueryKey,
     queryFn: async () => {
       const url = module ? `/api/notifications/unread-count?module=${module}` : "/api/notifications/unread-count";
-      const response = await fetch(url);
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const response = await fetch(url, { headers });
       if (!response.ok) throw new Error("Failed to fetch unread count");
       return response.json();
     },

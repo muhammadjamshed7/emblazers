@@ -1298,14 +1298,17 @@ export class MongoStorage implements IStorage {
 
   async upsertAttendanceRecord(record: InsertAttendanceRecord): Promise<AttendanceRecord> {
     const filter: any = { date: record.date };
+    const updateData: any = { ...record, markedAt: new Date() };
     if (record.targetType === "STUDENT") {
       filter.studentId = record.studentId;
+      delete updateData.staffId;
     } else {
       filter.staffId = record.staffId;
+      delete updateData.studentId;
     }
     const doc = await AttendanceRecordModel.findOneAndUpdate(
       filter,
-      { $set: { ...record, markedAt: new Date() } },
+      { $set: updateData },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
     return toDTO<AttendanceRecord>(doc);

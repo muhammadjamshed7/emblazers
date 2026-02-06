@@ -112,7 +112,6 @@ export default function MarkStudents() {
       date: selectedDate,
       targetType: "STUDENT" as const,
       studentId: student.studentId,
-      staffId: null,
       entityName: student.name,
       className: student.class,
       section: student.section,

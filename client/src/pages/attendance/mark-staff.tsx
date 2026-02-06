@@ -96,11 +96,8 @@ export default function MarkStaff() {
     const records = activeStaff.map((staff) => ({
       date: selectedDate,
       targetType: "STAFF" as const,
-      studentId: null,
       staffId: staff.staffId,
       entityName: staff.name,
-      className: null,
-      section: null,
       status: statusMap[staff.staffId] || "PRESENT",
     }));
 

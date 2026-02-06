@@ -34,8 +34,14 @@ const AttendanceRecordSchema = new Schema<IAttendanceRecord>(
 
 AttendanceRecordSchema.index({ date: 1 });
 AttendanceRecordSchema.index({ className: 1, section: 1, date: 1 });
-AttendanceRecordSchema.index({ studentId: 1, date: 1 }, { unique: true, sparse: true });
-AttendanceRecordSchema.index({ staffId: 1, date: 1 }, { unique: true, sparse: true });
+AttendanceRecordSchema.index(
+  { studentId: 1, date: 1 },
+  { unique: true, partialFilterExpression: { studentId: { $type: "string" } } }
+);
+AttendanceRecordSchema.index(
+  { staffId: 1, date: 1 },
+  { unique: true, partialFilterExpression: { staffId: { $type: "string" } } }
+);
 AttendanceRecordSchema.index({ status: 1, date: 1 });
 AttendanceRecordSchema.index({ targetType: 1, date: 1 });
 
