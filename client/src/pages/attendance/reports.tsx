@@ -1,145 +1,179 @@
 import { ModuleLayout } from "@/components/layout/module-layout";
 import { PageHeader } from "@/components/shared/page-header";
-import { attendanceNavItems, useAttendanceData } from "./attendance-data";
+import { attendanceNavItems, useAttendanceData, classes, sections } from "./attendance-data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { FileDown, FileSpreadsheet } from "lucide-react";
-import { exportToPDF, exportToExcel } from "@/lib/export-utils";
-import type { Column } from "@/components/shared/data-table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { useState, useMemo } from "react";
+import { DataTable, StatusBadge } from "@/components/shared/data-table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { format, startOfMonth, isWithinInterval, parseISO } from "date-fns";
+import { Input } from "@/components/ui/input";
 
 export default function AttendanceReports() {
   const { records } = useAttendanceData();
-
-  const total = records.length;
-  const present = records.filter((r) => r.status === "Present").length;
-  const absent = records.filter((r) => r.status === "Absent").length;
-  const late = records.filter((r) => r.status === "Late").length;
-
-  const byClass = ["Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6"].map((cls) => {
-    const classRecords = records.filter((r) => r.class === cls);
-    const classPresent = classRecords.filter((r) => r.status === "Present").length;
-    return {
-      class: cls,
-      total: classRecords.length,
-      present: classPresent,
-      rate: classRecords.length > 0 ? Math.round((classPresent / classRecords.length) * 100) : 0,
-    };
+  const [selectedClass, setSelectedClass] = useState("All");
+  const [selectedSection, setSelectedSection] = useState("All");
+  const [dateRange, setDateRange] = useState({
+    start: format(startOfMonth(new Date()), "yyyy-MM-dd"),
+    end: format(new Date(), "yyyy-MM-dd")
   });
 
-  const classColumns: Column<typeof byClass[0]>[] = [
-    { key: "class", label: "Class" },
-    { key: "total", label: "Total" },
-    { key: "present", label: "Present" },
-    { key: "rate", label: "Rate %" },
-  ];
-
-  const handleExportPDF = () => {
-    exportToPDF({
-      title: "Attendance Reports - By Class",
-      filename: "attendance-reports",
-      data: byClass,
-      columns: classColumns,
+  const filteredRecords = useMemo(() => {
+    return records.filter(r => {
+      const classMatch = selectedClass === "All" || r.class === selectedClass;
+      const sectionMatch = selectedSection === "All" || r.section === selectedSection;
+      const dateMatch = isWithinInterval(parseISO(r.date), {
+        start: parseISO(dateRange.start),
+        end: parseISO(dateRange.end)
+      });
+      return classMatch && sectionMatch && dateMatch;
     });
-  };
+  }, [records, selectedClass, selectedSection, dateRange]);
 
-  const handleExportExcel = () => {
-    exportToExcel({
-      title: "Attendance Reports",
-      filename: "attendance-reports",
-      data: byClass,
-      columns: classColumns,
+  const monthlySummary = useMemo(() => {
+    const summary: Record<string, any> = {};
+    filteredRecords.forEach(r => {
+      const key = `${r.studentId}-${r.class}-${r.section}`;
+      if (!summary[key]) {
+        summary[key] = {
+          studentId: r.studentId,
+          name: r.studentName,
+          class: r.class,
+          section: r.section,
+          Present: 0,
+          Absent: 0,
+          Leave: 0,
+          Late: 0,
+          total: 0
+        };
+      }
+      if (r.status in summary[key]) {
+        summary[key][r.status]++;
+      }
+      summary[key].total++;
     });
-  };
+    return Object.values(summary);
+  }, [filteredRecords]);
 
   return (
     <ModuleLayout module="attendance" navItems={attendanceNavItems}>
       <div className="space-y-6">
         <PageHeader
           title="Attendance Reports"
-          description="Attendance analytics and summary"
-          actions={
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={handleExportPDF} data-testid="button-export-pdf">
-                <FileDown className="w-4 h-4 mr-2" />
-                PDF
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleExportExcel} data-testid="button-export-excel">
-                <FileSpreadsheet className="w-4 h-4 mr-2" />
-                Excel
-              </Button>
-            </div>
-          }
+          description="View and analyze attendance statistics"
         />
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Records</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold" data-testid="text-total-records">{total}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Present</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600 dark:text-green-400" data-testid="text-present">{present}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Absent</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600 dark:text-red-400" data-testid="text-absent">{absent}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Late</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-600 dark:text-orange-400" data-testid="text-late">{late}</div>
-            </CardContent>
-          </Card>
-        </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Attendance Rate by Class</CardTitle>
+            <CardTitle>Filters</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium">Class</th>
-                    <th className="text-left py-3 px-4 font-medium">Total</th>
-                    <th className="text-left py-3 px-4 font-medium">Present</th>
-                    <th className="text-left py-3 px-4 font-medium">Rate</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {byClass.map((row) => (
-                    <tr key={row.class} className="border-b last:border-0" data-testid={`row-class-${row.class}`}>
-                      <td className="py-3 px-4">{row.class}</td>
-                      <td className="py-3 px-4">{row.total}</td>
-                      <td className="py-3 px-4">{row.present}</td>
-                      <td className="py-3 px-4">
-                        <Badge variant={row.rate >= 80 ? "default" : row.rate >= 60 ? "secondary" : "destructive"}>
-                          {row.rate}%
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label>Class</Label>
+                <Select value={selectedClass} onValueChange={setSelectedClass}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Classes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Classes</SelectItem>
+                    {classes.map((c) => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Section</Label>
+                <Select value={selectedSection} onValueChange={setSelectedSection}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Sections" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Sections</SelectItem>
+                    {sections.map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Start Date</Label>
+                <Input 
+                  type="date" 
+                  value={dateRange.start} 
+                  onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>End Date</Label>
+                <Input 
+                  type="date" 
+                  value={dateRange.end} 
+                  onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                />
+              </div>
             </div>
           </CardContent>
         </Card>
+
+        <Tabs defaultValue="daily" className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="daily">Detailed List</TabsTrigger>
+            <TabsTrigger value="summary">Monthly Summary</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="daily" className="mt-6">
+            <Card>
+              <CardContent className="pt-6">
+                <DataTable
+                  data={filteredRecords}
+                  columns={[
+                    { key: "date", label: "Date", sortable: true },
+                    { key: "studentName", label: "Student", sortable: true },
+                    { key: "class", label: "Class" },
+                    { key: "section", label: "Section" },
+                    { key: "status", label: "Status", render: (item) => <StatusBadge status={item.status} /> },
+                  ]}
+                  searchKey="studentName"
+                  getRowKey={(item) => item.id}
+                  exportOptions={{ enabled: true, title: "Detailed Attendance Report" }}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="summary" className="mt-6">
+            <Card>
+              <CardContent className="pt-6">
+                <DataTable
+                  data={monthlySummary}
+                  columns={[
+                    { key: "name", label: "Student", sortable: true },
+                    { key: "class", label: "Class" },
+                    { key: "section", label: "Section" },
+                    { key: "Present", label: "P", render: (item) => <span className="text-green-600 font-medium">{item.Present}</span> },
+                    { key: "Absent", label: "A", render: (item) => <span className="text-red-600 font-medium">{item.Absent}</span> },
+                    { key: "Leave", label: "L", render: (item) => <span className="text-blue-600 font-medium">{item.Leave}</span> },
+                    { key: "Late", label: "T", render: (item) => <span className="text-yellow-600 font-medium">{item.Late}</span> },
+                    { 
+                      key: "percentage", 
+                      label: "Attendance %", 
+                      render: (item) => {
+                        const perc = item.total > 0 ? ((item.Present / item.total) * 100).toFixed(1) : "0.0";
+                        return <span className="font-bold">{perc}%</span>
+                      }
+                    }
+                  ]}
+                  searchKey="name"
+                  getRowKey={(item) => item.studentId}
+                  exportOptions={{ enabled: true, title: "Monthly Attendance Summary" }}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </ModuleLayout>
   );
