@@ -36,34 +36,91 @@ export const financeNavItems = [
   { label: "Reports", path: "/finance/reports", icon: FileText },
 ];
 
+interface DashboardData {
+  totalAssets: number;
+  totalLiabilities: number;
+  totalIncome: number;
+  totalExpenses: number;
+  recentVouchers: FinanceVoucher[];
+}
+
 export function useFinanceData() {
-  const { data: accounts = [], isLoading: accountsLoading, error: accountsError } = useQuery<Account[]>({
-    queryKey: ['/api/accounts']
+  const { data: dashboard, isLoading: dashboardLoading, error: dashboardError } = useQuery<DashboardData>({
+    queryKey: ['/api/finance/dashboard']
   });
   
   const { data: vouchers = [], isLoading: vouchersLoading, error: vouchersError } = useQuery<FinanceVoucher[]>({
     queryKey: ['/api/finance-vouchers']
   });
 
-  const createVoucherMutation = useMutation({
+  return { 
+    dashboard: dashboard || { totalAssets: 0, totalLiabilities: 0, totalIncome: 0, totalExpenses: 0, recentVouchers: [] },
+    vouchers, 
+    isLoading: dashboardLoading || vouchersLoading,
+    error: dashboardError ?? vouchersError,
+  };
+}
+
+const invalidateFinanceQueries = () => {
+  queryClient.invalidateQueries({ queryKey: ['/api/finance-vouchers'] });
+  queryClient.invalidateQueries({ queryKey: ['/api/finance/dashboard'] });
+  queryClient.invalidateQueries({ queryKey: ['/api/ledger-entries'] });
+};
+
+export function useFinanceVouchers() {
+  const { data: vouchers = [], isLoading, error } = useQuery<FinanceVoucher[]>({
+    queryKey: ['/api/finance-vouchers']
+  });
+
+  const createMutation = useMutation({
     mutationFn: async (data: InsertFinanceVoucher) => {
       const res = await apiRequest('POST', '/api/finance-vouchers', data);
       return res.json() as Promise<FinanceVoucher>;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/finance-vouchers'] })
+    onSuccess: invalidateFinanceQueries
   });
 
-  const addVoucher = async (voucher: InsertFinanceVoucher): Promise<FinanceVoucher> => {
-    return await createVoucherMutation.mutateAsync(voucher);
-  };
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<InsertFinanceVoucher> }) => {
+      const res = await apiRequest('PATCH', `/api/finance-vouchers/${id}`, updates);
+      return res.json() as Promise<FinanceVoucher>;
+    },
+    onSuccess: invalidateFinanceQueries
+  });
 
-  return { 
-    accounts, 
-    vouchers, 
-    addVoucher,
-    isLoading: accountsLoading || vouchersLoading,
-    error: accountsError ?? vouchersError,
-    isPending: createVoucherMutation.isPending
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest('DELETE', `/api/finance-vouchers/${id}`);
+    },
+    onSuccess: invalidateFinanceQueries
+  });
+
+  const postMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest('POST', `/api/finance-vouchers/${id}/post`);
+      return res.json() as Promise<FinanceVoucher>;
+    },
+    onSuccess: invalidateFinanceQueries
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest('POST', `/api/finance-vouchers/${id}/cancel`);
+      return res.json() as Promise<FinanceVoucher>;
+    },
+    onSuccess: invalidateFinanceQueries
+  });
+
+  return {
+    vouchers,
+    isLoading,
+    error,
+    createVoucher: createMutation.mutateAsync,
+    updateVoucher: (id: string, updates: Partial<InsertFinanceVoucher>) => updateMutation.mutateAsync({ id, updates }),
+    deleteVoucher: deleteMutation.mutateAsync,
+    postVoucher: postMutation.mutateAsync,
+    cancelVoucher: cancelMutation.mutateAsync,
+    isPending: createMutation.isPending || updateMutation.isPending || deleteMutation.isPending || postMutation.isPending || cancelMutation.isPending,
   };
 }
 
@@ -116,7 +173,10 @@ export function useExpenses() {
       const res = await apiRequest('POST', '/api/expenses', data);
       return res.json() as Promise<Expense>;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/expenses'] })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      invalidateFinanceQueries();
+    }
   });
 
   const updateMutation = useMutation({
@@ -124,14 +184,20 @@ export function useExpenses() {
       const res = await apiRequest('PATCH', `/api/expenses/${id}`, updates);
       return res.json() as Promise<Expense>;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/expenses'] })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      invalidateFinanceQueries();
+    }
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       await apiRequest('DELETE', `/api/expenses/${id}`);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/expenses'] })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      invalidateFinanceQueries();
+    }
   });
 
   return {
@@ -184,25 +250,22 @@ export function useChartOfAccounts() {
   };
 }
 
-export function useLedgerEntries() {
-  const { data: entries = [], isLoading, error } = useQuery<LedgerEntry[]>({
-    queryKey: ['/api/ledger-entries']
-  });
+export function useLedgerEntries(accountId?: string, fromDate?: string, toDate?: string) {
+  const params = new URLSearchParams();
+  if (accountId && accountId !== "all") params.append("accountId", accountId);
+  if (fromDate) params.append("fromDate", fromDate);
+  if (toDate) params.append("toDate", toDate);
+  const queryString = params.toString();
+  const url = queryString ? `/api/ledger-entries?${queryString}` : '/api/ledger-entries';
 
-  const createMutation = useMutation({
-    mutationFn: async (data: InsertLedgerEntry) => {
-      const res = await apiRequest('POST', '/api/ledger-entries', data);
-      return res.json() as Promise<LedgerEntry>;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/ledger-entries'] })
+  const { data: entries = [], isLoading, error } = useQuery<LedgerEntry[]>({
+    queryKey: [url],
   });
 
   return {
     entries,
     isLoading,
     error,
-    createEntry: createMutation.mutateAsync,
-    isPending: createMutation.isPending
   };
 }
 
@@ -232,7 +295,7 @@ export function useJournalEntries() {
 }
 
 export const accountTypes = ["Asset", "Liability", "Equity", "Income", "Expense"] as const;
-export const voucherTypes = ["Payment", "Receipt", "Journal"] as const;
+export const voucherTypes = ["Receipt", "Payment", "Journal", "Contra"] as const;
 export const vendorCategories = ["Supplier", "Contractor", "Service Provider", "Utility", "Other"] as const;
 export const expenseCategories = ["Utilities", "Supplies", "Maintenance", "Salary", "Transport", "Events", "Marketing", "IT", "Other"] as const;
 export const paymentStatuses = ["Pending", "Approved", "Paid", "Cancelled"] as const;

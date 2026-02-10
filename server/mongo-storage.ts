@@ -323,9 +323,14 @@ export class MongoStorage implements IStorage {
   }
 
   async createFinanceVoucher(voucher: InsertFinanceVoucher): Promise<FinanceVoucher> {
-    const count = await FinanceVoucherModel.countDocuments();
-    const voucherId = `VCH${String(count + 1).padStart(5, "0")}`;
-    const voucherNumber = `VCH-${new Date().getFullYear()}-${String(count + 1).padStart(4, "0")}`;
+    const lastVoucher = await FinanceVoucherModel.findOne({}, { voucherId: 1 }).sort({ voucherId: -1 });
+    let nextNum = 1;
+    if (lastVoucher?.voucherId) {
+      const match = lastVoucher.voucherId.match(/VCH(\d+)/);
+      if (match) nextNum = parseInt(match[1], 10) + 1;
+    }
+    const voucherId = `VCH${String(nextNum).padStart(5, "0")}`;
+    const voucherNumber = `VCH-${new Date().getFullYear()}-${String(nextNum).padStart(4, "0")}`;
     const doc = await FinanceVoucherModel.create({ ...voucher, voucherId, voucherNumber });
     return toDTO<FinanceVoucher>(doc);
   }
@@ -340,6 +345,142 @@ export class MongoStorage implements IStorage {
     return !!result;
   }
 
+  async postFinanceVoucher(id: string, postedBy: string): Promise<FinanceVoucher | undefined> {
+    const voucher = await FinanceVoucherModel.findById(id);
+    if (!voucher) return undefined;
+    if (voucher.status !== "Draft") {
+      throw new Error(`Voucher is already ${voucher.status}. Only Draft vouchers can be posted.`);
+    }
+    if (voucher.totalDebit !== voucher.totalCredit) {
+      throw new Error(`Total debit (${voucher.totalDebit}) must equal total credit (${voucher.totalCredit}).`);
+    }
+    if (!voucher.entries || voucher.entries.length === 0) {
+      throw new Error("Voucher must have at least one entry.");
+    }
+
+    const now = new Date().toISOString();
+    for (const entry of voucher.entries) {
+      const account = await ChartOfAccountsModel.findById(entry.accountId);
+      const accountCode = account?.accountCode || "";
+      const accountName = entry.accountName || account?.accountName || "";
+
+      const lastEntry = await LedgerEntryModel.findOne({}, { entryNo: 1 }).sort({ entryNo: -1 });
+      let nextEntryNum = 1;
+      if (lastEntry?.entryNo) {
+        const match = lastEntry.entryNo.match(/LE(\d+)/);
+        if (match) nextEntryNum = parseInt(match[1], 10) + 1;
+      }
+      const entryNo = `LE${String(nextEntryNum).padStart(8, "0")}`;
+
+      const existingBalance = await LedgerEntryModel.find({ accountId: entry.accountId })
+        .sort({ createdAt: -1 }).limit(1);
+      const prevBalance = existingBalance.length > 0 ? existingBalance[0].balance : 0;
+      const balance = prevBalance + entry.debit - entry.credit;
+
+      await LedgerEntryModel.create({
+        entryNo,
+        date: voucher.date,
+        accountId: entry.accountId,
+        accountCode,
+        accountName,
+        description: entry.description || voucher.narration,
+        referenceType: "Voucher",
+        referenceId: voucher._id.toString(),
+        referenceNo: voucher.voucherNumber,
+        debit: entry.debit,
+        credit: entry.credit,
+        balance,
+        createdBy: postedBy,
+        createdAt: now,
+      });
+    }
+
+    voucher.status = "Posted";
+    voucher.postedBy = postedBy;
+    voucher.postedAt = now;
+    await voucher.save();
+
+    return toDTO<FinanceVoucher>(voucher);
+  }
+
+  async cancelFinanceVoucher(id: string, cancelledBy: string): Promise<FinanceVoucher | undefined> {
+    const voucher = await FinanceVoucherModel.findById(id);
+    if (!voucher) return undefined;
+    if (voucher.status !== "Posted") {
+      throw new Error(`Only Posted vouchers can be cancelled. Current status: ${voucher.status}`);
+    }
+
+    const reversalEntries = voucher.entries.map((e: any) => ({
+      accountId: e.accountId,
+      accountName: e.accountName,
+      debit: e.credit,
+      credit: e.debit,
+      description: `Reversal: ${e.description || ""}`,
+    }));
+
+    const reversalVoucher = await this.createFinanceVoucher({
+      type: voucher.type,
+      date: new Date().toISOString().split("T")[0],
+      entries: reversalEntries,
+      totalDebit: voucher.totalCredit,
+      totalCredit: voucher.totalDebit,
+      narration: `Reversal of ${voucher.voucherNumber}`,
+      reference: voucher.voucherNumber,
+      status: "Draft",
+      createdBy: cancelledBy,
+    });
+
+    await this.postFinanceVoucher(reversalVoucher.id, cancelledBy);
+
+    const now = new Date().toISOString();
+    voucher.status = "Cancelled";
+    voucher.cancelledBy = cancelledBy;
+    voucher.cancelledAt = now;
+    await voucher.save();
+
+    return toDTO<FinanceVoucher>(voucher);
+  }
+
+  async getFinanceDashboard(): Promise<any> {
+    const accounts = await ChartOfAccountsModel.find({ isActive: true });
+    const accountMap = new Map<string, any>();
+    for (const acc of accounts) {
+      accountMap.set(acc._id.toString(), {
+        accountCode: acc.accountCode,
+        accountName: acc.accountName,
+        accountType: acc.accountType,
+      });
+    }
+
+    const ledgerEntries = await LedgerEntryModel.find();
+    let totalAssets = 0;
+    let totalLiabilities = 0;
+    let totalIncome = 0;
+    let totalExpenses = 0;
+
+    for (const entry of ledgerEntries) {
+      const account = accountMap.get(entry.accountId);
+      if (!account) continue;
+      const net = entry.debit - entry.credit;
+      switch (account.accountType) {
+        case "Asset": totalAssets += net; break;
+        case "Liability": totalLiabilities += (entry.credit - entry.debit); break;
+        case "Income": totalIncome += (entry.credit - entry.debit); break;
+        case "Expense": totalExpenses += net; break;
+      }
+    }
+
+    const recentVouchers = await FinanceVoucherModel.find()
+      .sort({ createdAt: -1 }).limit(10);
+
+    return {
+      totalAssets,
+      totalLiabilities,
+      totalIncome,
+      totalExpenses,
+      recentVouchers: toDTOArray<FinanceVoucher>(recentVouchers),
+    };
+  }
 
   async getTimetables(): Promise<Timetable[]> {
     const docs = await TimetableModel.find().sort({ createdAt: -1 });
@@ -1094,8 +1235,13 @@ export class MongoStorage implements IStorage {
   }
 
   async createVendor(vendor: InsertVendor): Promise<Vendor> {
-    const count = await VendorModel.countDocuments();
-    const vendorId = `VND${String(count + 1).padStart(4, "0")}`;
+    const lastVendor = await VendorModel.findOne({}, { vendorId: 1 }).sort({ vendorId: -1 });
+    let nextNum = 1;
+    if (lastVendor?.vendorId) {
+      const match = lastVendor.vendorId.match(/VND(\d+)/);
+      if (match) nextNum = parseInt(match[1], 10) + 1;
+    }
+    const vendorId = `VND${String(nextNum).padStart(4, "0")}`;
     const doc = await VendorModel.create({ ...vendor, vendorId, createdAt: new Date() });
     return toDTO<Vendor>(doc);
   }
@@ -1121,10 +1267,80 @@ export class MongoStorage implements IStorage {
   }
 
   async createExpense(expense: InsertExpense): Promise<Expense> {
-    const count = await ExpenseModel.countDocuments();
-    const expenseId = `EXP${String(count + 1).padStart(6, "0")}`;
+    const lastExpense = await ExpenseModel.findOne({}, { expenseId: 1 }).sort({ expenseId: -1 });
+    let nextNum = 1;
+    if (lastExpense?.expenseId) {
+      const match = lastExpense.expenseId.match(/EXP(\d+)/);
+      if (match) nextNum = parseInt(match[1], 10) + 1;
+    }
+    const expenseId = `EXP${String(nextNum).padStart(6, "0")}`;
     const doc = await ExpenseModel.create({ ...expense, expenseId, createdAt: new Date() });
-    return toDTO<Expense>(doc);
+    const createdExpense = toDTO<Expense>(doc);
+
+    if (expense.status === "Paid") {
+      try {
+        const categoryToAccountCode: Record<string, string> = {
+          "Utilities": "5002",
+          "Supplies": "5004",
+          "Maintenance": "5003",
+          "Salary": "5001",
+          "Transport": "5005",
+          "Events": "5006",
+          "Marketing": "5007",
+          "IT": "5008",
+          "Other": "5009",
+        };
+        const paymentModeToAccountCode: Record<string, string> = {
+          "Cash": "1001",
+          "Bank Transfer": "1002",
+          "Cheque": "1002",
+          "Online": "1002",
+        };
+
+        const expenseAccountCode = categoryToAccountCode[expense.category] || "5009";
+        const creditAccountCode = paymentModeToAccountCode[expense.paymentMode] || "1001";
+
+        const expenseAccount = await ChartOfAccountsModel.findOne({ accountCode: expenseAccountCode });
+        const creditAccount = await ChartOfAccountsModel.findOne({ accountCode: creditAccountCode });
+
+        if (expenseAccount && creditAccount) {
+          const entries = [
+            {
+              accountId: expenseAccount._id.toString(),
+              accountName: expenseAccount.accountName,
+              debit: expense.amount,
+              credit: 0,
+              description: expense.description,
+            },
+            {
+              accountId: creditAccount._id.toString(),
+              accountName: creditAccount.accountName,
+              debit: 0,
+              credit: expense.amount,
+              description: expense.description,
+            },
+          ];
+
+          const voucher = await this.createFinanceVoucher({
+            type: "Payment",
+            date: expense.date,
+            entries,
+            totalDebit: expense.amount,
+            totalCredit: expense.amount,
+            narration: `Expense: ${expense.description} (${expense.category})`,
+            reference: expenseId,
+            status: "Draft",
+            createdBy: expense.paidBy || "system",
+          });
+
+          await this.postFinanceVoucher(voucher.id, expense.paidBy || "system");
+        }
+      } catch (err) {
+        console.error("Failed to auto-create voucher for paid expense:", err);
+      }
+    }
+
+    return createdExpense;
   }
 
   async updateExpense(id: string, updates: Partial<Expense>): Promise<Expense | undefined> {
@@ -1174,6 +1390,18 @@ export class MongoStorage implements IStorage {
 
   async getLedgerEntriesByAccount(accountId: string): Promise<LedgerEntry[]> {
     const docs = await LedgerEntryModel.find({ accountId }).sort({ date: -1, createdAt: -1 });
+    return toDTOArray<LedgerEntry>(docs);
+  }
+
+  async getLedgerEntriesByAccountAndDate(accountId?: string, fromDate?: string, toDate?: string): Promise<LedgerEntry[]> {
+    const filter: any = {};
+    if (accountId) filter.accountId = accountId;
+    if (fromDate || toDate) {
+      filter.date = {};
+      if (fromDate) filter.date.$gte = fromDate;
+      if (toDate) filter.date.$lte = toDate;
+    }
+    const docs = await LedgerEntryModel.find(filter).sort({ date: -1, createdAt: -1 });
     return toDTOArray<LedgerEntry>(docs);
   }
 

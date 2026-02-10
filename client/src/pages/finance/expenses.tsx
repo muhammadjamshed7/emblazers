@@ -236,10 +236,10 @@ export default function FinanceExpenses() {
                   <TableCell>{getStatusBadge(expense.status)}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
-                      <Button size="sm" variant="ghost" onClick={() => handleViewExpense(expense)} data-testid={`button-view-expense-${expense.id}`}>
+                      <Button size="icon" variant="ghost" onClick={() => handleViewExpense(expense)} data-testid={`button-view-expense-${expense.id}`}>
                         <Eye className="w-4 h-4" />
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => handleDeleteExpense(expense.id)} data-testid={`button-delete-expense-${expense.id}`}>
+                      <Button size="icon" variant="ghost" onClick={() => handleDeleteExpense(expense.id)} data-testid={`button-delete-expense-${expense.id}`}>
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>

@@ -592,18 +592,97 @@ export async function registerRoutes(
   });
 
   app.patch("/api/finance-vouchers/:id", async (req, res) => {
-    const { id, ...updates } = req.body;
-    const parsed = insertFinanceVoucherSchema.partial().safeParse(updates);
-    if (!parsed.success) return res.status(400).json({ error: parsed.error });
-    const voucher = await storage.updateFinanceVoucher(req.params.id, parsed.data);
-    if (!voucher) return res.status(404).json({ error: "Not found" });
-    res.json(voucher);
+    try {
+      const existing = await storage.getFinanceVoucher(req.params.id);
+      if (!existing) return res.status(404).json({ error: "Not found" });
+      if (existing.status === "Posted") return res.status(400).json({ error: "Cannot edit a Posted voucher" });
+      if (existing.status === "Cancelled") return res.status(400).json({ error: "Cannot edit a Cancelled voucher" });
+      const { id, ...updates } = req.body;
+      const parsed = insertFinanceVoucherSchema.partial().safeParse(updates);
+      if (!parsed.success) return res.status(400).json({ error: parsed.error });
+      const voucher = await storage.updateFinanceVoucher(req.params.id, parsed.data);
+      if (!voucher) return res.status(404).json({ error: "Not found" });
+      res.json(voucher);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   });
 
   app.delete("/api/finance-vouchers/:id", async (req, res) => {
-    const deleted = await storage.deleteFinanceVoucher(req.params.id);
-    if (!deleted) return res.status(404).json({ error: "Not found" });
-    res.json({ success: true });
+    try {
+      const existing = await storage.getFinanceVoucher(req.params.id);
+      if (!existing) return res.status(404).json({ error: "Not found" });
+      if (existing.status === "Posted") return res.status(400).json({ error: "Cannot delete a Posted voucher" });
+      const deleted = await storage.deleteFinanceVoucher(req.params.id);
+      if (!deleted) return res.status(404).json({ error: "Not found" });
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/finance-vouchers/:id/post", async (req, res) => {
+    try {
+      const postedBy = (req as any).user?.email || "system";
+      const voucher = await storage.postFinanceVoucher(req.params.id, postedBy);
+      if (!voucher) return res.status(404).json({ error: "Voucher not found" });
+      res.json(voucher);
+    } catch (err: any) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/finance-vouchers/:id/cancel", async (req, res) => {
+    try {
+      const cancelledBy = (req as any).user?.email || "system";
+      const voucher = await storage.cancelFinanceVoucher(req.params.id, cancelledBy);
+      if (!voucher) return res.status(404).json({ error: "Voucher not found" });
+      res.json(voucher);
+    } catch (err: any) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/finance/dashboard", async (_req, res) => {
+    try {
+      const dashboard = await storage.getFinanceDashboard();
+      res.json(dashboard);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/finance/reports/trial-balance", async (_req, res) => {
+    try {
+      const entries = await storage.getLedgerEntries();
+      const accountBalances: Record<string, { accountCode: string; accountName: string; debit: number; credit: number }> = {};
+      for (const entry of entries) {
+        if (!accountBalances[entry.accountId]) {
+          accountBalances[entry.accountId] = {
+            accountCode: entry.accountCode,
+            accountName: entry.accountName,
+            debit: 0,
+            credit: 0,
+          };
+        }
+        accountBalances[entry.accountId].debit += entry.debit;
+        accountBalances[entry.accountId].credit += entry.credit;
+      }
+      const trialBalance = Object.entries(accountBalances).map(([accountId, data]) => ({
+        accountId,
+        accountCode: data.accountCode,
+        accountName: data.accountName,
+        totalDebit: data.debit,
+        totalCredit: data.credit,
+        balance: data.debit - data.credit,
+      }));
+      trialBalance.sort((a, b) => a.accountCode.localeCompare(b.accountCode));
+      const totalDebit = trialBalance.reduce((s, r) => s + r.totalDebit, 0);
+      const totalCredit = trialBalance.reduce((s, r) => s + r.totalCredit, 0);
+      res.json({ accounts: trialBalance, totalDebit, totalCredit });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   });
 
 
@@ -1994,9 +2073,22 @@ export async function registerRoutes(
   });
 
   // ============== LEDGER ENTRY ENDPOINTS ==============
-  app.get("/api/ledger-entries", async (_req, res) => {
-    const entries = await storage.getLedgerEntries();
-    res.json(entries);
+  app.get("/api/ledger-entries", async (req, res) => {
+    try {
+      const { accountId, fromDate, toDate } = req.query;
+      if (accountId || fromDate || toDate) {
+        const entries = await storage.getLedgerEntriesByAccountAndDate(
+          accountId as string | undefined,
+          fromDate as string | undefined,
+          toDate as string | undefined,
+        );
+        return res.json(entries);
+      }
+      const entries = await storage.getLedgerEntries();
+      res.json(entries);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   });
 
   app.get("/api/ledger-entries/:id", async (req, res) => {

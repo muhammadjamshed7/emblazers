@@ -22,6 +22,8 @@ export interface IFinanceVoucher extends Document {
   createdBy: string;
   postedBy?: string;
   postedAt?: string;
+  cancelledBy?: string;
+  cancelledAt?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,6 +51,8 @@ const FinanceVoucherSchema = new Schema<IFinanceVoucher>(
     createdBy: { type: String, required: true },
     postedBy: { type: String },
     postedAt: { type: String },
+    cancelledBy: { type: String },
+    cancelledAt: { type: String },
   },
   { timestamps: true }
 );

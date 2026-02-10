@@ -184,20 +184,35 @@ export const insertAccountSchema = accountSchema.omit({ id: true });
 export type Account = z.infer<typeof accountSchema>;
 export type InsertAccount = z.infer<typeof insertAccountSchema>;
 
-export const financeVoucherSchema = z.object({
-  id: z.string(),
-  voucherNo: z.string(),
-  type: z.enum(["Payment", "Receipt", "Journal"]),
-  date: z.string(),
+export const voucherEntrySchema = z.object({
   accountId: z.string(),
   accountName: z.string(),
-  amount: z.number(),
-  narration: z.string(),
   debit: z.number(),
   credit: z.number(),
+  description: z.string().optional(),
 });
 
-export const insertFinanceVoucherSchema = financeVoucherSchema.omit({ id: true });
+export const financeVoucherSchema = z.object({
+  id: z.string(),
+  voucherId: z.string(),
+  voucherNumber: z.string(),
+  type: z.enum(["Receipt", "Payment", "Journal", "Contra"]),
+  date: z.string(),
+  entries: z.array(voucherEntrySchema),
+  totalDebit: z.number(),
+  totalCredit: z.number(),
+  narration: z.string(),
+  reference: z.string().optional(),
+  status: z.enum(["Draft", "Posted", "Cancelled"]),
+  createdBy: z.string(),
+  postedBy: z.string().optional(),
+  postedAt: z.string().optional(),
+  cancelledBy: z.string().optional(),
+  cancelledAt: z.string().optional(),
+  createdAt: z.string(),
+});
+
+export const insertFinanceVoucherSchema = financeVoucherSchema.omit({ id: true, voucherId: true, voucherNumber: true, createdAt: true });
 export type FinanceVoucher = z.infer<typeof financeVoucherSchema>;
 export type InsertFinanceVoucher = z.infer<typeof insertFinanceVoucherSchema>;
 
@@ -368,8 +383,8 @@ export const expenseSchema = z.object({
   transactionRef: z.string().optional(),
   invoiceNo: z.string().optional(),
   invoiceDate: z.string().optional(),
-  accountId: z.string(),
-  accountName: z.string(),
+  accountId: z.string().optional(),
+  accountName: z.string().optional(),
   status: z.enum(["Pending", "Approved", "Paid", "Cancelled"]),
   approvedBy: z.string().optional(),
   paidBy: z.string().optional(),
@@ -410,7 +425,7 @@ export const ledgerEntrySchema = z.object({
   accountCode: z.string(),
   accountName: z.string(),
   description: z.string(),
-  referenceType: z.enum(["Challan", "Payment", "Expense", "Payroll", "Journal", "Opening"]),
+  referenceType: z.enum(["Challan", "Payment", "Expense", "Payroll", "Journal", "Opening", "Voucher"]),
   referenceId: z.string().optional(),
   referenceNo: z.string().optional(),
   debit: z.number(),

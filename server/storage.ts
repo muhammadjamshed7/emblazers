@@ -103,6 +103,9 @@ export interface IStorage {
   createFinanceVoucher(voucher: InsertFinanceVoucher): Promise<FinanceVoucher>;
   updateFinanceVoucher(id: string, updates: Partial<FinanceVoucher>): Promise<FinanceVoucher | undefined>;
   deleteFinanceVoucher(id: string): Promise<boolean>;
+  postFinanceVoucher(id: string, postedBy: string): Promise<FinanceVoucher | undefined>;
+  cancelFinanceVoucher(id: string, cancelledBy: string): Promise<FinanceVoucher | undefined>;
+  getFinanceDashboard(): Promise<any>;
 
   getTimetables(): Promise<Timetable[]>;
   getTimetable(id: string): Promise<Timetable | undefined>;
@@ -276,6 +279,7 @@ export interface IStorage {
   getLedgerEntries(): Promise<LedgerEntry[]>;
   getLedgerEntry(id: string): Promise<LedgerEntry | undefined>;
   getLedgerEntriesByAccount(accountId: string): Promise<LedgerEntry[]>;
+  getLedgerEntriesByAccountAndDate(accountId?: string, fromDate?: string, toDate?: string): Promise<LedgerEntry[]>;
   createLedgerEntry(entry: InsertLedgerEntry): Promise<LedgerEntry>;
   updateLedgerEntry(id: string, updates: Partial<LedgerEntry>): Promise<LedgerEntry | undefined>;
   deleteLedgerEntry(id: string): Promise<boolean>;
@@ -887,6 +891,17 @@ export class MemStorage implements IStorage {
     return this.financeVouchers.delete(id);
   }
 
+  async postFinanceVoucher(_id: string, _postedBy: string): Promise<FinanceVoucher | undefined> {
+    throw new Error("postFinanceVoucher not implemented in MemStorage");
+  }
+
+  async cancelFinanceVoucher(_id: string, _cancelledBy: string): Promise<FinanceVoucher | undefined> {
+    throw new Error("cancelFinanceVoucher not implemented in MemStorage");
+  }
+
+  async getFinanceDashboard(): Promise<any> {
+    return { totalAssets: 0, totalLiabilities: 0, totalIncome: 0, totalExpenses: 0, recentVouchers: [] };
+  }
 
   async getTimetables(): Promise<Timetable[]> {
     return Array.from(this.timetables.values());
@@ -1576,6 +1591,76 @@ export class MemStorage implements IStorage {
       return true;
     });
   }
+
+  async getFeeStructures(): Promise<FeeStructure[]> { return []; }
+  async getFeeStructure(_id: string): Promise<FeeStructure | undefined> { return undefined; }
+  async createFeeStructure(s: InsertFeeStructure): Promise<FeeStructure> { return { ...s, id: randomUUID(), structureId: "FS001", createdAt: new Date().toISOString() } as FeeStructure; }
+  async updateFeeStructure(_id: string, _u: Partial<FeeStructure>): Promise<FeeStructure | undefined> { return undefined; }
+  async deleteFeeStructure(_id: string): Promise<boolean> { return false; }
+
+  async getDiscountRules(): Promise<DiscountRule[]> { return []; }
+  async getDiscountRule(_id: string): Promise<DiscountRule | undefined> { return undefined; }
+  async createDiscountRule(r: InsertDiscountRule): Promise<DiscountRule> { return { ...r, id: randomUUID() } as DiscountRule; }
+  async updateDiscountRule(_id: string, _u: Partial<DiscountRule>): Promise<DiscountRule | undefined> { return undefined; }
+  async deleteDiscountRule(_id: string): Promise<boolean> { return false; }
+
+  async getLateFeeRules(): Promise<LateFeeRule[]> { return []; }
+  async getLateFeeRule(_id: string): Promise<LateFeeRule | undefined> { return undefined; }
+  async createLateFeeRule(r: InsertLateFeeRule): Promise<LateFeeRule> { return { ...r, id: randomUUID() } as LateFeeRule; }
+  async updateLateFeeRule(_id: string, _u: Partial<LateFeeRule>): Promise<LateFeeRule | undefined> { return undefined; }
+  async deleteLateFeeRule(_id: string): Promise<boolean> { return false; }
+
+  async getInstallmentPlans(): Promise<InstallmentPlan[]> { return []; }
+  async getInstallmentPlan(_id: string): Promise<InstallmentPlan | undefined> { return undefined; }
+  async createInstallmentPlan(p: InsertInstallmentPlan): Promise<InstallmentPlan> { return { ...p, id: randomUUID() } as InstallmentPlan; }
+  async updateInstallmentPlan(_id: string, _u: Partial<InstallmentPlan>): Promise<InstallmentPlan | undefined> { return undefined; }
+  async deleteInstallmentPlan(_id: string): Promise<boolean> { return false; }
+
+  async getChallans(): Promise<Challan[]> { return []; }
+  async getChallan(_id: string): Promise<Challan | undefined> { return undefined; }
+  async getChallansByStudent(_studentId: string): Promise<Challan[]> { return []; }
+  async createChallan(c: InsertChallan): Promise<Challan> { return { ...c, id: randomUUID(), challanNo: "CHN000001", createdAt: new Date().toISOString() } as Challan; }
+  async updateChallan(_id: string, _u: Partial<Challan>): Promise<Challan | undefined> { return undefined; }
+  async deleteChallan(_id: string): Promise<boolean> { return false; }
+
+  async getPayments(): Promise<Payment[]> { return []; }
+  async getPayment(_id: string): Promise<Payment | undefined> { return undefined; }
+  async getPaymentsByChallan(_challanId: string): Promise<Payment[]> { return []; }
+  async createPayment(p: InsertPayment): Promise<Payment> { return { ...p, id: randomUUID(), receiptNo: "RCP000001", createdAt: new Date().toISOString() } as Payment; }
+  async updatePayment(_id: string, _u: Partial<Payment>): Promise<Payment | undefined> { return undefined; }
+  async deletePayment(_id: string): Promise<boolean> { return false; }
+
+  async getVendors(): Promise<Vendor[]> { return []; }
+  async getVendor(_id: string): Promise<Vendor | undefined> { return undefined; }
+  async createVendor(v: InsertVendor): Promise<Vendor> { return { ...v, id: randomUUID(), vendorId: "VND0001", createdAt: new Date().toISOString() } as Vendor; }
+  async updateVendor(_id: string, _u: Partial<Vendor>): Promise<Vendor | undefined> { return undefined; }
+  async deleteVendor(_id: string): Promise<boolean> { return false; }
+
+  async getExpenses(): Promise<Expense[]> { return []; }
+  async getExpense(_id: string): Promise<Expense | undefined> { return undefined; }
+  async createExpense(e: InsertExpense): Promise<Expense> { return { ...e, id: randomUUID(), expenseId: "EXP000001", createdAt: new Date().toISOString() } as Expense; }
+  async updateExpense(_id: string, _u: Partial<Expense>): Promise<Expense | undefined> { return undefined; }
+  async deleteExpense(_id: string): Promise<boolean> { return false; }
+
+  async getChartOfAccounts(): Promise<ChartOfAccounts[]> { return []; }
+  async getChartOfAccount(_id: string): Promise<ChartOfAccounts | undefined> { return undefined; }
+  async createChartOfAccount(a: InsertChartOfAccounts): Promise<ChartOfAccounts> { return { ...a, id: randomUUID(), createdAt: new Date().toISOString() } as ChartOfAccounts; }
+  async updateChartOfAccount(_id: string, _u: Partial<ChartOfAccounts>): Promise<ChartOfAccounts | undefined> { return undefined; }
+  async deleteChartOfAccount(_id: string): Promise<boolean> { return false; }
+
+  async getLedgerEntries(): Promise<LedgerEntry[]> { return []; }
+  async getLedgerEntry(_id: string): Promise<LedgerEntry | undefined> { return undefined; }
+  async getLedgerEntriesByAccount(_accountId: string): Promise<LedgerEntry[]> { return []; }
+  async getLedgerEntriesByAccountAndDate(_accountId?: string, _fromDate?: string, _toDate?: string): Promise<LedgerEntry[]> { return []; }
+  async createLedgerEntry(e: InsertLedgerEntry): Promise<LedgerEntry> { return { ...e, id: randomUUID(), entryNo: "LE00000001", createdAt: new Date().toISOString() } as LedgerEntry; }
+  async updateLedgerEntry(_id: string, _u: Partial<LedgerEntry>): Promise<LedgerEntry | undefined> { return undefined; }
+  async deleteLedgerEntry(_id: string): Promise<boolean> { return false; }
+
+  async getJournalEntries(): Promise<JournalEntry[]> { return []; }
+  async getJournalEntry(_id: string): Promise<JournalEntry | undefined> { return undefined; }
+  async createJournalEntry(e: InsertJournalEntry): Promise<JournalEntry> { return { ...e, id: randomUUID(), journalNo: "JE000001", createdAt: new Date().toISOString() } as JournalEntry; }
+  async updateJournalEntry(_id: string, _u: Partial<JournalEntry>): Promise<JournalEntry | undefined> { return undefined; }
+  async deleteJournalEntry(_id: string): Promise<boolean> { return false; }
 }
 
 import { isDBConnected } from "./db";

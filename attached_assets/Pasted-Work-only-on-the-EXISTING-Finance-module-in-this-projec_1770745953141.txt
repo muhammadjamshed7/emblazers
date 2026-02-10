@@ -1,0 +1,113 @@
+Work only on the EXISTING Finance module in this project. MongoDB is already connected. The Finance UI, sidebar, and routes already exist. Do not redesign anything and do not create new pages. Just make the current Finance module work correctly.
+
+Step 1: Check the existing Finance routes and pages
+- Dashboard
+- Chart of Accounts
+- Ledger
+- Expenses
+- Vendors
+- Vouchers
+- Reports
+Keep these pages exactly as they are (same navigation, same layout).
+
+Step 2: Check existing MongoDB/Mongoose models
+- If models already exist for finance, reuse them.
+- Only add missing fields if required.
+- Do not create duplicate student/staff tables; link to existing IDs.
+
+Step 3: Implement Chart of Accounts properly
+- Make sure accounts are stored in MongoDB with:
+  code (unique), name, type (Asset/Liability/Equity/Income/Expense), parentId (optional), isActive, openingBalance.
+- Do NOT store “balance” as a fixed number.
+- Balance must be calculated from ledger entries.
+
+Step 4: Implement vouchers (the core of finance)
+- Use voucher types: Receipt, Payment, Journal, Contra (already shown in UI).
+- Voucher statuses: Draft, Posted, Cancelled.
+Rules:
+- Draft vouchers can be edited.
+- Posted vouchers cannot be edited or deleted.
+- If something is wrong, create a reversal voucher (do not modify old posted vouchers).
+
+Step 5: Implement double-entry ledger entries for every posted voucher
+When a voucher is posted:
+- Create journal/ledger lines in MongoDB.
+- Total Debit must equal Total Credit (always).
+- If not equal, block posting and show an error.
+
+Step 6: Connect student money to Finance automatically
+When the existing system records student money:
+- fee collection
+- admission fee
+- fine payment
+Automatically create a Receipt voucher in Finance and post it (or save draft if the project uses approval).
+Accounting:
+- Debit: Cash or Bank account
+- Credit: correct income account (Fee Income / Admission Income / Fine Income)
+Link the voucher to the existing student ID and payment record ID.
+
+Step 7: Make Expenses page create proper finance entries
+When an expense is created from the existing Expenses screen:
+- Create a Payment voucher and post it.
+Accounting:
+- Debit: the selected Expense account
+- Credit: Cash or Bank
+If a vendor is selected, link it (do not duplicate vendor data).
+
+Step 8: Connect Payroll payments to Finance
+When salary is paid from the existing Payroll module:
+- Create a Payment voucher in Finance.
+Accounting:
+- Debit: Salary Expense
+- Credit: Cash or Bank
+Link to the existing staff ID and payroll payment record ID.
+
+Step 9: Fix the Ledger page
+- Ledger must read only from posted voucher journal lines.
+- Show running balance per account.
+- Add filters: account + date range.
+- Do not allow editing balances manually.
+
+Step 10: Fix the Finance Dashboard calculations
+Dashboard cards must be calculated from ledger totals (not hardcoded):
+- Total Assets
+- Total Income (month to date and total)
+- Total Expenses (month to date and total)
+- Total Liabilities
+Also fill:
+- Recent Vouchers (latest posted/draft)
+- Accounts Summary (top accounts with balances)
+
+Step 11: Fix Reports page
+Generate reports from ledger only:
+- Trial Balance (opening, debits, credits, closing)
+- Income Statement (income vs expenses by date range)
+- Balance Sheet (Assets = Liabilities + Equity)
+No static values.
+
+Step 12: Add basic validation and permissions
+- Only allowed roles can post/cancel vouchers (use existing auth/roles).
+- Block negative amounts.
+- Block posting if debit != credit.
+- Log who created/posted/cancelled and when.
+
+Step 13: Seed default accounts if chart is empty
+If no accounts exist, create basic defaults:
+- Cash, Bank
+- Fee Income, Admission Income, Fine Income
+- Salary Expense, Utilities Expense, Maintenance Expense, Misc Expense
+- Accounts Payable (optional)
+- Equity/Capital
+
+Step 14: End-to-end test inside the existing project
+Confirm these flows work:
+- Student fee payment updates Finance dashboard and ledger
+- Expense creates voucher and affects totals
+- Payroll payment creates voucher and affects totals
+- Trial Balance matches all posted vouchers
+
+Deliver the changes as code inside the existing structure:
+- update/reuse models
+- update/reuse existing APIs
+- update page logic to read real data
+Do not break existing routes or UI.

@@ -60,6 +60,8 @@ const routeToModulesMap: Record<string, ModuleType[]> = {
   "/api/chart-of-accounts": ["finance"],
   "/api/ledger-entries": ["finance"],
   "/api/journal-entries": ["finance"],
+  "/api/finance/dashboard": ["finance"],
+  "/api/finance/reports": ["finance"],
 };
 
 const publicRoutes = [
@@ -84,6 +86,11 @@ function getBaseRoute(path: string): string {
 
   // Handle attendance subroutes: /api/attendance/summary -> /api/attendance/summary
   if (parts[1] === "attendance" && parts.length > 2) {
+    return "/" + parts.slice(0, 3).join("/");
+  }
+
+  // Handle finance subroutes: /api/finance/dashboard -> /api/finance/dashboard, /api/finance/reports/trial-balance -> /api/finance/reports
+  if (parts[1] === "finance" && parts.length > 2) {
     return "/" + parts.slice(0, 3).join("/");
   }
 
