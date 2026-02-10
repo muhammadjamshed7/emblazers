@@ -21,6 +21,18 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (February 2026)
 
+### Finance Module - Double-Entry Accounting System
+- Implemented complete double-entry accounting with balanced debit/credit enforcement
+- FinanceVoucher model rebuilt with entries[] array (each entry: accountId, accountName, debit, credit, description)
+- Voucher workflow: Draft -> Posted (creates ledger entries) -> Cancelled (creates reversal voucher)
+- Posted vouchers cannot be edited or deleted; cancellation creates an auto-posted reversal voucher
+- LedgerEntry records created on voucher posting with referenceType="Voucher"
+- Dashboard aggregates totals from ledger entries (totalAssets, totalLiabilities, totalIncome, totalExpenses)
+- Trial Balance, Income Statement, and Balance Sheet reports from ledger data
+- 17 default Chart of Accounts seeded on startup (Asset: 1001-1002, Liability: 2001, Equity: 3001, Income: 4001-4004, Expense: 5001-5009)
+- Expense-to-voucher integration: Paid expenses auto-create Payment vouchers mapped to correct expense/payment accounts
+- ID generation fixed across FinanceVoucher, Vendor, and Expense models using findOne().sort() pattern
+
 ### Production Deployment & Bug Fixes
 - App deployed publicly at https://emblazers.replit.app
 - Fixed duplicate key errors in attendance records by switching MongoDB indexes from sparse to partialFilterExpression
