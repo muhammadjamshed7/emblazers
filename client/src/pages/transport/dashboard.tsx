@@ -2,11 +2,12 @@ import { ModuleLayout } from "@/components/layout/module-layout";
 import { StatsCard, StatsGrid } from "@/components/shared/stats-card";
 import { RecentTable } from "@/components/shared/recent-table";
 import { StatusBadge } from "@/components/shared/data-table";
+import { Skeleton } from "@/components/ui/skeleton";
 import { transportNavItems, useTransportData } from "./transport-data";
 import { Bus, MapPin, Users, UserCheck } from "lucide-react";
 
 export default function TransportDashboard() {
-  const { routes, vehicles, drivers, allocations } = useTransportData();
+  const { routes, vehicles, drivers, allocations, isLoading } = useTransportData();
 
   const totalRoutes = routes.length;
   const activeVehicles = vehicles.filter((v) => v.status === "Active").length;
@@ -14,6 +15,28 @@ export default function TransportDashboard() {
   const totalAllocations = allocations.length;
 
   const recentAllocations = allocations.slice(0, 5);
+
+  if (isLoading) {
+    return (
+      <ModuleLayout module="transport" navItems={transportNavItems}>
+        <div className="space-y-6">
+          <div>
+            <Skeleton className="h-8 w-64 mb-2" />
+            <Skeleton className="h-4 w-96" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-28 rounded-md" />
+            ))}
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Skeleton className="h-64 rounded-md" />
+            <Skeleton className="h-64 rounded-md" />
+          </div>
+        </div>
+      </ModuleLayout>
+    );
+  }
 
   return (
     <ModuleLayout module="transport" navItems={transportNavItems}>
@@ -59,7 +82,7 @@ export default function TransportDashboard() {
               { key: "studentName", label: "Student" },
               { key: "class", label: "Class" },
               { key: "routeName", label: "Route" },
-              { key: "stop", label: "Stop" },
+              { key: "stopName", label: "Stop" },
             ]}
             getRowKey={(item) => item.id}
           />
@@ -68,7 +91,7 @@ export default function TransportDashboard() {
             title="Vehicles Status"
             data={vehicles}
             columns={[
-              { key: "regNo", label: "Reg No" },
+              { key: "registrationNumber", label: "Reg No" },
               { key: "type", label: "Type" },
               { key: "capacity", label: "Capacity" },
               {

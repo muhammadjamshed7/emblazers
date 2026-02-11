@@ -14,6 +14,7 @@ export interface ITransportAllocation extends Document {
   monthlyFee: number;
   startDate: string;
   endDate?: string;
+  vehicleId?: string;
   status: "Active" | "Inactive";
   createdAt: Date;
   updatedAt: Date;
@@ -34,6 +35,7 @@ const TransportAllocationSchema = new Schema<ITransportAllocation>(
     monthlyFee: { type: Number, required: true },
     startDate: { type: String, required: true },
     endDate: { type: String },
+    vehicleId: { type: String },
     status: { type: String, enum: ["Active", "Inactive"], default: "Active" },
   },
   { timestamps: true }

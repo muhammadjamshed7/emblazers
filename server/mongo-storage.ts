@@ -813,8 +813,9 @@ export class MongoStorage implements IStorage {
   }
 
   async createRoute(route: InsertRoute): Promise<Route> {
-    const count = await RouteModel.countDocuments();
-    const routeId = `RT${String(count + 1).padStart(3, "0")}`;
+    const last = await RouteModel.findOne().sort({ routeId: -1 });
+    const lastNum = last?.routeId ? parseInt(last.routeId.replace("RT", "")) : 0;
+    const routeId = `RT${String(lastNum + 1).padStart(3, "0")}`;
     const doc = await RouteModel.create({ ...route, routeId });
     return toDTO<Route>(doc);
   }
@@ -840,8 +841,9 @@ export class MongoStorage implements IStorage {
   }
 
   async createVehicle(vehicle: InsertVehicle): Promise<Vehicle> {
-    const count = await VehicleModel.countDocuments();
-    const vehicleId = `VH${String(count + 1).padStart(3, "0")}`;
+    const last = await VehicleModel.findOne().sort({ vehicleId: -1 });
+    const lastNum = last?.vehicleId ? parseInt(last.vehicleId.replace("VH", "")) : 0;
+    const vehicleId = `VH${String(lastNum + 1).padStart(3, "0")}`;
     const doc = await VehicleModel.create({ ...vehicle, vehicleId });
     return toDTO<Vehicle>(doc);
   }
@@ -867,8 +869,9 @@ export class MongoStorage implements IStorage {
   }
 
   async createDriver(driver: InsertDriver): Promise<Driver> {
-    const count = await DriverModel.countDocuments();
-    const driverId = `DR${String(count + 1).padStart(3, "0")}`;
+    const last = await DriverModel.findOne().sort({ driverId: -1 });
+    const lastNum = last?.driverId ? parseInt(last.driverId.replace("DR", "")) : 0;
+    const driverId = `DR${String(lastNum + 1).padStart(3, "0")}`;
     const doc = await DriverModel.create({ ...driver, driverId });
     return toDTO<Driver>(doc);
   }
@@ -894,8 +897,9 @@ export class MongoStorage implements IStorage {
   }
 
   async createStudentTransport(transport: InsertStudentTransport): Promise<StudentTransport> {
-    const count = await TransportAllocationModel.countDocuments();
-    const allocationId = `TA${String(count + 1).padStart(4, "0")}`;
+    const last = await TransportAllocationModel.findOne().sort({ allocationId: -1 });
+    const lastNum = last?.allocationId ? parseInt(last.allocationId.replace("TA", "")) : 0;
+    const allocationId = `TA${String(lastNum + 1).padStart(4, "0")}`;
     const doc = await TransportAllocationModel.create({ ...transport, allocationId });
     return toDTO<StudentTransport>(doc);
   }

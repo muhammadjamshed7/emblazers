@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { type Route, type Vehicle, type Driver, type StudentTransport, type InsertRoute, type InsertVehicle, type InsertDriver, type InsertStudentTransport } from "@shared/schema";
+import { type Route, type Vehicle, type Driver, type StudentTransport, type Student, type InsertRoute, type InsertVehicle, type InsertDriver, type InsertStudentTransport } from "@shared/schema";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import {
   LayoutDashboard,
@@ -18,6 +18,17 @@ export const transportNavItems = [
   { label: "Student Allocation", path: "/transport/allocation", icon: UserCheck },
   { label: "Reports", path: "/transport/reports", icon: FileText },
 ];
+
+export const vehicleTypes = ["Bus", "Van", "Coaster", "Car"] as const;
+export const vehicleStatuses = ["Active", "Under Maintenance", "Inactive"] as const;
+export const driverStatuses = ["Active", "On Leave", "Inactive"] as const;
+export const allocationStatuses = ["Active", "Inactive"] as const;
+
+export function useStudentsForTransport() {
+  return useQuery<Student[]>({
+    queryKey: ['/api/students']
+  });
+}
 
 export function useTransportData() {
   const { data: routes = [], isLoading: routesLoading, error: routesError } = useQuery<Route[]>({
@@ -52,6 +63,13 @@ export function useTransportData() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/routes'] })
   });
 
+  const deleteRouteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest('DELETE', `/api/routes/${id}`);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/routes'] })
+  });
+
   const createVehicleMutation = useMutation({
     mutationFn: async (data: InsertVehicle) => {
       const res = await apiRequest('POST', '/api/vehicles', data);
@@ -64,6 +82,13 @@ export function useTransportData() {
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Vehicle> }) => {
       const res = await apiRequest('PATCH', `/api/vehicles/${id}`, updates);
       return res.json() as Promise<Vehicle>;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] })
+  });
+
+  const deleteVehicleMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest('DELETE', `/api/vehicles/${id}`);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/vehicles'] })
   });
@@ -84,6 +109,13 @@ export function useTransportData() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/drivers'] })
   });
 
+  const deleteDriverMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest('DELETE', `/api/drivers/${id}`);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/drivers'] })
+  });
+
   const createAllocationMutation = useMutation({
     mutationFn: async (data: InsertStudentTransport) => {
       const res = await apiRequest('POST', '/api/student-transports', data);
@@ -100,12 +132,23 @@ export function useTransportData() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/student-transports'] })
   });
 
+  const deleteAllocationMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest('DELETE', `/api/student-transports/${id}`);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/student-transports'] })
+  });
+
   const addRoute = async (route: InsertRoute): Promise<Route> => {
     return await createRouteMutation.mutateAsync(route);
   };
 
   const updateRoute = async (id: string, updates: Partial<Route>) => {
     await updateRouteMutation.mutateAsync({ id, updates });
+  };
+
+  const deleteRoute = async (id: string) => {
+    await deleteRouteMutation.mutateAsync(id);
   };
 
   const addVehicle = async (vehicle: InsertVehicle): Promise<Vehicle> => {
@@ -116,6 +159,10 @@ export function useTransportData() {
     await updateVehicleMutation.mutateAsync({ id, updates });
   };
 
+  const deleteVehicle = async (id: string) => {
+    await deleteVehicleMutation.mutateAsync(id);
+  };
+
   const addDriver = async (driver: InsertDriver): Promise<Driver> => {
     return await createDriverMutation.mutateAsync(driver);
   };
@@ -124,12 +171,20 @@ export function useTransportData() {
     await updateDriverMutation.mutateAsync({ id, updates });
   };
 
+  const deleteDriver = async (id: string) => {
+    await deleteDriverMutation.mutateAsync(id);
+  };
+
   const addAllocation = async (allocation: InsertStudentTransport): Promise<StudentTransport> => {
     return await createAllocationMutation.mutateAsync(allocation);
   };
 
   const updateAllocation = async (id: string, updates: Partial<StudentTransport>) => {
     await updateAllocationMutation.mutateAsync({ id, updates });
+  };
+
+  const deleteAllocation = async (id: string) => {
+    await deleteAllocationMutation.mutateAsync(id);
   };
 
   const getRoute = (id: string) => routes.find((r) => r.id === id);
@@ -142,19 +197,20 @@ export function useTransportData() {
     allocations, 
     addRoute, 
     updateRoute, 
+    deleteRoute,
     addVehicle, 
     updateVehicle, 
+    deleteVehicle,
     addDriver, 
     updateDriver, 
+    deleteDriver,
     addAllocation, 
     updateAllocation, 
+    deleteAllocation,
     getRoute, 
     getVehicle,
     isLoading: routesLoading || vehiclesLoading || driversLoading || allocationsLoading,
     error: routesError ?? vehiclesError ?? driversError ?? allocationsError,
-    isPending: createRouteMutation.isPending || updateRouteMutation.isPending || createVehicleMutation.isPending || updateVehicleMutation.isPending || createDriverMutation.isPending || updateDriverMutation.isPending || createAllocationMutation.isPending || updateAllocationMutation.isPending
+    isPending: createRouteMutation.isPending || updateRouteMutation.isPending || deleteRouteMutation.isPending || createVehicleMutation.isPending || updateVehicleMutation.isPending || deleteVehicleMutation.isPending || createDriverMutation.isPending || updateDriverMutation.isPending || deleteDriverMutation.isPending || createAllocationMutation.isPending || updateAllocationMutation.isPending || deleteAllocationMutation.isPending
   };
 }
-
-export const vehicleTypes = ["Bus", "Van", "Mini Bus"] as const;
-export const vehicleStatuses = ["Active", "Maintenance", "Inactive"] as const;

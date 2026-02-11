@@ -704,52 +704,78 @@ export type InsertBookIssue = z.infer<typeof insertBookIssueSchema>;
 // ============== TRANSPORT MODULE ==============
 export const routeSchema = z.object({
   id: z.string(),
+  routeId: z.string().optional(),
   routeCode: z.string(),
   routeName: z.string(),
   stops: z.array(z.string()),
 });
 
-export const insertRouteSchema = routeSchema.omit({ id: true });
+export const insertRouteSchema = routeSchema.omit({ id: true, routeId: true });
 export type Route = z.infer<typeof routeSchema>;
 export type InsertRoute = z.infer<typeof insertRouteSchema>;
 
 export const vehicleSchema = z.object({
   id: z.string(),
-  regNo: z.string(),
-  type: z.enum(["Bus", "Van", "Mini Bus"]),
+  vehicleId: z.string().optional(),
+  registrationNumber: z.string(),
+  type: z.enum(["Bus", "Van", "Coaster", "Car"]),
   capacity: z.number(),
-  assignedRouteId: z.string().optional(),
-  status: z.enum(["Active", "Maintenance", "Inactive"]),
+  model: z.string(),
+  make: z.string(),
+  year: z.number(),
+  driverId: z.string().optional(),
+  driverName: z.string().optional(),
+  routeId: z.string().optional(),
+  routeName: z.string().optional(),
+  status: z.enum(["Active", "Under Maintenance", "Inactive"]).default("Active"),
+  insuranceExpiry: z.string(),
+  fitnessExpiry: z.string(),
 });
 
-export const insertVehicleSchema = vehicleSchema.omit({ id: true });
+export const insertVehicleSchema = vehicleSchema.omit({ id: true, vehicleId: true });
 export type Vehicle = z.infer<typeof vehicleSchema>;
 export type InsertVehicle = z.infer<typeof insertVehicleSchema>;
 
 export const driverSchema = z.object({
   id: z.string(),
+  driverId: z.string().optional(),
   name: z.string(),
+  cnic: z.string(),
   contact: z.string(),
-  licenseNo: z.string(),
-  assignedVehicleId: z.string().optional(),
+  address: z.string().optional(),
+  licenseNumber: z.string(),
+  licenseExpiry: z.string(),
+  experience: z.number(),
+  vehicleId: z.string().optional(),
+  routeId: z.string().optional(),
+  salary: z.number(),
+  status: z.enum(["Active", "On Leave", "Inactive"]).default("Active"),
 });
 
-export const insertDriverSchema = driverSchema.omit({ id: true });
+export const insertDriverSchema = driverSchema.omit({ id: true, driverId: true });
 export type Driver = z.infer<typeof driverSchema>;
 export type InsertDriver = z.infer<typeof insertDriverSchema>;
 
 export const studentTransportSchema = z.object({
   id: z.string(),
+  allocationId: z.string().optional(),
   studentId: z.string(),
   studentName: z.string(),
   class: z.string(),
+  section: z.string(),
   routeId: z.string(),
   routeName: z.string(),
-  stop: z.string(),
+  stopName: z.string(),
+  pickupTime: z.string(),
+  dropTime: z.string(),
+  monthlyFee: z.number(),
+  startDate: z.string(),
+  endDate: z.string().optional(),
   vehicleId: z.string().optional(),
+  status: z.enum(["Active", "Inactive"]).default("Active"),
 });
 
-export const insertStudentTransportSchema = studentTransportSchema.omit({ id: true });
+export const insertStudentTransportSchema = studentTransportSchema.omit({ id: true, allocationId: true });
 export type StudentTransport = z.infer<typeof studentTransportSchema>;
 export type InsertStudentTransport = z.infer<typeof insertStudentTransportSchema>;
 
