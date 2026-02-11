@@ -7,7 +7,7 @@ const ledgerEntrySchema = new mongoose.Schema({
   accountCode: { type: String, required: true },
   accountName: { type: String, required: true },
   description: { type: String, required: true },
-  referenceType: { type: String, enum: ["Challan", "Payment", "Expense", "Payroll", "Journal", "Opening", "Voucher"], required: true },
+  referenceType: { type: String, enum: ["Challan", "Payment", "Expense", "Payroll", "Journal", "Opening", "Voucher", "FeeCollection", "SalaryPayment"], required: true },
   referenceId: { type: String },
   referenceNo: { type: String },
   debit: { type: Number, default: 0 },

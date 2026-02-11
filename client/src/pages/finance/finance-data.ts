@@ -36,12 +36,34 @@ export const financeNavItems = [
   { label: "Reports", path: "/finance/reports", icon: FileText },
 ];
 
+interface RecentFeePayment {
+  id: string;
+  receiptNo: string;
+  studentName: string;
+  amount: number;
+  paymentMode: string;
+  paymentDate: string;
+}
+
+interface RecentPayrollPayment {
+  id: string;
+  payrollId: string;
+  staffName: string;
+  netSalary: number;
+  month: string;
+  paidDate: string;
+}
+
 interface DashboardData {
   totalAssets: number;
   totalLiabilities: number;
   totalIncome: number;
   totalExpenses: number;
   recentVouchers: FinanceVoucher[];
+  totalFeeCollected: number;
+  totalPayrollPaid: number;
+  recentFeePayments: RecentFeePayment[];
+  recentPayrollPayments: RecentPayrollPayment[];
 }
 
 export function useFinanceData() {
@@ -54,7 +76,7 @@ export function useFinanceData() {
   });
 
   return { 
-    dashboard: dashboard || { totalAssets: 0, totalLiabilities: 0, totalIncome: 0, totalExpenses: 0, recentVouchers: [] },
+    dashboard: dashboard || { totalAssets: 0, totalLiabilities: 0, totalIncome: 0, totalExpenses: 0, recentVouchers: [], totalFeeCollected: 0, totalPayrollPaid: 0, recentFeePayments: [], recentPayrollPayments: [] },
     vouchers, 
     isLoading: dashboardLoading || vouchersLoading,
     error: dashboardError ?? vouchersError,

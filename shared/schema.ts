@@ -425,7 +425,7 @@ export const ledgerEntrySchema = z.object({
   accountCode: z.string(),
   accountName: z.string(),
   description: z.string(),
-  referenceType: z.enum(["Challan", "Payment", "Expense", "Payroll", "Journal", "Opening", "Voucher"]),
+  referenceType: z.enum(["Challan", "Payment", "Expense", "Payroll", "Journal", "Opening", "Voucher", "FeeCollection", "SalaryPayment"]),
   referenceId: z.string().optional(),
   referenceNo: z.string().optional(),
   debit: z.number(),

@@ -523,10 +523,29 @@ export async function registerRoutes(
 
   app.patch("/api/payrolls/:id", async (req, res) => {
     const { id, ...updates } = req.body;
+    const existingPayroll = await storage.getPayroll(req.params.id);
+    if (!existingPayroll) return res.status(404).json({ error: "Not found" });
+
     const parsed = insertPayrollSchema.partial().safeParse(updates);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const payroll = await storage.updatePayroll(req.params.id, parsed.data);
     if (!payroll) return res.status(404).json({ error: "Not found" });
+
+    if (existingPayroll.status !== "Paid" && payroll.status === "Paid" && payroll.netSalary > 0) {
+      const paidDate = payroll.paidDate || new Date().toISOString().split("T")[0];
+      await (storage as any).createAutoPostedVoucher({
+        type: "Payment",
+        date: paidDate,
+        debitAccountCode: "5001",
+        creditAccountCode: "1001",
+        amount: payroll.netSalary,
+        narration: `Salary payment to ${payroll.staffName} for ${payroll.month}`,
+        reference: payroll.id,
+        referenceType: "SalaryPayment",
+        createdBy: (req as any).user?.email || "system",
+      });
+    }
+
     res.json(payroll);
   });
 
@@ -1961,6 +1980,28 @@ export async function registerRoutes(
         paidAmount: newPaidAmount,
         balanceAmount: Math.max(0, newBalance),
         status: newStatus,
+      });
+    }
+
+    if (parsed.data.type === "Payment" && parsed.data.amount > 0) {
+      const paymentModeToAccount: Record<string, string> = {
+        "Cash": "1001",
+        "Bank Transfer": "1002",
+        "Cheque": "1002",
+        "Online": "1002",
+        "Card": "1002",
+      };
+      const debitAccountCode = paymentModeToAccount[parsed.data.paymentMode] || "1001";
+      await (storage as any).createAutoPostedVoucher({
+        type: "Receipt",
+        date: parsed.data.paymentDate,
+        debitAccountCode,
+        creditAccountCode: "4001",
+        amount: parsed.data.amount,
+        narration: `Fee collection from ${parsed.data.studentName} - Receipt #${payment.receiptNo}`,
+        reference: payment.receiptNo,
+        referenceType: "FeeCollection",
+        createdBy: parsed.data.receivedBy || "system",
       });
     }
 

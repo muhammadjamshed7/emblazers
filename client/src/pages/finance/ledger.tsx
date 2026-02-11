@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Search, Filter, ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -125,6 +126,8 @@ export default function FinanceLedger() {
               <TableRow>
                 <TableHead>Date</TableHead>
                 <TableHead>Ref #</TableHead>
+                <TableHead>Source</TableHead>
+                <TableHead>Account</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead className="text-right">Debit</TableHead>
                 <TableHead className="text-right">Credit</TableHead>
@@ -132,10 +135,31 @@ export default function FinanceLedger() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {entriesWithBalance.map((entry) => (
+              {entriesWithBalance.map((entry) => {
+                const sourceLabel: Record<string, string> = {
+                  Voucher: "Voucher",
+                  FeeCollection: "Fee Collection",
+                  SalaryPayment: "Salary Payment",
+                  Expense: "Expense",
+                  Payroll: "Payroll",
+                  Payment: "Payment",
+                  Journal: "Journal",
+                  Opening: "Opening",
+                  Challan: "Challan",
+                };
+                const sourceVariant = entry.referenceType === "FeeCollection" ? "default" as const
+                  : entry.referenceType === "SalaryPayment" ? "secondary" as const
+                  : "outline" as const;
+                return (
                 <TableRow key={entry.id} data-testid={`row-ledger-${entry.id}`}>
                   <TableCell>{entry.date}</TableCell>
                   <TableCell className="font-medium">{entry.referenceNo || entry.entryNo}</TableCell>
+                  <TableCell>
+                    <Badge variant={sourceVariant}>
+                      {sourceLabel[entry.referenceType] || entry.referenceType}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{entry.accountName}</TableCell>
                   <TableCell>{entry.description}</TableCell>
                   <TableCell className="text-right">
                     {entry.debit > 0 && (
@@ -157,10 +181,11 @@ export default function FinanceLedger() {
                     Rs. {entry.runningBalance.toLocaleString()}
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
               {entriesWithBalance.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     {isLoading ? "Loading ledger entries..." : "No ledger entries found."}
                   </TableCell>
                 </TableRow>

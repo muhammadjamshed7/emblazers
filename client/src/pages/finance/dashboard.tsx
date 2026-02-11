@@ -2,7 +2,7 @@ import { ModuleLayout } from "@/components/layout/module-layout";
 import { StatsCard, StatsGrid } from "@/components/shared/stats-card";
 import { RecentTable } from "@/components/shared/recent-table";
 import { financeNavItems, useFinanceData, useChartOfAccounts } from "./finance-data";
-import { Building2, TrendingUp, TrendingDown, Receipt } from "lucide-react";
+import { Building2, TrendingUp, TrendingDown, Receipt, CreditCard, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,8 +14,8 @@ function DashboardSkeleton() {
         <Skeleton className="h-8 w-64 mb-2" />
         <Skeleton className="h-4 w-48" />
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-        {[1, 2, 3, 4].map((i) => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
           <Card key={i}>
             <CardContent className="p-6">
               <Skeleton className="h-4 w-24 mb-3" />
@@ -25,7 +25,7 @@ function DashboardSkeleton() {
         ))}
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {[1, 2].map((i) => (
+        {[1, 2, 3].map((i) => (
           <Card key={i}>
             <CardHeader><Skeleton className="h-5 w-40" /></CardHeader>
             <CardContent>
@@ -53,6 +53,8 @@ export default function FinanceDashboard() {
   }
 
   const recentVouchers = dashboard.recentVouchers || [];
+  const recentFeePayments = dashboard.recentFeePayments || [];
+  const recentPayrollPayments = dashboard.recentPayrollPayments || [];
   const topAccounts = accounts.slice(0, 5);
 
   return (
@@ -88,6 +90,18 @@ export default function FinanceDashboard() {
             icon={Receipt}
             iconColor="text-orange-500"
           />
+          <StatsCard
+            title="Fee Collections"
+            value={`Rs. ${(dashboard.totalFeeCollected || 0).toLocaleString()}`}
+            icon={CreditCard}
+            iconColor="text-emerald-500"
+          />
+          <StatsCard
+            title="Payroll Disbursed"
+            value={`Rs. ${(dashboard.totalPayrollPaid || 0).toLocaleString()}`}
+            icon={Wallet}
+            iconColor="text-violet-500"
+          />
         </StatsGrid>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -111,6 +125,36 @@ export default function FinanceDashboard() {
             ]}
             getRowKey={(item: any) => item.id}
             testId="table-recent-vouchers"
+          />
+
+          <RecentTable
+            title="Fee Collections"
+            data={recentFeePayments}
+            columns={[
+              { key: "receiptNo", label: "Receipt #" },
+              { key: "studentName", label: "Student" },
+              { key: "amount", label: "Amount", render: (item: any) => `Rs. ${(item.amount || 0).toLocaleString()}` },
+              { key: "paymentMode", label: "Mode", render: (item: any) => (
+                <Badge variant="outline">{item.paymentMode}</Badge>
+              )},
+              { key: "paymentDate", label: "Date" },
+            ]}
+            getRowKey={(item: any) => item.id}
+            testId="table-recent-fee-payments"
+          />
+
+          <RecentTable
+            title="Payroll Disbursements"
+            data={recentPayrollPayments}
+            columns={[
+              { key: "payrollId", label: "Payroll #" },
+              { key: "staffName", label: "Staff" },
+              { key: "netSalary", label: "Net Salary", render: (item: any) => `Rs. ${(item.netSalary || 0).toLocaleString()}` },
+              { key: "month", label: "Month" },
+              { key: "paidDate", label: "Paid Date" },
+            ]}
+            getRowKey={(item: any) => item.id}
+            testId="table-recent-payroll"
           />
 
           <RecentTable

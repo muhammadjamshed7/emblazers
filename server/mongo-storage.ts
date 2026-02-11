@@ -345,7 +345,7 @@ export class MongoStorage implements IStorage {
     return !!result;
   }
 
-  async postFinanceVoucher(id: string, postedBy: string): Promise<FinanceVoucher | undefined> {
+  async postFinanceVoucher(id: string, postedBy: string, overrideReferenceType?: string): Promise<FinanceVoucher | undefined> {
     const voucher = await FinanceVoucherModel.findById(id);
     if (!voucher) return undefined;
     if (voucher.status !== "Draft") {
@@ -384,7 +384,7 @@ export class MongoStorage implements IStorage {
         accountCode,
         accountName,
         description: entry.description || voucher.narration,
-        referenceType: "Voucher",
+        referenceType: overrideReferenceType || "Voucher",
         referenceId: voucher._id.toString(),
         referenceNo: voucher.voucherNumber,
         debit: entry.debit,
@@ -441,6 +441,68 @@ export class MongoStorage implements IStorage {
     return toDTO<FinanceVoucher>(voucher);
   }
 
+  async createAutoPostedVoucher(params: {
+    type: "Receipt" | "Payment" | "Journal" | "Contra";
+    date: string;
+    debitAccountCode: string;
+    creditAccountCode: string;
+    amount: number;
+    narration: string;
+    reference?: string;
+    referenceType: string;
+    createdBy: string;
+  }): Promise<void> {
+    try {
+      if (params.reference) {
+        const existing = await FinanceVoucherModel.findOne({ reference: params.reference });
+        if (existing) {
+          console.log(`Auto-voucher skipped: voucher already exists for reference ${params.reference}`);
+          return;
+        }
+      }
+
+      const debitAccount = await ChartOfAccountsModel.findOne({ accountCode: params.debitAccountCode });
+      const creditAccount = await ChartOfAccountsModel.findOne({ accountCode: params.creditAccountCode });
+      if (!debitAccount || !creditAccount) {
+        console.error(`Auto-voucher skipped: accounts not found (${params.debitAccountCode} / ${params.creditAccountCode})`);
+        return;
+      }
+
+      const entries = [
+        {
+          accountId: debitAccount._id.toString(),
+          accountName: debitAccount.accountName,
+          debit: params.amount,
+          credit: 0,
+          description: params.narration,
+        },
+        {
+          accountId: creditAccount._id.toString(),
+          accountName: creditAccount.accountName,
+          debit: 0,
+          credit: params.amount,
+          description: params.narration,
+        },
+      ];
+
+      const voucher = await this.createFinanceVoucher({
+        type: params.type,
+        date: params.date,
+        entries,
+        totalDebit: params.amount,
+        totalCredit: params.amount,
+        narration: params.narration,
+        reference: params.reference,
+        status: "Draft",
+        createdBy: params.createdBy,
+      });
+
+      await this.postFinanceVoucher(voucher.id, params.createdBy, params.referenceType);
+    } catch (err) {
+      console.error(`Failed to auto-create ${params.referenceType} voucher:`, err);
+    }
+  }
+
   async getFinanceDashboard(): Promise<any> {
     const accounts = await ChartOfAccountsModel.find({ isActive: true });
     const accountMap = new Map<string, any>();
@@ -473,12 +535,50 @@ export class MongoStorage implements IStorage {
     const recentVouchers = await FinanceVoucherModel.find()
       .sort({ createdAt: -1 }).limit(10);
 
+    const FeeVoucherModel = (await import("./models/FeeVoucher")).default;
+    const PayrollModel = (await import("./models/Payroll")).default;
+    const { Payment: PaymentModel } = await import("./models/Payment");
+
+    const totalFeeCollected = await PaymentModel.aggregate([
+      { $match: { type: "Payment", status: "Completed" } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]);
+
+    const totalPayrollPaid = await PayrollModel.aggregate([
+      { $match: { status: "Paid" } },
+      { $group: { _id: null, total: { $sum: "$netSalary" } } },
+    ]);
+
+    const recentFeePayments = await PaymentModel.find({ type: "Payment", status: "Completed" })
+      .sort({ createdAt: -1 }).limit(5);
+
+    const recentPayrollPayments = await PayrollModel.find({ status: "Paid" })
+      .sort({ updatedAt: -1 }).limit(5);
+
     return {
       totalAssets,
       totalLiabilities,
       totalIncome,
       totalExpenses,
       recentVouchers: toDTOArray<FinanceVoucher>(recentVouchers),
+      totalFeeCollected: totalFeeCollected[0]?.total || 0,
+      totalPayrollPaid: totalPayrollPaid[0]?.total || 0,
+      recentFeePayments: recentFeePayments.map((p: any) => ({
+        id: p._id.toString(),
+        receiptNo: p.receiptNo,
+        studentName: p.studentName,
+        amount: p.amount,
+        paymentMode: p.paymentMode,
+        paymentDate: p.paymentDate,
+      })),
+      recentPayrollPayments: recentPayrollPayments.map((p: any) => ({
+        id: p._id.toString(),
+        payrollId: p.payrollId,
+        staffName: p.staffName,
+        netSalary: p.netSalary,
+        month: p.month,
+        paidDate: p.paidDate,
+      })),
     };
   }
 
