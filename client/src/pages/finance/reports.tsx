@@ -35,14 +35,21 @@ export default function FinanceReports() {
     to: new Date().toISOString().split("T")[0],
   });
 
-  const { data: trialBalanceData = [] } = useQuery<TrialBalanceRow[]>({
+  const { data: trialBalanceResponse } = useQuery<{ accounts: any[]; totalDebit: number; totalCredit: number }>({
     queryKey: ['/api/finance/reports/trial-balance'],
   });
 
+  const trialBalanceData: TrialBalanceRow[] = (trialBalanceResponse?.accounts || []).map((a: any) => ({
+    accountCode: a.accountCode,
+    accountName: a.accountName,
+    debit: a.totalDebit || 0,
+    credit: a.totalCredit || 0,
+  }));
+
   const { entries: ledgerEntries } = useLedgerEntries(undefined, dateRange.from, dateRange.to);
 
-  const tbGrandDebit = trialBalanceData.reduce((s, r) => s + r.debit, 0);
-  const tbGrandCredit = trialBalanceData.reduce((s, r) => s + r.credit, 0);
+  const tbGrandDebit = trialBalanceResponse?.totalDebit ?? trialBalanceData.reduce((s, r) => s + r.debit, 0);
+  const tbGrandCredit = trialBalanceResponse?.totalCredit ?? trialBalanceData.reduce((s, r) => s + r.credit, 0);
   const tbBalanced = Math.abs(tbGrandDebit - tbGrandCredit) < 0.01;
 
   const accountTotals = ledgerEntries.reduce((acc, entry) => {

@@ -1,0 +1,96 @@
+WebSocket connected for notifications
+index-DYVIzkyL.js:548 WebSocket disconnected
+index-DYVIzkyL.js:548 WebSocket connected for notifications
+index-DYVIzkyL.js:40 TypeError: n.reduce is not a function
+    at Sje (index-DYVIzkyL.js:814:246190)
+    at F4 (index-DYVIzkyL.js:38:17018)
+    at x_ (index-DYVIzkyL.js:40:3139)
+    at xR (index-DYVIzkyL.js:40:44833)
+    at hR (index-DYVIzkyL.js:40:39790)
+    at Nq (index-DYVIzkyL.js:40:39718)
+    at T2 (index-DYVIzkyL.js:40:39570)
+    at C_ (index-DYVIzkyL.js:40:35934)
+    at jA (index-DYVIzkyL.js:40:36738)
+    at sf (index-DYVIzkyL.js:38:3279)
+m_ @ index-DYVIzkyL.js:40
+GD.r.callback @ index-DYVIzkyL.js:40
+nA @ index-DYVIzkyL.js:38
+yA @ index-DYVIzkyL.js:40
+cR @ index-DYVIzkyL.js:40
+jq @ index-DYVIzkyL.js:40
+Cq @ index-DYVIzkyL.js:40
+Ff @ index-DYVIzkyL.js:40
+jA @ index-DYVIzkyL.js:40
+sf @ index-DYVIzkyL.js:38
+(anonymous) @ index-DYVIzkyL.js:40
+setTimeout
+a @ index-DYVIzkyL.js:48
+o @ index-DYVIzkyL.js:48
+batch @ index-DYVIzkyL.js:48
+zc @ index-DYVIzkyL.js:48
+setData @ index-DYVIzkyL.js:48
+onSuccess @ index-DYVIzkyL.js:48
+f @ index-DYVIzkyL.js:48
+Promise.then
+x @ index-DYVIzkyL.js:48
+start @ index-DYVIzkyL.js:48
+fetch @ index-DYVIzkyL.js:48
+xx @ index-DYVIzkyL.js:48
+onSubscribe @ index-DYVIzkyL.js:48
+subscribe @ index-DYVIzkyL.js:48
+(anonymous) @ index-DYVIzkyL.js:48
+FD @ index-DYVIzkyL.js:38
+Uw @ index-DYVIzkyL.js:40
+K0 @ index-DYVIzkyL.js:40
+Cq @ index-DYVIzkyL.js:40
+Ff @ index-DYVIzkyL.js:40
+jA @ index-DYVIzkyL.js:40
+sf @ index-DYVIzkyL.js:38
+(anonymous) @ index-DYVIzkyL.js:40Understand this error
+index-DYVIzkyL.js:814 Uncaught TypeError: n.reduce is not a function
+    at Sje (index-DYVIzkyL.js:814:246190)
+    at F4 (index-DYVIzkyL.js:38:17018)
+    at x_ (index-DYVIzkyL.js:40:3139)
+    at xR (index-DYVIzkyL.js:40:44833)
+    at hR (index-DYVIzkyL.js:40:39790)
+    at Nq (index-DYVIzkyL.js:40:39718)
+    at T2 (index-DYVIzkyL.js:40:39570)
+    at C_ (index-DYVIzkyL.js:40:35934)
+    at jA (index-DYVIzkyL.js:40:36738)
+    at sf (index-DYVIzkyL.js:38:3279)
+Sje @ index-DYVIzkyL.js:814
+F4 @ index-DYVIzkyL.js:38
+x_ @ index-DYVIzkyL.js:40
+xR @ index-DYVIzkyL.js:40
+hR @ index-DYVIzkyL.js:40
+Nq @ index-DYVIzkyL.js:40
+T2 @ index-DYVIzkyL.js:40
+C_ @ index-DYVIzkyL.js:40
+jA @ index-DYVIzkyL.js:40
+sf @ index-DYVIzkyL.js:38
+(anonymous) @ index-DYVIzkyL.js:40
+setTimeout
+a @ index-DYVIzkyL.js:48
+o @ index-DYVIzkyL.js:48
+batch @ index-DYVIzkyL.js:48
+zc @ index-DYVIzkyL.js:48
+setData @ index-DYVIzkyL.js:48
+onSuccess @ index-DYVIzkyL.js:48
+f @ index-DYVIzkyL.js:48
+Promise.then
+x @ index-DYVIzkyL.js:48
+start @ index-DYVIzkyL.js:48
+fetch @ index-DYVIzkyL.js:48
+xx @ index-DYVIzkyL.js:48
+onSubscribe @ index-DYVIzkyL.js:48
+subscribe @ index-DYVIzkyL.js:48
+(anonymous) @ index-DYVIzkyL.js:48
+FD @ index-DYVIzkyL.js:38
+Uw @ index-DYVIzkyL.js:40
+K0 @ index-DYVIzkyL.js:40
+Cq @ index-DYVIzkyL.js:40
+Ff @ index-DYVIzkyL.js:40
+jA @ index-DYVIzkyL.js:40
+sf @ index-DYVIzkyL.js:38
+(anonymous) @ index-DYVIzkyL.js:40Understand this error
+index-DYVIzkyL.js:548 WebSocket disconnected
