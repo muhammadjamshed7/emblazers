@@ -17,6 +17,7 @@ import {
   type Book, type InsertBook,
   type LibraryMember, type InsertLibraryMember,
   type BookIssue, type InsertBookIssue,
+  type BookCategory, type InsertBookCategory,
   type Route, type InsertRoute,
   type Vehicle, type InsertVehicle,
   type Driver, type InsertDriver,
@@ -166,6 +167,12 @@ export interface IStorage {
   createBookIssue(issue: InsertBookIssue): Promise<BookIssue>;
   updateBookIssue(id: string, updates: Partial<BookIssue>): Promise<BookIssue | undefined>;
   deleteBookIssue(id: string): Promise<boolean>;
+
+  getBookCategories(): Promise<BookCategory[]>;
+  getBookCategory(id: string): Promise<BookCategory | undefined>;
+  createBookCategory(category: InsertBookCategory): Promise<BookCategory>;
+  updateBookCategory(id: string, updates: Partial<BookCategory>): Promise<BookCategory | undefined>;
+  deleteBookCategory(id: string): Promise<boolean>;
 
   getRoutes(): Promise<Route[]>;
   getRoute(id: string): Promise<Route | undefined>;
@@ -1215,6 +1222,12 @@ export class MemStorage implements IStorage {
   async deleteBookIssue(id: string): Promise<boolean> {
     return this.bookIssues.delete(id);
   }
+
+  async getBookCategories(): Promise<BookCategory[]> { return []; }
+  async getBookCategory(_id: string): Promise<BookCategory | undefined> { return undefined; }
+  async createBookCategory(c: InsertBookCategory): Promise<BookCategory> { return { ...c, id: randomUUID() } as BookCategory; }
+  async updateBookCategory(_id: string, _u: Partial<BookCategory>): Promise<BookCategory | undefined> { return undefined; }
+  async deleteBookCategory(_id: string): Promise<boolean> { return false; }
 
   async getRoutes(): Promise<Route[]> {
     return Array.from(this.routes.values());

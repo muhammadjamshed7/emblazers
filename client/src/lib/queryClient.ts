@@ -1,6 +1,16 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import { getAuthToken, forceLogout } from "./auth";
 
+let logoutDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+function debouncedForceLogout() {
+  if (logoutDebounceTimer) return;
+  logoutDebounceTimer = setTimeout(() => {
+    logoutDebounceTimer = null;
+    forceLogout();
+  }, 300);
+}
+
 function getAuthHeaders(): Record<string, string> {
   const token = getAuthToken();
   if (token) {
@@ -9,17 +19,7 @@ function getAuthHeaders(): Record<string, string> {
   return {};
 }
 
-async function handleUnauthorized(res: Response) {
-  if (res.status === 401) {
-    forceLogout();
-    throw new Error("Session expired. Please log in again.");
-  }
-}
-
 async function throwIfResNotOk(res: Response) {
-  if (res.status === 401) {
-    await handleUnauthorized(res);
-  }
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
     throw new Error(`${res.status}: ${text}`);
@@ -46,6 +46,11 @@ export async function apiRequest(
     credentials: "include",
   });
 
+  if (res.status === 401) {
+    debouncedForceLogout();
+    throw new Error("Session expired. Please log in again.");
+  }
+
   await throwIfResNotOk(res);
   return res;
 }
@@ -56,6 +61,11 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
+    const token = getAuthToken();
+    if (!token && unauthorizedBehavior === "returnNull") {
+      return null;
+    }
+
     const res = await fetch(queryKey.join("/") as string, {
       credentials: "include",
       headers: getAuthHeaders(),
@@ -65,7 +75,7 @@ export const getQueryFn: <T>(options: {
       if (unauthorizedBehavior === "returnNull") {
         return null;
       }
-      forceLogout();
+      debouncedForceLogout();
       throw new Error("Session expired. Please log in again.");
     }
 

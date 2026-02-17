@@ -133,17 +133,13 @@ export function moduleAuthMiddleware(req: Request, res: Response, next: NextFunc
     if (!allowedModules) {
       console.warn(`[Security] Unmapped route accessed: ${req.path} by module ${decoded.module}`);
       return res.status(403).json({
-        error: "Access denied: This resource is not accessible",
-        path: req.path
+        error: "Access denied: This resource is not accessible"
       });
     }
 
     if (!allowedModules.includes(decoded.module)) {
       return res.status(403).json({
-        error: "Access denied: You do not have permission to access this resource",
-        currentModule: decoded.module,
-        requiredModules: allowedModules,
-        path: req.path
+        error: "Access denied: You do not have permission to access this resource"
       });
     }
 

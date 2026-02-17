@@ -87,8 +87,7 @@ async function seed() {
     }
 
     console.log("\nSeed completed successfully!");
-    console.log("\nLogin credentials for all modules:");
-    console.log("Password for all: 12345678");
+    console.log("\nModule users created:");
     seedUsers.forEach((u) => {
       console.log(`  ${u.role}: ${u.email}`);
     });

@@ -286,7 +286,7 @@ export const installmentPlanSchema = z.object({
 
 export const insertInstallmentPlanSchema = installmentPlanSchema.omit({ id: true });
 export type InstallmentPlan = z.infer<typeof installmentPlanSchema>;
-export type InsertInstallmentPlan = z.infer<typeof installmentPlanSchema>;
+export type InsertInstallmentPlan = z.infer<typeof insertInstallmentPlanSchema>;
 
 export const challanSchema = z.object({
   id: z.string(),

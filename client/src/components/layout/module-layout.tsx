@@ -46,7 +46,7 @@ function AppSidebar({ module, navItems, onLogout }: { module: ModuleType; navIte
   return (
     <Sidebar>
       <SidebarHeader className="p-4">
-        <Link href="/" data-testid="link-sidebar-home">
+        <Link href={`/${module}/dashboard`} data-testid="link-sidebar-home">
           <div className="flex items-center gap-3">
             <div className={`w-10 h-10 ${config.bgColor} rounded-lg flex items-center justify-center`}>
               <Icon className="w-5 h-5 text-white" />

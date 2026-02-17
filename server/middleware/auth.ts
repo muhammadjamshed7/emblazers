@@ -47,9 +47,7 @@ export function requireModule(...allowedModules: ModuleType[]) {
 
     if (!allowedModules.includes(req.user.module)) {
       return res.status(403).json({ 
-        error: "Access denied: You do not have permission to access this module",
-        currentModule: req.user.module,
-        requiredModules: allowedModules
+        error: "Access denied: You do not have permission to access this resource"
       });
     }
 
