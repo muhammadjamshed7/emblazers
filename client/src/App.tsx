@@ -70,6 +70,8 @@ import CurriculumSyllabus from "@/pages/curriculum/syllabus";
 import CurriculumExams from "@/pages/curriculum/exams";
 import CurriculumEntry from "@/pages/curriculum/entry";
 import CurriculumReports from "@/pages/curriculum/reports";
+import CurriculumQuizzes from "@/pages/curriculum/quizzes";
+import CurriculumQuizResults from "@/pages/curriculum/quiz-results";
 
 import PosDashboard from "@/pages/pos/dashboard";
 import PosSales from "@/pages/pos/sales";
@@ -163,6 +165,8 @@ function Router() {
       <Route path="/curriculum/exams" component={CurriculumExams} />
       <Route path="/curriculum/entry" component={CurriculumEntry} />
       <Route path="/curriculum/reports" component={CurriculumReports} />
+      <Route path="/curriculum/quizzes" component={CurriculumQuizzes} />
+      <Route path="/curriculum/quiz-results" component={CurriculumQuizResults} />
 
       <Route path="/pos/dashboard" component={PosDashboard} />
       <Route path="/pos/sales" component={PosSales} />

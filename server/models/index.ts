@@ -30,3 +30,6 @@ export { ActivityLog } from "./ActivityLog";
 export { Notification } from "./Notification";
 export { default as BookCategory } from "./BookCategory";
 export { Counter } from "./Counter";
+export { default as Question } from "./Question";
+export { default as Quiz } from "./Quiz";
+export { default as QuizAttempt } from "./QuizAttempt";

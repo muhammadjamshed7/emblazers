@@ -63,6 +63,9 @@ import {
   insertLedgerEntrySchema,
   insertJournalEntrySchema,
   insertAttendanceRecordSchema,
+  insertQuestionSchema,
+  insertQuizSchema,
+  insertQuizAttemptSchema,
   type ModuleType,
   type Notification,
   moduleUserCredentials,
@@ -972,6 +975,150 @@ export async function registerRoutes(
     res.json({ success: true });
   });
 
+  // ============== QUIZ ROUTES ==============
+  app.get("/api/questions", async (req, res) => {
+    const questions = await storage.getQuestions();
+    if (req.query.class || req.query.subject) {
+      const filtered = questions.filter(q => {
+        if (req.query.class && q.class !== req.query.class) return false;
+        if (req.query.subject && q.subject !== req.query.subject) return false;
+        return true;
+      });
+      return res.json(filtered);
+    }
+    res.json(questions);
+  });
+
+  app.get("/api/questions/:id", async (req, res) => {
+    const question = await storage.getQuestion(req.params.id);
+    if (!question) return res.status(404).json({ error: "Question not found" });
+    res.json(question);
+  });
+
+  app.post("/api/questions", async (req, res) => {
+    const parsed = insertQuestionSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error });
+    const question = await storage.createQuestion(parsed.data);
+    res.status(201).json(question);
+  });
+
+  app.patch("/api/questions/:id", async (req, res) => {
+    const question = await storage.updateQuestion(req.params.id, req.body);
+    if (!question) return res.status(404).json({ error: "Question not found" });
+    res.json(question);
+  });
+
+  app.delete("/api/questions/:id", async (req, res) => {
+    const deleted = await storage.deleteQuestion(req.params.id);
+    if (!deleted) return res.status(404).json({ error: "Question not found" });
+    res.json({ success: true });
+  });
+
+  app.get("/api/quizzes", async (_req, res) => {
+    const quizzes = await storage.getQuizzes();
+    res.json(quizzes);
+  });
+
+  app.get("/api/quizzes/:id", async (req, res) => {
+    const quiz = await storage.getQuiz(req.params.id);
+    if (!quiz) return res.status(404).json({ error: "Quiz not found" });
+    res.json(quiz);
+  });
+
+  app.post("/api/quizzes", async (req, res) => {
+    const parsed = insertQuizSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error });
+    const data = { ...parsed.data, createdAt: new Date().toISOString() };
+    const quiz = await storage.createQuiz(data);
+    res.status(201).json(quiz);
+  });
+
+  app.patch("/api/quizzes/:id", async (req, res) => {
+    const quiz = await storage.updateQuiz(req.params.id, req.body);
+    if (!quiz) return res.status(404).json({ error: "Quiz not found" });
+    res.json(quiz);
+  });
+
+  app.delete("/api/quizzes/:id", async (req, res) => {
+    const deleted = await storage.deleteQuiz(req.params.id);
+    if (!deleted) return res.status(404).json({ error: "Quiz not found" });
+    res.json({ success: true });
+  });
+
+  app.get("/api/quiz-attempts", async (req, res) => {
+    if (req.query.quizId) {
+      const attempts = await storage.getQuizAttemptsByQuiz(req.query.quizId as string);
+      return res.json(attempts);
+    }
+    const attempts = await storage.getQuizAttempts();
+    res.json(attempts);
+  });
+
+  app.get("/api/quiz-attempts/:id", async (req, res) => {
+    const attempt = await storage.getQuizAttempt(req.params.id);
+    if (!attempt) return res.status(404).json({ error: "Attempt not found" });
+    res.json(attempt);
+  });
+
+  app.post("/api/quiz-attempts", async (req, res) => {
+    try {
+      const parsed = insertQuizAttemptSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: parsed.error });
+
+      const quiz = await storage.getQuiz(parsed.data.quizId);
+      if (!quiz) return res.status(404).json({ error: "Quiz not found" });
+
+      let score = 0;
+      let hasShortAnswer = false;
+      const answers = parsed.data.answers || [];
+
+      for (const ans of answers) {
+        const question = await storage.getQuestion(ans.questionId);
+        if (!question) continue;
+
+        if (question.type === "ShortAnswer") {
+          hasShortAnswer = true;
+          continue;
+        }
+
+        const qRef = quiz.questions.find(q => q.questionId === ans.questionId);
+        const marks = qRef?.marks || question.marks || 1;
+
+        if (ans.answer.trim().toLowerCase() === question.correctAnswer.trim().toLowerCase()) {
+          score += marks;
+        }
+      }
+
+      const attemptData = {
+        ...parsed.data,
+        score,
+        maxScore: quiz.totalMarks,
+        autoGraded: !hasShortAnswer,
+        status: hasShortAnswer ? "Submitted" as const : "Graded" as const,
+        submittedAt: new Date().toISOString(),
+      };
+
+      const attempt = await storage.createQuizAttempt(attemptData);
+      res.status(201).json(attempt);
+    } catch (error) {
+      console.error("Failed to create quiz attempt:", error);
+      res.status(500).json({ error: "Failed to submit quiz attempt" });
+    }
+  });
+
+  app.patch("/api/quiz-attempts/:id", async (req, res) => {
+    const attempt = await storage.updateQuizAttempt(req.params.id, req.body);
+    if (!attempt) return res.status(404).json({ error: "Attempt not found" });
+    res.json(attempt);
+  });
+
+  app.delete("/api/quiz-attempts/:id", async (req, res) => {
+    const deleted = await storage.deleteQuizAttempt(req.params.id);
+    if (!deleted) return res.status(404).json({ error: "Attempt not found" });
+    res.json({ success: true });
+  });
+
+  // ============== POS ROUTES ==============
   app.get("/api/pos-items", async (_req, res) => {
     const items = await storage.getPosItems();
     res.json(items);

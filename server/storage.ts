@@ -40,6 +40,9 @@ import {
   type JournalEntry, type InsertJournalEntry,
   type AttendanceRecord, type InsertAttendanceRecord,
   type AttendanceSummary,
+  type Question, type InsertQuestion,
+  type Quiz, type InsertQuiz,
+  type QuizAttempt, type InsertQuizAttempt,
   moduleCredentials,
   moduleUserCredentials,
   demoUsers,
@@ -137,6 +140,25 @@ export interface IStorage {
   createResult(result: InsertResult): Promise<Result>;
   updateResult(id: string, updates: Partial<Result>): Promise<Result | undefined>;
   deleteResult(id: string): Promise<boolean>;
+
+  getQuestions(): Promise<Question[]>;
+  getQuestion(id: string): Promise<Question | undefined>;
+  createQuestion(question: InsertQuestion): Promise<Question>;
+  updateQuestion(id: string, updates: Partial<Question>): Promise<Question | undefined>;
+  deleteQuestion(id: string): Promise<boolean>;
+
+  getQuizzes(): Promise<Quiz[]>;
+  getQuiz(id: string): Promise<Quiz | undefined>;
+  createQuiz(quiz: InsertQuiz): Promise<Quiz>;
+  updateQuiz(id: string, updates: Partial<Quiz>): Promise<Quiz | undefined>;
+  deleteQuiz(id: string): Promise<boolean>;
+
+  getQuizAttempts(): Promise<QuizAttempt[]>;
+  getQuizAttemptsByQuiz(quizId: string): Promise<QuizAttempt[]>;
+  getQuizAttempt(id: string): Promise<QuizAttempt | undefined>;
+  createQuizAttempt(attempt: InsertQuizAttempt): Promise<QuizAttempt>;
+  updateQuizAttempt(id: string, updates: Partial<QuizAttempt>): Promise<QuizAttempt | undefined>;
+  deleteQuizAttempt(id: string): Promise<boolean>;
 
   getPosItems(): Promise<PosItem[]>;
   getPosItem(id: string): Promise<PosItem | undefined>;
@@ -1087,6 +1109,25 @@ export class MemStorage implements IStorage {
   async deleteResult(id: string): Promise<boolean> {
     return this.results.delete(id);
   }
+
+  async getQuestions(): Promise<Question[]> { return []; }
+  async getQuestion(_id: string): Promise<Question | undefined> { return undefined; }
+  async createQuestion(q: InsertQuestion): Promise<Question> { return { ...q, id: randomUUID() } as Question; }
+  async updateQuestion(_id: string, _u: Partial<Question>): Promise<Question | undefined> { return undefined; }
+  async deleteQuestion(_id: string): Promise<boolean> { return false; }
+
+  async getQuizzes(): Promise<Quiz[]> { return []; }
+  async getQuiz(_id: string): Promise<Quiz | undefined> { return undefined; }
+  async createQuiz(q: InsertQuiz): Promise<Quiz> { return { ...q, id: randomUUID() } as Quiz; }
+  async updateQuiz(_id: string, _u: Partial<Quiz>): Promise<Quiz | undefined> { return undefined; }
+  async deleteQuiz(_id: string): Promise<boolean> { return false; }
+
+  async getQuizAttempts(): Promise<QuizAttempt[]> { return []; }
+  async getQuizAttemptsByQuiz(_quizId: string): Promise<QuizAttempt[]> { return []; }
+  async getQuizAttempt(_id: string): Promise<QuizAttempt | undefined> { return undefined; }
+  async createQuizAttempt(a: InsertQuizAttempt): Promise<QuizAttempt> { return { ...a, id: randomUUID() } as QuizAttempt; }
+  async updateQuizAttempt(_id: string, _u: Partial<QuizAttempt>): Promise<QuizAttempt | undefined> { return undefined; }
+  async deleteQuizAttempt(_id: string): Promise<boolean> { return false; }
 
   async getPosItems(): Promise<PosItem[]> {
     return Array.from(this.posItems.values());

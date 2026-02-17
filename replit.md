@@ -21,6 +21,16 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (February 2026)
 
+### Curriculum Module - Quiz/Exam Feature (Full-Stack)
+- Complete quiz system integrated into Curriculum module with question bank, quiz builder, and auto-grading
+- Three Mongoose models: Question (MCQ/TrueFalse/ShortAnswer with difficulty/class/subject), Quiz (references questions with custom marks, Draft/Published/Closed status), QuizAttempt (student answers with auto-calculated scores)
+- Server-side auto-grading: MCQ and TrueFalse questions graded automatically on submission; ShortAnswer flagged for manual teacher review
+- Frontend pages: Quizzes (/curriculum/quizzes) with Question Bank tab + Quiz Manager tab, Quiz Results (/curriculum/quiz-results) with analytics, attempt detail view, and manual grading
+- Dashboard updated with quiz statistics (published quizzes, average quiz score, recent quiz attempts)
+- Navigation updated with Quizzes and Quiz Results sidebar items
+- Quiz routes (/api/questions, /api/quizzes, /api/quiz-attempts) restricted to curriculum module via module-auth middleware
+- React Query hooks in useQuizData() for all CRUD operations
+
 ### Finance Module - Double-Entry Accounting System
 - Implemented complete double-entry accounting with balanced debit/credit enforcement
 - FinanceVoucher model rebuilt with entries[] array (each entry: accountId, accountName, debit, credit, description)

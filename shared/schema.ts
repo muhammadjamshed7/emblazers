@@ -600,6 +600,72 @@ export const insertResultSchema = resultSchema.omit({ id: true });
 export type Result = z.infer<typeof resultSchema>;
 export type InsertResult = z.infer<typeof insertResultSchema>;
 
+// ============== QUIZ MODULE (within Curriculum) ==============
+export const questionSchema = z.object({
+  id: z.string(),
+  subject: z.string(),
+  class: z.string(),
+  type: z.enum(["MCQ", "TrueFalse", "ShortAnswer"]),
+  prompt: z.string(),
+  options: z.array(z.string()).optional(),
+  correctAnswer: z.string(),
+  marks: z.number().default(1),
+  difficulty: z.enum(["Easy", "Medium", "Hard"]).optional(),
+});
+
+export const insertQuestionSchema = questionSchema.omit({ id: true });
+export type Question = z.infer<typeof questionSchema>;
+export type InsertQuestion = z.infer<typeof insertQuestionSchema>;
+
+export const quizQuestionRefSchema = z.object({
+  questionId: z.string(),
+  marks: z.number(),
+});
+
+export const quizSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  class: z.string(),
+  section: z.string().optional(),
+  subject: z.string(),
+  term: z.string().optional(),
+  totalMarks: z.number(),
+  timeLimit: z.number().optional(),
+  questions: z.array(quizQuestionRefSchema),
+  assignedBy: z.string().optional(),
+  status: z.enum(["Draft", "Published", "Closed"]),
+  createdAt: z.string().optional(),
+});
+
+export const insertQuizSchema = quizSchema.omit({ id: true });
+export type Quiz = z.infer<typeof quizSchema>;
+export type InsertQuiz = z.infer<typeof insertQuizSchema>;
+
+export const quizAnswerSchema = z.object({
+  questionId: z.string(),
+  answer: z.string(),
+});
+
+export const quizAttemptSchema = z.object({
+  id: z.string(),
+  quizId: z.string(),
+  quizTitle: z.string(),
+  studentId: z.string(),
+  studentName: z.string(),
+  class: z.string(),
+  section: z.string().optional(),
+  answers: z.array(quizAnswerSchema),
+  score: z.number(),
+  maxScore: z.number(),
+  autoGraded: z.boolean().default(true),
+  status: z.enum(["Submitted", "Graded"]),
+  submittedAt: z.string().optional(),
+});
+
+export const insertQuizAttemptSchema = quizAttemptSchema.omit({ id: true });
+export type QuizAttempt = z.infer<typeof quizAttemptSchema>;
+export type InsertQuizAttempt = z.infer<typeof insertQuizAttemptSchema>;
+
 // ============== POS MODULE ==============
 export const posItemSchema = z.object({
   id: z.string(),

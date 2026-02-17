@@ -40,6 +40,9 @@ import {
   type JournalEntry, type InsertJournalEntry,
   type AttendanceRecord, type InsertAttendanceRecord,
   type AttendanceSummary,
+  type Question, type InsertQuestion,
+  type Quiz, type InsertQuiz,
+  type QuizAttempt, type InsertQuizAttempt,
   moduleUserCredentials,
   type ModuleType,
   type UserRole,
@@ -89,6 +92,9 @@ import { Expense as ExpenseModel } from "./models/Expense";
 import { ChartOfAccounts as ChartOfAccountsModel } from "./models/ChartOfAccounts";
 import { LedgerEntry as LedgerEntryModel } from "./models/LedgerEntry";
 import { JournalEntry as JournalEntryModel } from "./models/JournalEntry";
+import QuestionModel from "./models/Question";
+import QuizModel from "./models/Quiz";
+import QuizAttemptModel from "./models/QuizAttempt";
 
 function toDTO<T>(doc: any): T {
   if (!doc) return doc;
@@ -740,6 +746,86 @@ export class MongoStorage implements IStorage {
 
   async deleteResult(id: string): Promise<boolean> {
     const result = await ExamResultModel.findByIdAndDelete(id);
+    return !!result;
+  }
+
+  async getQuestions(): Promise<Question[]> {
+    const docs = await QuestionModel.find().sort({ createdAt: -1 });
+    return toDTOArray<Question>(docs);
+  }
+
+  async getQuestion(id: string): Promise<Question | undefined> {
+    const doc = await QuestionModel.findById(id);
+    return doc ? toDTO<Question>(doc) : undefined;
+  }
+
+  async createQuestion(question: InsertQuestion): Promise<Question> {
+    const doc = await QuestionModel.create(question);
+    return toDTO<Question>(doc);
+  }
+
+  async updateQuestion(id: string, updates: Partial<Question>): Promise<Question | undefined> {
+    const doc = await QuestionModel.findByIdAndUpdate(id, updates, { new: true });
+    return doc ? toDTO<Question>(doc) : undefined;
+  }
+
+  async deleteQuestion(id: string): Promise<boolean> {
+    const result = await QuestionModel.findByIdAndDelete(id);
+    return !!result;
+  }
+
+  async getQuizzes(): Promise<Quiz[]> {
+    const docs = await QuizModel.find().sort({ createdAt: -1 });
+    return toDTOArray<Quiz>(docs);
+  }
+
+  async getQuiz(id: string): Promise<Quiz | undefined> {
+    const doc = await QuizModel.findById(id);
+    return doc ? toDTO<Quiz>(doc) : undefined;
+  }
+
+  async createQuiz(quiz: InsertQuiz): Promise<Quiz> {
+    const doc = await QuizModel.create(quiz);
+    return toDTO<Quiz>(doc);
+  }
+
+  async updateQuiz(id: string, updates: Partial<Quiz>): Promise<Quiz | undefined> {
+    const doc = await QuizModel.findByIdAndUpdate(id, updates, { new: true });
+    return doc ? toDTO<Quiz>(doc) : undefined;
+  }
+
+  async deleteQuiz(id: string): Promise<boolean> {
+    const result = await QuizModel.findByIdAndDelete(id);
+    return !!result;
+  }
+
+  async getQuizAttempts(): Promise<QuizAttempt[]> {
+    const docs = await QuizAttemptModel.find().sort({ createdAt: -1 });
+    return toDTOArray<QuizAttempt>(docs);
+  }
+
+  async getQuizAttemptsByQuiz(quizId: string): Promise<QuizAttempt[]> {
+    const docs = await QuizAttemptModel.find({ quizId }).sort({ score: -1 });
+    return toDTOArray<QuizAttempt>(docs);
+  }
+
+  async getQuizAttempt(id: string): Promise<QuizAttempt | undefined> {
+    const doc = await QuizAttemptModel.findById(id);
+    return doc ? toDTO<QuizAttempt>(doc) : undefined;
+  }
+
+  async createQuizAttempt(attempt: InsertQuizAttempt): Promise<QuizAttempt> {
+    const doc = await QuizAttemptModel.create(attempt);
+    return toDTO<QuizAttempt>(doc);
+  }
+
+  async updateQuizAttempt(id: string, updates: Partial<QuizAttempt>): Promise<QuizAttempt | undefined> {
+    const doc = await QuizAttemptModel.findByIdAndUpdate(id, updates, { new: true });
+    return doc ? toDTO<QuizAttempt>(doc) : undefined;
+  }
+
+  async deleteQuizAttempt(id: string): Promise<boolean> {
+    const result = await QuizAttemptModel.findByIdAndDelete(id);
     return !!result;
   }
 
