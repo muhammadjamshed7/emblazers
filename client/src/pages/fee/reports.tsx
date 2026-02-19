@@ -15,7 +15,7 @@ export default function FeeReports() {
   const totalPending = vouchers.reduce((sum, v) => sum + (v.netAmount - v.paidAmount), 0);
   const totalVouchers = vouchers.length;
 
-  const byClass = ["Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6"].map((cls) => {
+  const byClass = ["Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6", "Class 7", "Class 8", "Class 9", "Class 10"].map((cls) => {
     const classVouchers = vouchers.filter((v) => v.class === cls);
     return {
       class: cls,

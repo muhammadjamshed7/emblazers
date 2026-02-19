@@ -77,13 +77,10 @@ export default function StudentDashboard() {
 
           <RecentTable
             title="Students by Class"
-            data={[
-              { class: "Class 1", count: students.filter((s) => s.class === "Class 1" && s.status === "Active").length },
-              { class: "Class 2", count: students.filter((s) => s.class === "Class 2" && s.status === "Active").length },
-              { class: "Class 3", count: students.filter((s) => s.class === "Class 3" && s.status === "Active").length },
-              { class: "Class 4", count: students.filter((s) => s.class === "Class 4" && s.status === "Active").length },
-              { class: "Class 5", count: students.filter((s) => s.class === "Class 5" && s.status === "Active").length },
-            ]}
+            data={["Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6", "Class 7", "Class 8", "Class 9", "Class 10"].map(cls => ({
+              class: cls,
+              count: students.filter((s) => s.class === cls && s.status === "Active").length,
+            }))}
             columns={[
               { key: "class", label: "Class" },
               { key: "count", label: "Students" },
