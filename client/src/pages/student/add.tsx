@@ -70,9 +70,14 @@ export default function AddStudent() {
       await addStudent(cleanedData);
       toast({ title: "Student added", description: "New student has been enrolled successfully." });
       setLocation("/student/list");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to add student:", error);
-      toast({ title: "Error", description: "Failed to add student. Please try again.", variant: "destructive" });
+      const msg = error?.message || "";
+      if (msg.includes("already exists") || msg.includes("409")) {
+        toast({ title: "Duplicate Student", description: "A student with this information already exists.", variant: "destructive" });
+      } else {
+        toast({ title: "Error", description: "Failed to add student. Please try again.", variant: "destructive" });
+      }
     }
   };
 

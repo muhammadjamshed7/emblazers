@@ -128,13 +128,32 @@ export class MongoStorage implements IStorage {
   }
 
   async createStudent(student: InsertStudent): Promise<Student> {
-    const lastStudent = await StudentModel.findOne({}, { studentId: 1 }).sort({ studentId: -1 });
-    let nextNum = 1;
-    if (lastStudent?.studentId) {
-      const match = lastStudent.studentId.match(/STU(\d+)/);
-      if (match) nextNum = parseInt(match[1], 10) + 1;
+    const classCode = student.class.replace(/class\s*/i, "C");
+    const section = student.section.toUpperCase();
+    const admissionYear = student.admissionDate
+      ? new Date(student.admissionDate).getFullYear()
+      : new Date().getFullYear();
+    const prefix = `${classCode}-${section}-${admissionYear}-`;
+
+    const existing = await StudentModel.findOne(
+      { studentId: { $regex: `^${prefix.replace(/[-]/g, '\\-')}` } },
+      { studentId: 1 }
+    ).sort({ studentId: -1 });
+
+    let nextSerial = 1;
+    if (existing?.studentId) {
+      const parts = existing.studentId.split("-");
+      const lastSerial = parseInt(parts[parts.length - 1], 10);
+      if (!isNaN(lastSerial)) nextSerial = lastSerial + 1;
     }
-    const studentId = `STU${String(nextNum).padStart(4, "0")}`;
+
+    const studentId = `${prefix}${String(nextSerial).padStart(4, "0")}`;
+
+    const duplicate = await StudentModel.findOne({ studentId });
+    if (duplicate) {
+      throw new Error(`Student code ${studentId} already exists`);
+    }
+
     const doc = await StudentModel.create({ ...student, studentId });
     return toDTO<Student>(doc);
   }
@@ -143,9 +162,9 @@ export class MongoStorage implements IStorage {
     const existing = await StudentModel.findById(id);
     if (!existing) return undefined;
 
-    const doc = await StudentModel.findByIdAndUpdate(id, updates, { new: true });
+    const { studentId, ...safeUpdates } = updates as any;
+    const doc = await StudentModel.findByIdAndUpdate(id, safeUpdates, { new: true });
     if (!doc) return undefined;
-
 
     return toDTO<Student>(doc);
   }

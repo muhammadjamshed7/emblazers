@@ -314,8 +314,10 @@ export async function registerRoutes(
       const student = await storage.createStudent(parsed.data);
       res.status(201).json(student);
     } catch (error: any) {
-      if (error.message === "Student with this B-Form already exists") {
-        return res.status(409).json({ error: error.message });
+      if (error.message === "Student with this B-Form already exists" ||
+          error.message?.includes("already exists") ||
+          error.code === 11000) {
+        return res.status(409).json({ error: error.message || "Student already exists" });
       }
       console.error("Failed to create student:", error);
       res.status(500).json({ error: "Failed to create student" });
