@@ -954,19 +954,29 @@ export async function registerRoutes(
   });
 
   app.post("/api/results", async (req, res) => {
-    const parsed = insertResultSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: parsed.error });
-    const result = await storage.createResult(parsed.data);
-    res.status(201).json(result);
+    try {
+      const parsed = insertResultSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: parsed.error });
+      const result = await storage.createResult(parsed.data);
+      res.status(201).json(result);
+    } catch (error: any) {
+      console.error("Error creating result:", error);
+      res.status(500).json({ error: error.message || "Failed to create result" });
+    }
   });
 
   app.patch("/api/results/:id", async (req, res) => {
-    const { id, ...updates } = req.body;
-    const parsed = insertResultSchema.partial().safeParse(updates);
-    if (!parsed.success) return res.status(400).json({ error: parsed.error });
-    const result = await storage.updateResult(req.params.id, parsed.data);
-    if (!result) return res.status(404).json({ error: "Not found" });
-    res.json(result);
+    try {
+      const { id, ...updates } = req.body;
+      const parsed = insertResultSchema.partial().safeParse(updates);
+      if (!parsed.success) return res.status(400).json({ error: parsed.error });
+      const result = await storage.updateResult(req.params.id, parsed.data);
+      if (!result) return res.status(404).json({ error: "Not found" });
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error updating result:", error);
+      res.status(500).json({ error: error.message || "Failed to update result" });
+    }
   });
 
   app.delete("/api/results/:id", async (req, res) => {

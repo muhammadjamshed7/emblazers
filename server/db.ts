@@ -75,6 +75,27 @@ async function fixAttendanceIndexes(): Promise<void> {
   }
 }
 
+async function fixExamResultIndexes(): Promise<void> {
+  try {
+    const db = mongoose.connection.db;
+    if (!db) return;
+    const collections = await db.listCollections({ name: "examresults" }).toArray();
+    if (collections.length === 0) return;
+    const collection = db.collection("examresults");
+    const indexes = await collection.indexes();
+    for (const idx of indexes) {
+      if (idx.name === "_id_") continue;
+      if (idx.key && idx.key.examId && idx.key.studentId && !idx.key.subject) {
+        console.log(`Dropping old ExamResult index: ${idx.name}`);
+        await collection.dropIndex(idx.name!);
+      }
+    }
+    console.log("ExamResult indexes fixed");
+  } catch (err) {
+    console.log("ExamResult index fix skipped:", (err as Error).message);
+  }
+}
+
 export async function connectDB(): Promise<void> {
   const mongoUri = process.env.MONGO_URI;
 
@@ -87,6 +108,7 @@ export async function connectDB(): Promise<void> {
     await mongoose.connect(mongoUri);
     console.log("MongoDB connected successfully");
     await fixAttendanceIndexes();
+    await fixExamResultIndexes();
     await seedDefaultAccounts();
   } catch (error) {
     console.error("MongoDB connection error:", error);

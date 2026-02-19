@@ -733,8 +733,9 @@ export class MongoStorage implements IStorage {
   }
 
   async createResult(result: InsertResult): Promise<Result> {
-    const count = await ExamResultModel.countDocuments();
-    const resultId = `RES${String(count + 1).padStart(5, "0")}`;
+    const last = await ExamResultModel.findOne().sort({ resultId: -1 });
+    const lastNum = last?.resultId ? parseInt(last.resultId.replace("RES", "")) || 0 : 0;
+    const resultId = `RES${String(lastNum + 1).padStart(5, "0")}`;
     const doc = await ExamResultModel.create({ ...result, resultId });
     return toDTO<Result>(doc);
   }

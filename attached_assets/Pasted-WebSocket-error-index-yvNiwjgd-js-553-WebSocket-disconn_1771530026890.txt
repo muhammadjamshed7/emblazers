@@ -1,0 +1,51 @@
+WebSocket error
+index-yvNiwjgd.js:553 WebSocket disconnected
+index-yvNiwjgd.js:553 WebSocket connected for notifications
+index-yvNiwjgd.js:553 WebSocket disconnected
+index-yvNiwjgd.js:553 WebSocket connection to 'wss://emblazers.replit.app/ws' failed: WebSocket is closed before the connection is established.
+(anonymous) @ index-yvNiwjgd.js:553Understand this warning
+index-yvNiwjgd.js:553 WebSocket error
+index-yvNiwjgd.js:553 WebSocket disconnected
+/api/staff:1  Failed to load resource: the server responded with a status of 403 ()Understand this error
+index-yvNiwjgd.js:553 WebSocket connected for notifications
+index-yvNiwjgd.js:553 WebSocket disconnected
+/api/staff:1  Failed to load resource: the server responded with a status of 403 ()Understand this error
+index-yvNiwjgd.js:553 WebSocket connected for notifications
+index-yvNiwjgd.js:553 WebSocket disconnected
+results:1  Failed to load resource: the server responded with a status of 500 ()Understand this error
+results:1  Failed to load resource: the server responded with a status of 500 ()Understand this error
+results:1  Failed to load resource: the server responded with a status of 500 ()Understand this error
+results:1  Failed to load resource: the server responded with a status of 500 ()Understand this error
+/api/staff:1  Failed to load resource: the server responded with a status of 500 ()Understand this error
+index-yvNiwjgd.js:553 WebSocket connection to 'wss://emblazers.replit.app/ws' failed: 
+(anonymous) @ index-yvNiwjgd.js:553Understand this error
+index-yvNiwjgd.js:553 WebSocket error
+index-yvNiwjgd.js:553 WebSocket disconnected
+/api/staff:1  Failed to load resource: the server responded with a status of 500 ()Understand this error
+index-yvNiwjgd.js:553 WebSocket connection to 'wss://emblazers.replit.app/ws' failed: 
+(anonymous) @ index-yvNiwjgd.js:553Understand this error
+index-yvNiwjgd.js:553 WebSocket error
+index-yvNiwjgd.js:553 WebSocket disconnected
+index-CCVlH25J.css:1  Failed to load resource: the server responded with a status of 500 ()Understand this error
+index-yvNiwjgd.js:48  POST https://emblazers.replit.app/api/results 500 (Internal Server Error)
+vt @ index-yvNiwjgd.js:48
+mutationFn @ index-yvNiwjgd.js:819
+fn @ index-yvNiwjgd.js:48
+x @ index-yvNiwjgd.js:48
+start @ index-yvNiwjgd.js:48
+execute @ index-yvNiwjgd.js:48
+await in execute
+mutate @ index-yvNiwjgd.js:48
+_ @ index-yvNiwjgd.js:819
+k @ index-yvNiwjgd.js:819
+QH @ index-yvNiwjgd.js:37
+JH @ index-yvNiwjgd.js:37
+eW @ index-yvNiwjgd.js:37
+QE @ index-yvNiwjgd.js:37
+jD @ index-yvNiwjgd.js:37
+(anonymous) @ index-yvNiwjgd.js:37
+H4 @ index-yvNiwjgd.js:40
+q8 @ index-yvNiwjgd.js:37
+o5 @ index-yvNiwjgd.js:37
+v4 @ index-yvNiwjgd.js:37
+xW @ index-yvNiwjgd.js:37Understand this error
