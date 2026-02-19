@@ -13,7 +13,7 @@ const allModules: ModuleType[] = ["student", "hr", "fee", "payroll", "finance", 
 
 const routeToModulesMap: Record<string, ModuleType[]> = {
   "/api/students": ["student", "fee", "attendance", "hostel", "transport", "library", "curriculum"],
-  "/api/staff": ["hr", "payroll", "attendance", "timetable", "library"],
+  "/api/staff": ["hr", "payroll", "attendance", "timetable", "library", "curriculum"],
   "/api/vacancies": ["hr"],
   "/api/applicants": ["hr"],
   "/api/fee-vouchers": ["fee"],

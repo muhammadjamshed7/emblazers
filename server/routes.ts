@@ -87,6 +87,16 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
 
+  const asyncHandler = (fn: (req: any, res: any, next?: any) => Promise<any>) =>
+    (req: any, res: any, next: any) => {
+      Promise.resolve(fn(req, res, next)).catch((err) => {
+        console.error(`[API Error] ${req.method} ${req.path}:`, err);
+        if (!res.headersSent) {
+          res.status(500).json({ error: err.message || "Internal server error" });
+        }
+      });
+    };
+
   app.get("/api/health", (_req, res) => {
     res.json({ ok: true, db: isDBConnected() });
   });
@@ -282,7 +292,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/students", async (req, res) => {
+  app.get("/api/students", asyncHandler(async (req, res) => {
     const students = await storage.getStudents();
     const { query } = req.query;
 
@@ -298,13 +308,13 @@ export async function registerRoutes(
     }
 
     res.json(students);
-  });
+  }));
 
-  app.get("/api/students/:id", async (req, res) => {
+  app.get("/api/students/:id", asyncHandler(async (req, res) => {
     const student = await storage.getStudent(req.params.id);
     if (!student) return res.status(404).json({ error: "Not found" });
     res.json(student);
-  });
+  }));
 
 
   app.post("/api/students", async (req, res) => {
@@ -341,7 +351,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/students/:id", async (req, res) => {
+  app.delete("/api/students/:id", asyncHandler(async (req, res) => {
     const validation = await checkStudentReferences(req.params.id);
     if (!validation.canDelete) {
       return res.status(409).json({ error: validation.errorMessage, references: validation.references });
@@ -349,9 +359,9 @@ export async function registerRoutes(
     const deleted = await storage.deleteStudent(req.params.id);
     if (!deleted) return res.status(404).json({ error: "Not found" });
     res.json({ success: true });
-  });
+  }));
 
-  app.get("/api/staff", async (req, res) => {
+  app.get("/api/staff", asyncHandler(async (req, res) => {
     const staff = await storage.getStaff();
     const { query } = req.query;
 
@@ -366,31 +376,31 @@ export async function registerRoutes(
     }
 
     res.json(staff);
-  });
+  }));
 
-  app.get("/api/staff/:id", async (req, res) => {
+  app.get("/api/staff/:id", asyncHandler(async (req, res) => {
     const member = await storage.getStaffMember(req.params.id);
     if (!member) return res.status(404).json({ error: "Not found" });
     res.json(member);
-  });
+  }));
 
-  app.post("/api/staff", async (req, res) => {
+  app.post("/api/staff", asyncHandler(async (req, res) => {
     const parsed = insertStaffSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const member = await storage.createStaff(parsed.data);
     res.status(201).json(member);
-  });
+  }));
 
-  app.patch("/api/staff/:id", async (req, res) => {
+  app.patch("/api/staff/:id", asyncHandler(async (req, res) => {
     const { id, ...updates } = req.body;
     const parsed = insertStaffSchema.partial().safeParse(updates);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const member = await storage.updateStaff(req.params.id, parsed.data);
     if (!member) return res.status(404).json({ error: "Not found" });
     res.json(member);
-  });
+  }));
 
-  app.delete("/api/staff/:id", async (req, res) => {
+  app.delete("/api/staff/:id", asyncHandler(async (req, res) => {
     const validation = await checkStaffReferences(req.params.id);
     if (!validation.canDelete) {
       return res.status(409).json({ error: validation.errorMessage, references: validation.references });
@@ -398,36 +408,36 @@ export async function registerRoutes(
     const deleted = await storage.deleteStaff(req.params.id);
     if (!deleted) return res.status(404).json({ error: "Not found" });
     res.json({ success: true });
-  });
+  }));
 
-  app.get("/api/vacancies", async (_req, res) => {
+  app.get("/api/vacancies", asyncHandler(async (_req, res) => {
     const vacancies = await storage.getVacancies();
     res.json(vacancies);
-  });
+  }));
 
-  app.get("/api/vacancies/:id", async (req, res) => {
+  app.get("/api/vacancies/:id", asyncHandler(async (req, res) => {
     const vacancy = await storage.getVacancy(req.params.id);
     if (!vacancy) return res.status(404).json({ error: "Not found" });
     res.json(vacancy);
-  });
+  }));
 
-  app.post("/api/vacancies", async (req, res) => {
+  app.post("/api/vacancies", asyncHandler(async (req, res) => {
     const parsed = insertVacancySchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const vacancy = await storage.createVacancy(parsed.data);
     res.status(201).json(vacancy);
-  });
+  }));
 
-  app.patch("/api/vacancies/:id", async (req, res) => {
+  app.patch("/api/vacancies/:id", asyncHandler(async (req, res) => {
     const { id, ...updates } = req.body;
     const parsed = insertVacancySchema.partial().safeParse(updates);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const vacancy = await storage.updateVacancy(req.params.id, parsed.data);
     if (!vacancy) return res.status(404).json({ error: "Not found" });
     res.json(vacancy);
-  });
+  }));
 
-  app.delete("/api/vacancies/:id", async (req, res) => {
+  app.delete("/api/vacancies/:id", asyncHandler(async (req, res) => {
     const validation = await checkVacancyReferences(req.params.id);
     if (!validation.canDelete) {
       return res.status(409).json({ error: validation.errorMessage, references: validation.references });
@@ -435,84 +445,84 @@ export async function registerRoutes(
     const deleted = await storage.deleteVacancy(req.params.id);
     if (!deleted) return res.status(404).json({ error: "Not found" });
     res.json({ success: true });
-  });
+  }));
 
-  app.get("/api/applicants", async (_req, res) => {
+  app.get("/api/applicants", asyncHandler(async (_req, res) => {
     const applicants = await storage.getApplicants();
     res.json(applicants);
-  });
+  }));
 
-  app.get("/api/applicants/:id", async (req, res) => {
+  app.get("/api/applicants/:id", asyncHandler(async (req, res) => {
     const applicant = await storage.getApplicant(req.params.id);
     if (!applicant) return res.status(404).json({ error: "Not found" });
     res.json(applicant);
-  });
+  }));
 
-  app.post("/api/applicants", async (req, res) => {
+  app.post("/api/applicants", asyncHandler(async (req, res) => {
     const parsed = insertApplicantSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const applicant = await storage.createApplicant(parsed.data);
     res.status(201).json(applicant);
-  });
+  }));
 
-  app.patch("/api/applicants/:id", async (req, res) => {
+  app.patch("/api/applicants/:id", asyncHandler(async (req, res) => {
     const { id, ...updates } = req.body;
     const parsed = insertApplicantSchema.partial().safeParse(updates);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const applicant = await storage.updateApplicant(req.params.id, parsed.data);
     if (!applicant) return res.status(404).json({ error: "Not found" });
     res.json(applicant);
-  });
+  }));
 
-  app.delete("/api/applicants/:id", async (req, res) => {
+  app.delete("/api/applicants/:id", asyncHandler(async (req, res) => {
     const deleted = await storage.deleteApplicant(req.params.id);
     if (!deleted) return res.status(404).json({ error: "Not found" });
     res.json({ success: true });
-  });
+  }));
 
-  app.get("/api/fee-vouchers", async (_req, res) => {
+  app.get("/api/fee-vouchers", asyncHandler(async (_req, res) => {
     const vouchers = await storage.getFeeVouchers();
     res.json(vouchers);
-  });
+  }));
 
-  app.get("/api/fee-vouchers/:id", async (req, res) => {
+  app.get("/api/fee-vouchers/:id", asyncHandler(async (req, res) => {
     const voucher = await storage.getFeeVoucher(req.params.id);
     if (!voucher) return res.status(404).json({ error: "Not found" });
     res.json(voucher);
-  });
+  }));
 
-  app.post("/api/fee-vouchers", async (req, res) => {
+  app.post("/api/fee-vouchers", asyncHandler(async (req, res) => {
     const parsed = insertFeeVoucherSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const voucher = await storage.createFeeVoucher(parsed.data);
     res.status(201).json(voucher);
-  });
+  }));
 
-  app.patch("/api/fee-vouchers/:id", async (req, res) => {
+  app.patch("/api/fee-vouchers/:id", asyncHandler(async (req, res) => {
     const { id, ...updates } = req.body;
     const parsed = insertFeeVoucherSchema.partial().safeParse(updates);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const voucher = await storage.updateFeeVoucher(req.params.id, parsed.data);
     if (!voucher) return res.status(404).json({ error: "Not found" });
     res.json(voucher);
-  });
+  }));
 
-  app.delete("/api/fee-vouchers/:id", async (req, res) => {
+  app.delete("/api/fee-vouchers/:id", asyncHandler(async (req, res) => {
     const deleted = await storage.deleteFeeVoucher(req.params.id);
     if (!deleted) return res.status(404).json({ error: "Not found" });
     res.json({ success: true });
-  });
+  }));
 
-  app.get("/api/payrolls", async (_req, res) => {
+  app.get("/api/payrolls", asyncHandler(async (_req, res) => {
     const payrolls = await storage.getPayrolls();
     res.json(payrolls);
-  });
+  }));
 
-  app.get("/api/payrolls/:id", async (req, res) => {
+  app.get("/api/payrolls/:id", asyncHandler(async (req, res) => {
     const payroll = await storage.getPayroll(req.params.id);
     if (!payroll) return res.status(404).json({ error: "Not found" });
     res.json(payroll);
-  });
+  }));
 
   app.post("/api/payrolls", async (req, res) => {
     try {
@@ -526,7 +536,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/payrolls/:id", async (req, res) => {
+  app.patch("/api/payrolls/:id", asyncHandler(async (req, res) => {
     const { id, ...updates } = req.body;
     const existingPayroll = await storage.getPayroll(req.params.id);
     if (!existingPayroll) return res.status(404).json({ error: "Not found" });
@@ -552,42 +562,42 @@ export async function registerRoutes(
     }
 
     res.json(payroll);
-  });
+  }));
 
-  app.delete("/api/payrolls/:id", async (req, res) => {
+  app.delete("/api/payrolls/:id", asyncHandler(async (req, res) => {
     const deleted = await storage.deletePayroll(req.params.id);
     if (!deleted) return res.status(404).json({ error: "Not found" });
     res.json({ success: true });
-  });
+  }));
 
-  app.get("/api/accounts", async (_req, res) => {
+  app.get("/api/accounts", asyncHandler(async (_req, res) => {
     const accounts = await storage.getAccounts();
     res.json(accounts);
-  });
+  }));
 
-  app.get("/api/accounts/:id", async (req, res) => {
+  app.get("/api/accounts/:id", asyncHandler(async (req, res) => {
     const account = await storage.getAccount(req.params.id);
     if (!account) return res.status(404).json({ error: "Not found" });
     res.json(account);
-  });
+  }));
 
-  app.post("/api/accounts", async (req, res) => {
+  app.post("/api/accounts", asyncHandler(async (req, res) => {
     const parsed = insertAccountSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const account = await storage.createAccount(parsed.data);
     res.status(201).json(account);
-  });
+  }));
 
-  app.patch("/api/accounts/:id", async (req, res) => {
+  app.patch("/api/accounts/:id", asyncHandler(async (req, res) => {
     const { id, ...updates } = req.body;
     const parsed = insertAccountSchema.partial().safeParse(updates);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const account = await storage.updateAccount(req.params.id, parsed.data);
     if (!account) return res.status(404).json({ error: "Not found" });
     res.json(account);
-  });
+  }));
 
-  app.delete("/api/accounts/:id", async (req, res) => {
+  app.delete("/api/accounts/:id", asyncHandler(async (req, res) => {
     const validation = await checkAccountReferences(req.params.id);
     if (!validation.canDelete) {
       return res.status(409).json({ error: validation.errorMessage, references: validation.references });
@@ -595,25 +605,25 @@ export async function registerRoutes(
     const deleted = await storage.deleteAccount(req.params.id);
     if (!deleted) return res.status(404).json({ error: "Not found" });
     res.json({ success: true });
-  });
+  }));
 
-  app.get("/api/finance-vouchers", async (_req, res) => {
+  app.get("/api/finance-vouchers", asyncHandler(async (_req, res) => {
     const vouchers = await storage.getFinanceVouchers();
     res.json(vouchers);
-  });
+  }));
 
-  app.get("/api/finance-vouchers/:id", async (req, res) => {
+  app.get("/api/finance-vouchers/:id", asyncHandler(async (req, res) => {
     const voucher = await storage.getFinanceVoucher(req.params.id);
     if (!voucher) return res.status(404).json({ error: "Not found" });
     res.json(voucher);
-  });
+  }));
 
-  app.post("/api/finance-vouchers", async (req, res) => {
+  app.post("/api/finance-vouchers", asyncHandler(async (req, res) => {
     const parsed = insertFinanceVoucherSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const voucher = await storage.createFinanceVoucher(parsed.data);
     res.status(201).json(voucher);
-  });
+  }));
 
   app.patch("/api/finance-vouchers/:id", async (req, res) => {
     try {
@@ -808,133 +818,133 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/timetables", async (_req, res) => {
+  app.get("/api/timetables", asyncHandler(async (_req, res) => {
     const timetables = await storage.getTimetables();
     res.json(timetables);
-  });
+  }));
 
-  app.get("/api/timetables/:id", async (req, res) => {
+  app.get("/api/timetables/:id", asyncHandler(async (req, res) => {
     const timetable = await storage.getTimetable(req.params.id);
     if (!timetable) return res.status(404).json({ error: "Not found" });
     res.json(timetable);
-  });
+  }));
 
-  app.post("/api/timetables", async (req, res) => {
+  app.post("/api/timetables", asyncHandler(async (req, res) => {
     const parsed = insertTimetableSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const timetable = await storage.createTimetable(parsed.data);
     res.status(201).json(timetable);
-  });
+  }));
 
-  app.patch("/api/timetables/:id", async (req, res) => {
+  app.patch("/api/timetables/:id", asyncHandler(async (req, res) => {
     const { id, ...updates } = req.body;
     const parsed = insertTimetableSchema.partial().safeParse(updates);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const timetable = await storage.updateTimetable(req.params.id, parsed.data);
     if (!timetable) return res.status(404).json({ error: "Not found" });
     res.json(timetable);
-  });
+  }));
 
-  app.delete("/api/timetables/:id", async (req, res) => {
+  app.delete("/api/timetables/:id", asyncHandler(async (req, res) => {
     const deleted = await storage.deleteTimetable(req.params.id);
     if (!deleted) return res.status(404).json({ error: "Not found" });
     res.json({ success: true });
-  });
+  }));
 
-  app.get("/api/date-sheets", async (_req, res) => {
+  app.get("/api/date-sheets", asyncHandler(async (_req, res) => {
     const dateSheets = await storage.getDateSheets();
     res.json(dateSheets);
-  });
+  }));
 
-  app.get("/api/date-sheets/:id", async (req, res) => {
+  app.get("/api/date-sheets/:id", asyncHandler(async (req, res) => {
     const dateSheet = await storage.getDateSheet(req.params.id);
     if (!dateSheet) return res.status(404).json({ error: "Not found" });
     res.json(dateSheet);
-  });
+  }));
 
-  app.post("/api/date-sheets", async (req, res) => {
+  app.post("/api/date-sheets", asyncHandler(async (req, res) => {
     const parsed = insertDateSheetSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const dateSheet = await storage.createDateSheet(parsed.data);
     res.status(201).json(dateSheet);
-  });
+  }));
 
-  app.patch("/api/date-sheets/:id", async (req, res) => {
+  app.patch("/api/date-sheets/:id", asyncHandler(async (req, res) => {
     const { id, ...updates } = req.body;
     const parsed = insertDateSheetSchema.partial().safeParse(updates);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const dateSheet = await storage.updateDateSheet(req.params.id, parsed.data);
     if (!dateSheet) return res.status(404).json({ error: "Not found" });
     res.json(dateSheet);
-  });
+  }));
 
-  app.delete("/api/date-sheets/:id", async (req, res) => {
+  app.delete("/api/date-sheets/:id", asyncHandler(async (req, res) => {
     const deleted = await storage.deleteDateSheet(req.params.id);
     if (!deleted) return res.status(404).json({ error: "Not found" });
     res.json({ success: true });
-  });
+  }));
 
-  app.get("/api/curriculums", async (_req, res) => {
+  app.get("/api/curriculums", asyncHandler(async (_req, res) => {
     const curriculums = await storage.getCurriculums();
     res.json(curriculums);
-  });
+  }));
 
-  app.get("/api/curriculums/:id", async (req, res) => {
+  app.get("/api/curriculums/:id", asyncHandler(async (req, res) => {
     const curriculum = await storage.getCurriculum(req.params.id);
     if (!curriculum) return res.status(404).json({ error: "Not found" });
     res.json(curriculum);
-  });
+  }));
 
-  app.post("/api/curriculums", async (req, res) => {
+  app.post("/api/curriculums", asyncHandler(async (req, res) => {
     const parsed = insertCurriculumSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const curriculum = await storage.createCurriculum(parsed.data);
     res.status(201).json(curriculum);
-  });
+  }));
 
-  app.patch("/api/curriculums/:id", async (req, res) => {
+  app.patch("/api/curriculums/:id", asyncHandler(async (req, res) => {
     const { id, ...updates } = req.body;
     const parsed = insertCurriculumSchema.partial().safeParse(updates);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const curriculum = await storage.updateCurriculum(req.params.id, parsed.data);
     if (!curriculum) return res.status(404).json({ error: "Not found" });
     res.json(curriculum);
-  });
+  }));
 
-  app.delete("/api/curriculums/:id", async (req, res) => {
+  app.delete("/api/curriculums/:id", asyncHandler(async (req, res) => {
     const deleted = await storage.deleteCurriculum(req.params.id);
     if (!deleted) return res.status(404).json({ error: "Not found" });
     res.json({ success: true });
-  });
+  }));
 
-  app.get("/api/exams", async (_req, res) => {
+  app.get("/api/exams", asyncHandler(async (_req, res) => {
     const exams = await storage.getExams();
     res.json(exams);
-  });
+  }));
 
-  app.get("/api/exams/:id", async (req, res) => {
+  app.get("/api/exams/:id", asyncHandler(async (req, res) => {
     const exam = await storage.getExam(req.params.id);
     if (!exam) return res.status(404).json({ error: "Not found" });
     res.json(exam);
-  });
+  }));
 
-  app.post("/api/exams", async (req, res) => {
+  app.post("/api/exams", asyncHandler(async (req, res) => {
     const parsed = insertExamSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const exam = await storage.createExam(parsed.data);
     res.status(201).json(exam);
-  });
+  }));
 
-  app.patch("/api/exams/:id", async (req, res) => {
+  app.patch("/api/exams/:id", asyncHandler(async (req, res) => {
     const { id, ...updates } = req.body;
     const parsed = insertExamSchema.partial().safeParse(updates);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const exam = await storage.updateExam(req.params.id, parsed.data);
     if (!exam) return res.status(404).json({ error: "Not found" });
     res.json(exam);
-  });
+  }));
 
-  app.delete("/api/exams/:id", async (req, res) => {
+  app.delete("/api/exams/:id", asyncHandler(async (req, res) => {
     const validation = await checkExamReferences(req.params.id);
     if (!validation.canDelete) {
       return res.status(409).json({ error: validation.errorMessage, references: validation.references });
@@ -942,18 +952,18 @@ export async function registerRoutes(
     const deleted = await storage.deleteExam(req.params.id);
     if (!deleted) return res.status(404).json({ error: "Not found" });
     res.json({ success: true });
-  });
+  }));
 
-  app.get("/api/results", async (_req, res) => {
+  app.get("/api/results", asyncHandler(async (_req, res) => {
     const results = await storage.getResults();
     res.json(results);
-  });
+  }));
 
-  app.get("/api/results/:id", async (req, res) => {
+  app.get("/api/results/:id", asyncHandler(async (req, res) => {
     const result = await storage.getResult(req.params.id);
     if (!result) return res.status(404).json({ error: "Not found" });
     res.json(result);
-  });
+  }));
 
   app.post("/api/results", async (req, res) => {
     try {
@@ -981,14 +991,14 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/results/:id", async (req, res) => {
+  app.delete("/api/results/:id", asyncHandler(async (req, res) => {
     const deleted = await storage.deleteResult(req.params.id);
     if (!deleted) return res.status(404).json({ error: "Not found" });
     res.json({ success: true });
-  });
+  }));
 
   // ============== QUIZ ROUTES ==============
-  app.get("/api/questions", async (req, res) => {
+  app.get("/api/questions", asyncHandler(async (req, res) => {
     const questions = await storage.getQuestions();
     if (req.query.class || req.query.subject) {
       const filtered = questions.filter(q => {
@@ -999,78 +1009,78 @@ export async function registerRoutes(
       return res.json(filtered);
     }
     res.json(questions);
-  });
+  }));
 
-  app.get("/api/questions/:id", async (req, res) => {
+  app.get("/api/questions/:id", asyncHandler(async (req, res) => {
     const question = await storage.getQuestion(req.params.id);
     if (!question) return res.status(404).json({ error: "Question not found" });
     res.json(question);
-  });
+  }));
 
-  app.post("/api/questions", async (req, res) => {
+  app.post("/api/questions", asyncHandler(async (req, res) => {
     const parsed = insertQuestionSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const question = await storage.createQuestion(parsed.data);
     res.status(201).json(question);
-  });
+  }));
 
-  app.patch("/api/questions/:id", async (req, res) => {
+  app.patch("/api/questions/:id", asyncHandler(async (req, res) => {
     const question = await storage.updateQuestion(req.params.id, req.body);
     if (!question) return res.status(404).json({ error: "Question not found" });
     res.json(question);
-  });
+  }));
 
-  app.delete("/api/questions/:id", async (req, res) => {
+  app.delete("/api/questions/:id", asyncHandler(async (req, res) => {
     const deleted = await storage.deleteQuestion(req.params.id);
     if (!deleted) return res.status(404).json({ error: "Question not found" });
     res.json({ success: true });
-  });
+  }));
 
-  app.get("/api/quizzes", async (_req, res) => {
+  app.get("/api/quizzes", asyncHandler(async (_req, res) => {
     const quizzes = await storage.getQuizzes();
     res.json(quizzes);
-  });
+  }));
 
-  app.get("/api/quizzes/:id", async (req, res) => {
+  app.get("/api/quizzes/:id", asyncHandler(async (req, res) => {
     const quiz = await storage.getQuiz(req.params.id);
     if (!quiz) return res.status(404).json({ error: "Quiz not found" });
     res.json(quiz);
-  });
+  }));
 
-  app.post("/api/quizzes", async (req, res) => {
+  app.post("/api/quizzes", asyncHandler(async (req, res) => {
     const parsed = insertQuizSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const data = { ...parsed.data, createdAt: new Date().toISOString() };
     const quiz = await storage.createQuiz(data);
     res.status(201).json(quiz);
-  });
+  }));
 
-  app.patch("/api/quizzes/:id", async (req, res) => {
+  app.patch("/api/quizzes/:id", asyncHandler(async (req, res) => {
     const quiz = await storage.updateQuiz(req.params.id, req.body);
     if (!quiz) return res.status(404).json({ error: "Quiz not found" });
     res.json(quiz);
-  });
+  }));
 
-  app.delete("/api/quizzes/:id", async (req, res) => {
+  app.delete("/api/quizzes/:id", asyncHandler(async (req, res) => {
     const deleted = await storage.deleteQuiz(req.params.id);
     if (!deleted) return res.status(404).json({ error: "Quiz not found" });
     res.json({ success: true });
-  });
+  }));
 
-  app.get("/api/quiz-attempts", async (req, res) => {
+  app.get("/api/quiz-attempts", asyncHandler(async (req, res) => {
     if (req.query.quizId) {
       const attempts = await storage.getQuizAttemptsByQuiz(req.query.quizId as string);
       return res.json(attempts);
     }
     const attempts = await storage.getQuizAttempts();
     res.json(attempts);
-  });
+  }));
 
-  app.get("/api/quiz-attempts/:id", async (req, res) => {
+  app.get("/api/quiz-attempts/:id", asyncHandler(async (req, res) => {
     const attempt = await storage.getQuizAttempt(req.params.id);
     if (!attempt) return res.status(404).json({ error: "Attempt not found" });
     res.json(attempt);
-  });
+  }));
 
   app.post("/api/quiz-attempts", async (req, res) => {
     try {
@@ -1118,113 +1128,113 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/quiz-attempts/:id", async (req, res) => {
+  app.patch("/api/quiz-attempts/:id", asyncHandler(async (req, res) => {
     const attempt = await storage.updateQuizAttempt(req.params.id, req.body);
     if (!attempt) return res.status(404).json({ error: "Attempt not found" });
     res.json(attempt);
-  });
+  }));
 
-  app.delete("/api/quiz-attempts/:id", async (req, res) => {
+  app.delete("/api/quiz-attempts/:id", asyncHandler(async (req, res) => {
     const deleted = await storage.deleteQuizAttempt(req.params.id);
     if (!deleted) return res.status(404).json({ error: "Attempt not found" });
     res.json({ success: true });
-  });
+  }));
 
   // ============== POS ROUTES ==============
-  app.get("/api/pos-items", async (_req, res) => {
+  app.get("/api/pos-items", asyncHandler(async (_req, res) => {
     const items = await storage.getPosItems();
     res.json(items);
-  });
+  }));
 
-  app.get("/api/pos-items/:id", async (req, res) => {
+  app.get("/api/pos-items/:id", asyncHandler(async (req, res) => {
     const item = await storage.getPosItem(req.params.id);
     if (!item) return res.status(404).json({ error: "Not found" });
     res.json(item);
-  });
+  }));
 
-  app.post("/api/pos-items", async (req, res) => {
+  app.post("/api/pos-items", asyncHandler(async (req, res) => {
     const parsed = insertPosItemSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const item = await storage.createPosItem(parsed.data);
     res.status(201).json(item);
-  });
+  }));
 
-  app.patch("/api/pos-items/:id", async (req, res) => {
+  app.patch("/api/pos-items/:id", asyncHandler(async (req, res) => {
     const { id, ...updates } = req.body;
     const parsed = insertPosItemSchema.partial().safeParse(updates);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const item = await storage.updatePosItem(req.params.id, parsed.data);
     if (!item) return res.status(404).json({ error: "Not found" });
     res.json(item);
-  });
+  }));
 
-  app.delete("/api/pos-items/:id", async (req, res) => {
+  app.delete("/api/pos-items/:id", asyncHandler(async (req, res) => {
     const deleted = await storage.deletePosItem(req.params.id);
     if (!deleted) return res.status(404).json({ error: "Not found" });
     res.json({ success: true });
-  });
+  }));
 
-  app.get("/api/sales", async (_req, res) => {
+  app.get("/api/sales", asyncHandler(async (_req, res) => {
     const sales = await storage.getSales();
     res.json(sales);
-  });
+  }));
 
-  app.get("/api/sales/:id", async (req, res) => {
+  app.get("/api/sales/:id", asyncHandler(async (req, res) => {
     const sale = await storage.getSale(req.params.id);
     if (!sale) return res.status(404).json({ error: "Not found" });
     res.json(sale);
-  });
+  }));
 
-  app.post("/api/sales", async (req, res) => {
+  app.post("/api/sales", asyncHandler(async (req, res) => {
     const parsed = insertSaleSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const sale = await storage.createSale(parsed.data);
     res.status(201).json(sale);
-  });
+  }));
 
-  app.patch("/api/sales/:id", async (req, res) => {
+  app.patch("/api/sales/:id", asyncHandler(async (req, res) => {
     const { id, ...updates } = req.body;
     const parsed = insertSaleSchema.partial().safeParse(updates);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const sale = await storage.updateSale(req.params.id, parsed.data);
     if (!sale) return res.status(404).json({ error: "Not found" });
     res.json(sale);
-  });
+  }));
 
-  app.delete("/api/sales/:id", async (req, res) => {
+  app.delete("/api/sales/:id", asyncHandler(async (req, res) => {
     const deleted = await storage.deleteSale(req.params.id);
     if (!deleted) return res.status(404).json({ error: "Not found" });
     res.json({ success: true });
-  });
+  }));
 
-  app.get("/api/books", async (_req, res) => {
+  app.get("/api/books", asyncHandler(async (_req, res) => {
     const books = await storage.getBooks();
     res.json(books);
-  });
+  }));
 
-  app.get("/api/books/:id", async (req, res) => {
+  app.get("/api/books/:id", asyncHandler(async (req, res) => {
     const book = await storage.getBook(req.params.id);
     if (!book) return res.status(404).json({ error: "Not found" });
     res.json(book);
-  });
+  }));
 
-  app.post("/api/books", async (req, res) => {
+  app.post("/api/books", asyncHandler(async (req, res) => {
     const parsed = insertBookSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const book = await storage.createBook(parsed.data);
     res.status(201).json(book);
-  });
+  }));
 
-  app.patch("/api/books/:id", async (req, res) => {
+  app.patch("/api/books/:id", asyncHandler(async (req, res) => {
     const { id, ...updates } = req.body;
     const parsed = insertBookSchema.partial().safeParse(updates);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const book = await storage.updateBook(req.params.id, parsed.data);
     if (!book) return res.status(404).json({ error: "Not found" });
     res.json(book);
-  });
+  }));
 
-  app.delete("/api/books/:id", async (req, res) => {
+  app.delete("/api/books/:id", asyncHandler(async (req, res) => {
     const validation = await checkBookReferences(req.params.id);
     if (!validation.canDelete) {
       return res.status(409).json({ error: validation.errorMessage, references: validation.references });
@@ -1232,37 +1242,37 @@ export async function registerRoutes(
     const deleted = await storage.deleteBook(req.params.id);
     if (!deleted) return res.status(404).json({ error: "Not found" });
     res.json({ success: true });
-  });
+  }));
 
   // Book Category Routes
-  app.get("/api/book-categories", async (_req, res) => {
+  app.get("/api/book-categories", asyncHandler(async (_req, res) => {
     const categories = await storage.getBookCategories();
     res.json(categories);
-  });
+  }));
 
-  app.get("/api/book-categories/:id", async (req, res) => {
+  app.get("/api/book-categories/:id", asyncHandler(async (req, res) => {
     const category = await storage.getBookCategory(req.params.id);
     if (!category) return res.status(404).json({ error: "Not found" });
     res.json(category);
-  });
+  }));
 
-  app.post("/api/book-categories", async (req, res) => {
+  app.post("/api/book-categories", asyncHandler(async (req, res) => {
     const parsed = insertBookCategorySchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const category = await storage.createBookCategory(parsed.data);
     res.status(201).json(category);
-  });
+  }));
 
-  app.patch("/api/book-categories/:id", async (req, res) => {
+  app.patch("/api/book-categories/:id", asyncHandler(async (req, res) => {
     const { id, ...updates } = req.body;
     const parsed = insertBookCategorySchema.partial().safeParse(updates);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const category = await storage.updateBookCategory(req.params.id, parsed.data);
     if (!category) return res.status(404).json({ error: "Not found" });
     res.json(category);
-  });
+  }));
 
-  app.delete("/api/book-categories/:id", async (req, res) => {
+  app.delete("/api/book-categories/:id", asyncHandler(async (req, res) => {
     const category = await storage.getBookCategory(req.params.id);
     if (!category) return res.status(404).json({ error: "Not found" });
     if (category.isDefault) {
@@ -1271,7 +1281,7 @@ export async function registerRoutes(
     const deleted = await storage.deleteBookCategory(req.params.id);
     if (!deleted) return res.status(404).json({ error: "Not found" });
     res.json({ success: true });
-  });
+  }));
 
   // DEPRECATED: Members functionality removed - use Student/Staff search instead
   // app.get("/api/library-members", async (_req, res) => {
@@ -1292,26 +1302,34 @@ export async function registerRoutes(
   //   res.status(201).json(member);
   // });
 
-  // app.patch("/api/library-members/:id", async (req, res) => {
-  //   const { id, ...updates } = req.body;
-  //   const parsed = insertLibraryMemberSchema.partial().safeParse(updates);
-  //   if (!parsed.success) return res.status(400).json({ error: parsed.error });
-  //   const member = await storage.updateLibraryMember(req.params.id, parsed.data);
-  //   if (!member) return res.status(404).json({ error: "Not found" });
-  //   res.json(member);
-  // });
+  app.patch("/api/library-members/:id", async (req, res) => {
+    try {
+      const { id, ...updates } = req.body;
+      const parsed = insertLibraryMemberSchema.partial().safeParse(updates);
+      if (!parsed.success) return res.status(400).json({ error: parsed.error });
+      const member = await storage.updateLibraryMember(req.params.id, parsed.data);
+      if (!member) return res.status(404).json({ error: "Not found" });
+      res.json(member);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
 
-  // app.delete("/api/library-members/:id", async (req, res) => {
-  //   const validation = await checkLibraryMemberReferences(req.params.id);
-  //   if (!validation.canDelete) {
-  //     return res.status(409).json({ error: validation.errorMessage, references: validation.references });
-  //   }
-  //   const deleted = await storage.deleteLibraryMember(req.params.id);
-  //   if (!deleted) return res.status(404).json({ error: "Not found" });
-  //   res.json({ success: true });
-  // });
+  app.delete("/api/library-members/:id", async (req, res) => {
+    try {
+      const validation = await checkLibraryMemberReferences(req.params.id);
+      if (!validation.canDelete) {
+        return res.status(409).json({ error: validation.errorMessage, references: validation.references });
+      }
+      const deleted = await storage.deleteLibraryMember(req.params.id);
+      if (!deleted) return res.status(404).json({ error: "Not found" });
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
 
-  app.get("/api/book-issues", async (_req, res) => {
+  app.get("/api/book-issues", asyncHandler(async (_req, res) => {
     const issues = await storage.getBookIssues();
 
     // Update overdue status automatically
@@ -1324,15 +1342,15 @@ export async function registerRoutes(
     }
 
     res.json(issues);
-  });
+  }));
 
-  app.get("/api/book-issues/:id", async (req, res) => {
+  app.get("/api/book-issues/:id", asyncHandler(async (req, res) => {
     const issue = await storage.getBookIssue(req.params.id);
     if (!issue) return res.status(404).json({ error: "Not found" });
     res.json(issue);
-  });
+  }));
 
-  app.post("/api/book-issues", async (req, res) => {
+  app.post("/api/book-issues", asyncHandler(async (req, res) => {
     const parsed = insertBookIssueSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
 
@@ -1356,9 +1374,9 @@ export async function registerRoutes(
     });
 
     res.status(201).json(issue);
-  });
+  }));
 
-  app.patch("/api/book-issues/:id", async (req, res) => {
+  app.patch("/api/book-issues/:id", asyncHandler(async (req, res) => {
     const { id, ...updates } = req.body;
     const parsed = insertBookIssueSchema.partial().safeParse(updates);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
@@ -1399,16 +1417,16 @@ export async function registerRoutes(
     const updatedIssue = await storage.updateBookIssue(req.params.id, finalUpdates);
     if (!updatedIssue) return res.status(404).json({ error: "Not found" });
     res.json(updatedIssue);
-  });
+  }));
 
-  app.delete("/api/book-issues/:id", async (req, res) => {
+  app.delete("/api/book-issues/:id", asyncHandler(async (req, res) => {
     const deleted = await storage.deleteBookIssue(req.params.id);
     if (!deleted) return res.status(404).json({ error: "Not found" });
     res.json({ success: true });
-  });
+  }));
 
   // Library Statistics Endpoint
-  app.get("/api/library/statistics", async (_req, res) => {
+  app.get("/api/library/statistics", asyncHandler(async (_req, res) => {
     const books = await storage.getBooks();
     const issues = await storage.getBookIssues();
 
@@ -1445,10 +1463,10 @@ export async function registerRoutes(
       pendingFines,
       categoryCounts: categoryData
     });
-  });
+  }));
 
   // Library Student Search Endpoint
-  app.get("/api/library/search-students", async (req, res) => {
+  app.get("/api/library/search-students", asyncHandler(async (req, res) => {
     const { query } = req.query;
 
     if (!query || typeof query !== 'string') {
@@ -1470,10 +1488,10 @@ export async function registerRoutes(
 
     // Return full student details
     res.json(results);
-  });
+  }));
 
   // Library Staff Search Endpoint
-  app.get("/api/library/search-staff", async (req, res) => {
+  app.get("/api/library/search-staff", asyncHandler(async (req, res) => {
     const { query } = req.query;
 
     if (!query || typeof query !== 'string') {
@@ -1495,36 +1513,36 @@ export async function registerRoutes(
 
     // Return full staff details
     res.json(results);
-  });
+  }));
 
-  app.get("/api/routes", async (_req, res) => {
+  app.get("/api/routes", asyncHandler(async (_req, res) => {
     const routes = await storage.getRoutes();
     res.json(routes);
-  });
+  }));
 
-  app.get("/api/routes/:id", async (req, res) => {
+  app.get("/api/routes/:id", asyncHandler(async (req, res) => {
     const route = await storage.getRoute(req.params.id);
     if (!route) return res.status(404).json({ error: "Not found" });
     res.json(route);
-  });
+  }));
 
-  app.post("/api/routes", async (req, res) => {
+  app.post("/api/routes", asyncHandler(async (req, res) => {
     const parsed = insertRouteSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const route = await storage.createRoute(parsed.data);
     res.status(201).json(route);
-  });
+  }));
 
-  app.patch("/api/routes/:id", async (req, res) => {
+  app.patch("/api/routes/:id", asyncHandler(async (req, res) => {
     const { id, ...updates } = req.body;
     const parsed = insertRouteSchema.partial().safeParse(updates);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const route = await storage.updateRoute(req.params.id, parsed.data);
     if (!route) return res.status(404).json({ error: "Not found" });
     res.json(route);
-  });
+  }));
 
-  app.delete("/api/routes/:id", async (req, res) => {
+  app.delete("/api/routes/:id", asyncHandler(async (req, res) => {
     const validation = await checkRouteReferences(req.params.id);
     if (!validation.canDelete) {
       return res.status(409).json({ error: validation.errorMessage, references: validation.references });
@@ -1532,36 +1550,36 @@ export async function registerRoutes(
     const deleted = await storage.deleteRoute(req.params.id);
     if (!deleted) return res.status(404).json({ error: "Not found" });
     res.json({ success: true });
-  });
+  }));
 
-  app.get("/api/vehicles", async (_req, res) => {
+  app.get("/api/vehicles", asyncHandler(async (_req, res) => {
     const vehicles = await storage.getVehicles();
     res.json(vehicles);
-  });
+  }));
 
-  app.get("/api/vehicles/:id", async (req, res) => {
+  app.get("/api/vehicles/:id", asyncHandler(async (req, res) => {
     const vehicle = await storage.getVehicle(req.params.id);
     if (!vehicle) return res.status(404).json({ error: "Not found" });
     res.json(vehicle);
-  });
+  }));
 
-  app.post("/api/vehicles", async (req, res) => {
+  app.post("/api/vehicles", asyncHandler(async (req, res) => {
     const parsed = insertVehicleSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const vehicle = await storage.createVehicle(parsed.data);
     res.status(201).json(vehicle);
-  });
+  }));
 
-  app.patch("/api/vehicles/:id", async (req, res) => {
+  app.patch("/api/vehicles/:id", asyncHandler(async (req, res) => {
     const { id, ...updates } = req.body;
     const parsed = insertVehicleSchema.partial().safeParse(updates);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const vehicle = await storage.updateVehicle(req.params.id, parsed.data);
     if (!vehicle) return res.status(404).json({ error: "Not found" });
     res.json(vehicle);
-  });
+  }));
 
-  app.delete("/api/vehicles/:id", async (req, res) => {
+  app.delete("/api/vehicles/:id", asyncHandler(async (req, res) => {
     const validation = await checkVehicleReferences(req.params.id);
     if (!validation.canDelete) {
       return res.status(409).json({ error: validation.errorMessage, references: validation.references });
@@ -1569,102 +1587,102 @@ export async function registerRoutes(
     const deleted = await storage.deleteVehicle(req.params.id);
     if (!deleted) return res.status(404).json({ error: "Not found" });
     res.json({ success: true });
-  });
+  }));
 
-  app.get("/api/drivers", async (_req, res) => {
+  app.get("/api/drivers", asyncHandler(async (_req, res) => {
     const drivers = await storage.getDrivers();
     res.json(drivers);
-  });
+  }));
 
-  app.get("/api/drivers/:id", async (req, res) => {
+  app.get("/api/drivers/:id", asyncHandler(async (req, res) => {
     const driver = await storage.getDriver(req.params.id);
     if (!driver) return res.status(404).json({ error: "Not found" });
     res.json(driver);
-  });
+  }));
 
-  app.post("/api/drivers", async (req, res) => {
+  app.post("/api/drivers", asyncHandler(async (req, res) => {
     const parsed = insertDriverSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const driver = await storage.createDriver(parsed.data);
     res.status(201).json(driver);
-  });
+  }));
 
-  app.patch("/api/drivers/:id", async (req, res) => {
+  app.patch("/api/drivers/:id", asyncHandler(async (req, res) => {
     const { id, ...updates } = req.body;
     const parsed = insertDriverSchema.partial().safeParse(updates);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const driver = await storage.updateDriver(req.params.id, parsed.data);
     if (!driver) return res.status(404).json({ error: "Not found" });
     res.json(driver);
-  });
+  }));
 
-  app.delete("/api/drivers/:id", async (req, res) => {
+  app.delete("/api/drivers/:id", asyncHandler(async (req, res) => {
     const deleted = await storage.deleteDriver(req.params.id);
     if (!deleted) return res.status(404).json({ error: "Not found" });
     res.json({ success: true });
-  });
+  }));
 
-  app.get("/api/student-transports", async (_req, res) => {
+  app.get("/api/student-transports", asyncHandler(async (_req, res) => {
     const transports = await storage.getStudentTransports();
     res.json(transports);
-  });
+  }));
 
-  app.get("/api/student-transports/:id", async (req, res) => {
+  app.get("/api/student-transports/:id", asyncHandler(async (req, res) => {
     const transport = await storage.getStudentTransport(req.params.id);
     if (!transport) return res.status(404).json({ error: "Not found" });
     res.json(transport);
-  });
+  }));
 
-  app.post("/api/student-transports", async (req, res) => {
+  app.post("/api/student-transports", asyncHandler(async (req, res) => {
     const parsed = insertStudentTransportSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const transport = await storage.createStudentTransport(parsed.data);
     res.status(201).json(transport);
-  });
+  }));
 
-  app.patch("/api/student-transports/:id", async (req, res) => {
+  app.patch("/api/student-transports/:id", asyncHandler(async (req, res) => {
     const { id, ...updates } = req.body;
     const parsed = insertStudentTransportSchema.partial().safeParse(updates);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const transport = await storage.updateStudentTransport(req.params.id, parsed.data);
     if (!transport) return res.status(404).json({ error: "Not found" });
     res.json(transport);
-  });
+  }));
 
-  app.delete("/api/student-transports/:id", async (req, res) => {
+  app.delete("/api/student-transports/:id", asyncHandler(async (req, res) => {
     const deleted = await storage.deleteStudentTransport(req.params.id);
     if (!deleted) return res.status(404).json({ error: "Not found" });
     res.json({ success: true });
-  });
+  }));
 
-  app.get("/api/hostel-rooms", async (_req, res) => {
+  app.get("/api/hostel-rooms", asyncHandler(async (_req, res) => {
     const rooms = await storage.getHostelRooms();
     res.json(rooms);
-  });
+  }));
 
-  app.get("/api/hostel-rooms/:id", async (req, res) => {
+  app.get("/api/hostel-rooms/:id", asyncHandler(async (req, res) => {
     const room = await storage.getHostelRoom(req.params.id);
     if (!room) return res.status(404).json({ error: "Not found" });
     res.json(room);
-  });
+  }));
 
-  app.post("/api/hostel-rooms", async (req, res) => {
+  app.post("/api/hostel-rooms", asyncHandler(async (req, res) => {
     const parsed = insertHostelRoomSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const room = await storage.createHostelRoom(parsed.data);
     res.status(201).json(room);
-  });
+  }));
 
-  app.patch("/api/hostel-rooms/:id", async (req, res) => {
+  app.patch("/api/hostel-rooms/:id", asyncHandler(async (req, res) => {
     const { id, ...updates } = req.body;
     const parsed = insertHostelRoomSchema.partial().safeParse(updates);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const room = await storage.updateHostelRoom(req.params.id, parsed.data);
     if (!room) return res.status(404).json({ error: "Not found" });
     res.json(room);
-  });
+  }));
 
-  app.delete("/api/hostel-rooms/:id", async (req, res) => {
+  app.delete("/api/hostel-rooms/:id", asyncHandler(async (req, res) => {
     const validation = await checkHostelRoomReferences(req.params.id);
     if (!validation.canDelete) {
       return res.status(409).json({ error: validation.errorMessage, references: validation.references });
@@ -1672,36 +1690,36 @@ export async function registerRoutes(
     const deleted = await storage.deleteHostelRoom(req.params.id);
     if (!deleted) return res.status(404).json({ error: "Not found" });
     res.json({ success: true });
-  });
+  }));
 
-  app.get("/api/hostel-residents", async (_req, res) => {
+  app.get("/api/hostel-residents", asyncHandler(async (_req, res) => {
     const residents = await storage.getHostelResidents();
     res.json(residents);
-  });
+  }));
 
-  app.get("/api/hostel-residents/:id", async (req, res) => {
+  app.get("/api/hostel-residents/:id", asyncHandler(async (req, res) => {
     const resident = await storage.getHostelResident(req.params.id);
     if (!resident) return res.status(404).json({ error: "Not found" });
     res.json(resident);
-  });
+  }));
 
-  app.post("/api/hostel-residents", async (req, res) => {
+  app.post("/api/hostel-residents", asyncHandler(async (req, res) => {
     const parsed = insertHostelResidentSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const resident = await storage.createHostelResident(parsed.data);
     res.status(201).json(resident);
-  });
+  }));
 
-  app.patch("/api/hostel-residents/:id", async (req, res) => {
+  app.patch("/api/hostel-residents/:id", asyncHandler(async (req, res) => {
     const { id, ...updates } = req.body;
     const parsed = insertHostelResidentSchema.partial().safeParse(updates);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const resident = await storage.updateHostelResident(req.params.id, parsed.data);
     if (!resident) return res.status(404).json({ error: "Not found" });
     res.json(resident);
-  });
+  }));
 
-  app.delete("/api/hostel-residents/:id", async (req, res) => {
+  app.delete("/api/hostel-residents/:id", asyncHandler(async (req, res) => {
     const validation = await checkHostelResidentReferences(req.params.id);
     if (!validation.canDelete) {
       return res.status(409).json({ error: validation.errorMessage, references: validation.references });
@@ -1709,93 +1727,93 @@ export async function registerRoutes(
     const deleted = await storage.deleteHostelResident(req.params.id);
     if (!deleted) return res.status(404).json({ error: "Not found" });
     res.json({ success: true });
-  });
+  }));
 
-  app.get("/api/hostel-fees", async (_req, res) => {
+  app.get("/api/hostel-fees", asyncHandler(async (_req, res) => {
     const fees = await storage.getHostelFees();
     res.json(fees);
-  });
+  }));
 
-  app.get("/api/hostel-fees/:id", async (req, res) => {
+  app.get("/api/hostel-fees/:id", asyncHandler(async (req, res) => {
     const fee = await storage.getHostelFee(req.params.id);
     if (!fee) return res.status(404).json({ error: "Not found" });
     res.json(fee);
-  });
+  }));
 
-  app.post("/api/hostel-fees", async (req, res) => {
+  app.post("/api/hostel-fees", asyncHandler(async (req, res) => {
     const parsed = insertHostelFeeSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const fee = await storage.createHostelFee(parsed.data);
     res.status(201).json(fee);
-  });
+  }));
 
-  app.patch("/api/hostel-fees/:id", async (req, res) => {
+  app.patch("/api/hostel-fees/:id", asyncHandler(async (req, res) => {
     const { id, ...updates } = req.body;
     const parsed = insertHostelFeeSchema.partial().safeParse(updates);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const fee = await storage.updateHostelFee(req.params.id, parsed.data);
     if (!fee) return res.status(404).json({ error: "Not found" });
     res.json(fee);
-  });
+  }));
 
-  app.delete("/api/hostel-fees/:id", async (req, res) => {
+  app.delete("/api/hostel-fees/:id", asyncHandler(async (req, res) => {
     const deleted = await storage.deleteHostelFee(req.params.id);
     if (!deleted) return res.status(404).json({ error: "Not found" });
     res.json({ success: true });
-  });
+  }));
 
   // Notification endpoints
-  app.get("/api/notifications", async (req, res) => {
+  app.get("/api/notifications", asyncHandler(async (req, res) => {
     const module = req.query.module as string | undefined;
     const notifications = await storage.getNotifications(module);
     res.json(notifications);
-  });
+  }));
 
-  app.get("/api/notifications/unread-count", async (req, res) => {
+  app.get("/api/notifications/unread-count", asyncHandler(async (req, res) => {
     const module = req.query.module as string | undefined;
     const count = await storage.getUnreadNotificationCount(module);
     res.json({ count });
-  });
+  }));
 
-  app.post("/api/notifications", async (req, res) => {
+  app.post("/api/notifications", asyncHandler(async (req, res) => {
     const parsed = insertNotificationSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const notification = await storage.createNotification(parsed.data);
     broadcastNotification(notification);
     res.status(201).json(notification);
-  });
+  }));
 
-  app.patch("/api/notifications/:id/read", async (req, res) => {
+  app.patch("/api/notifications/:id/read", asyncHandler(async (req, res) => {
     const notification = await storage.markNotificationRead(req.params.id);
     if (!notification) return res.status(404).json({ error: "Not found" });
     res.json(notification);
-  });
+  }));
 
-  app.patch("/api/notifications/mark-all-read", async (req, res) => {
+  app.patch("/api/notifications/mark-all-read", asyncHandler(async (req, res) => {
     const module = req.query.module as string | undefined;
     await storage.markAllNotificationsRead(module);
     res.json({ success: true });
-  });
+  }));
 
-  app.delete("/api/notifications/:id", async (req, res) => {
+  app.delete("/api/notifications/:id", asyncHandler(async (req, res) => {
     const deleted = await storage.deleteNotification(req.params.id);
     if (!deleted) return res.status(404).json({ error: "Not found" });
     res.json({ success: true });
-  });
+  }));
 
   // Activity Log endpoints
-  app.get("/api/activity-logs", async (req, res) => {
+  app.get("/api/activity-logs", asyncHandler(async (req, res) => {
     const module = req.query.module as string | undefined;
     const logs = await storage.getActivityLogs(module);
     res.json(logs);
-  });
+  }));
 
-  app.post("/api/activity-logs", async (req, res) => {
+  app.post("/api/activity-logs", asyncHandler(async (req, res) => {
     const parsed = insertActivityLogSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const log = await storage.createActivityLog(parsed.data);
     res.status(201).json(log);
-  });
+  }));
 
   // ============== BULK OPERATION ENDPOINTS ==============
 
@@ -1948,183 +1966,183 @@ export async function registerRoutes(
   });
 
   // ============== FEE STRUCTURE ENDPOINTS ==============
-  app.get("/api/fee-structures", async (_req, res) => {
+  app.get("/api/fee-structures", asyncHandler(async (_req, res) => {
     const structures = await storage.getFeeStructures();
     res.json(structures);
-  });
+  }));
 
-  app.get("/api/fee-structures/:id", async (req, res) => {
+  app.get("/api/fee-structures/:id", asyncHandler(async (req, res) => {
     const structure = await storage.getFeeStructure(req.params.id);
     if (!structure) return res.status(404).json({ error: "Fee structure not found" });
     res.json(structure);
-  });
+  }));
 
-  app.post("/api/fee-structures", async (req, res) => {
+  app.post("/api/fee-structures", asyncHandler(async (req, res) => {
     const parsed = insertFeeStructureSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const structure = await storage.createFeeStructure(parsed.data);
     res.json(structure);
-  });
+  }));
 
-  app.patch("/api/fee-structures/:id", async (req, res) => {
+  app.patch("/api/fee-structures/:id", asyncHandler(async (req, res) => {
     const structure = await storage.updateFeeStructure(req.params.id, req.body);
     if (!structure) return res.status(404).json({ error: "Fee structure not found" });
     res.json(structure);
-  });
+  }));
 
-  app.delete("/api/fee-structures/:id", async (req, res) => {
+  app.delete("/api/fee-structures/:id", asyncHandler(async (req, res) => {
     const success = await storage.deleteFeeStructure(req.params.id);
     if (!success) return res.status(404).json({ error: "Fee structure not found" });
     res.json({ success: true });
-  });
+  }));
 
   // ============== DISCOUNT RULES ENDPOINTS ==============
-  app.get("/api/discount-rules", async (_req, res) => {
+  app.get("/api/discount-rules", asyncHandler(async (_req, res) => {
     const rules = await storage.getDiscountRules();
     res.json(rules);
-  });
+  }));
 
-  app.get("/api/discount-rules/:id", async (req, res) => {
+  app.get("/api/discount-rules/:id", asyncHandler(async (req, res) => {
     const rule = await storage.getDiscountRule(req.params.id);
     if (!rule) return res.status(404).json({ error: "Discount rule not found" });
     res.json(rule);
-  });
+  }));
 
-  app.post("/api/discount-rules", async (req, res) => {
+  app.post("/api/discount-rules", asyncHandler(async (req, res) => {
     const parsed = insertDiscountRuleSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const rule = await storage.createDiscountRule(parsed.data);
     res.json(rule);
-  });
+  }));
 
-  app.patch("/api/discount-rules/:id", async (req, res) => {
+  app.patch("/api/discount-rules/:id", asyncHandler(async (req, res) => {
     const rule = await storage.updateDiscountRule(req.params.id, req.body);
     if (!rule) return res.status(404).json({ error: "Discount rule not found" });
     res.json(rule);
-  });
+  }));
 
-  app.delete("/api/discount-rules/:id", async (req, res) => {
+  app.delete("/api/discount-rules/:id", asyncHandler(async (req, res) => {
     const success = await storage.deleteDiscountRule(req.params.id);
     if (!success) return res.status(404).json({ error: "Discount rule not found" });
     res.json({ success: true });
-  });
+  }));
 
   // ============== LATE FEE RULES ENDPOINTS ==============
-  app.get("/api/late-fee-rules", async (_req, res) => {
+  app.get("/api/late-fee-rules", asyncHandler(async (_req, res) => {
     const rules = await storage.getLateFeeRules();
     res.json(rules);
-  });
+  }));
 
-  app.get("/api/late-fee-rules/:id", async (req, res) => {
+  app.get("/api/late-fee-rules/:id", asyncHandler(async (req, res) => {
     const rule = await storage.getLateFeeRule(req.params.id);
     if (!rule) return res.status(404).json({ error: "Late fee rule not found" });
     res.json(rule);
-  });
+  }));
 
-  app.post("/api/late-fee-rules", async (req, res) => {
+  app.post("/api/late-fee-rules", asyncHandler(async (req, res) => {
     const parsed = insertLateFeeRuleSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const rule = await storage.createLateFeeRule(parsed.data);
     res.json(rule);
-  });
+  }));
 
-  app.patch("/api/late-fee-rules/:id", async (req, res) => {
+  app.patch("/api/late-fee-rules/:id", asyncHandler(async (req, res) => {
     const rule = await storage.updateLateFeeRule(req.params.id, req.body);
     if (!rule) return res.status(404).json({ error: "Late fee rule not found" });
     res.json(rule);
-  });
+  }));
 
-  app.delete("/api/late-fee-rules/:id", async (req, res) => {
+  app.delete("/api/late-fee-rules/:id", asyncHandler(async (req, res) => {
     const success = await storage.deleteLateFeeRule(req.params.id);
     if (!success) return res.status(404).json({ error: "Late fee rule not found" });
     res.json({ success: true });
-  });
+  }));
 
   // ============== INSTALLMENT PLANS ENDPOINTS ==============
-  app.get("/api/installment-plans", async (_req, res) => {
+  app.get("/api/installment-plans", asyncHandler(async (_req, res) => {
     const plans = await storage.getInstallmentPlans();
     res.json(plans);
-  });
+  }));
 
-  app.get("/api/installment-plans/:id", async (req, res) => {
+  app.get("/api/installment-plans/:id", asyncHandler(async (req, res) => {
     const plan = await storage.getInstallmentPlan(req.params.id);
     if (!plan) return res.status(404).json({ error: "Installment plan not found" });
     res.json(plan);
-  });
+  }));
 
-  app.post("/api/installment-plans", async (req, res) => {
+  app.post("/api/installment-plans", asyncHandler(async (req, res) => {
     const parsed = insertInstallmentPlanSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const plan = await storage.createInstallmentPlan(parsed.data);
     res.json(plan);
-  });
+  }));
 
-  app.patch("/api/installment-plans/:id", async (req, res) => {
+  app.patch("/api/installment-plans/:id", asyncHandler(async (req, res) => {
     const plan = await storage.updateInstallmentPlan(req.params.id, req.body);
     if (!plan) return res.status(404).json({ error: "Installment plan not found" });
     res.json(plan);
-  });
+  }));
 
-  app.delete("/api/installment-plans/:id", async (req, res) => {
+  app.delete("/api/installment-plans/:id", asyncHandler(async (req, res) => {
     const success = await storage.deleteInstallmentPlan(req.params.id);
     if (!success) return res.status(404).json({ error: "Installment plan not found" });
     res.json({ success: true });
-  });
+  }));
 
   // ============== CHALLAN ENDPOINTS ==============
-  app.get("/api/challans", async (_req, res) => {
+  app.get("/api/challans", asyncHandler(async (_req, res) => {
     const challans = await storage.getChallans();
     res.json(challans);
-  });
+  }));
 
-  app.get("/api/challans/:id", async (req, res) => {
+  app.get("/api/challans/:id", asyncHandler(async (req, res) => {
     const challan = await storage.getChallan(req.params.id);
     if (!challan) return res.status(404).json({ error: "Challan not found" });
     res.json(challan);
-  });
+  }));
 
-  app.get("/api/challans/student/:studentId", async (req, res) => {
+  app.get("/api/challans/student/:studentId", asyncHandler(async (req, res) => {
     const challans = await storage.getChallansByStudent(req.params.studentId);
     res.json(challans);
-  });
+  }));
 
-  app.post("/api/challans", async (req, res) => {
+  app.post("/api/challans", asyncHandler(async (req, res) => {
     const parsed = insertChallanSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const challan = await storage.createChallan(parsed.data);
     res.json(challan);
-  });
+  }));
 
-  app.patch("/api/challans/:id", async (req, res) => {
+  app.patch("/api/challans/:id", asyncHandler(async (req, res) => {
     const challan = await storage.updateChallan(req.params.id, req.body);
     if (!challan) return res.status(404).json({ error: "Challan not found" });
     res.json(challan);
-  });
+  }));
 
-  app.delete("/api/challans/:id", async (req, res) => {
+  app.delete("/api/challans/:id", asyncHandler(async (req, res) => {
     const success = await storage.deleteChallan(req.params.id);
     if (!success) return res.status(404).json({ error: "Challan not found" });
     res.json({ success: true });
-  });
+  }));
 
   // ============== PAYMENT ENDPOINTS ==============
-  app.get("/api/payments", async (_req, res) => {
+  app.get("/api/payments", asyncHandler(async (_req, res) => {
     const payments = await storage.getPayments();
     res.json(payments);
-  });
+  }));
 
-  app.get("/api/payments/:id", async (req, res) => {
+  app.get("/api/payments/:id", asyncHandler(async (req, res) => {
     const payment = await storage.getPayment(req.params.id);
     if (!payment) return res.status(404).json({ error: "Payment not found" });
     res.json(payment);
-  });
+  }));
 
-  app.get("/api/payments/challan/:challanId", async (req, res) => {
+  app.get("/api/payments/challan/:challanId", asyncHandler(async (req, res) => {
     const payments = await storage.getPaymentsByChallan(req.params.challanId);
     res.json(payments);
-  });
+  }));
 
-  app.post("/api/payments", async (req, res) => {
+  app.post("/api/payments", asyncHandler(async (req, res) => {
     const parsed = insertPaymentSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const payment = await storage.createPayment(parsed.data);
@@ -2165,112 +2183,112 @@ export async function registerRoutes(
     }
 
     res.json(payment);
-  });
+  }));
 
-  app.patch("/api/payments/:id", async (req, res) => {
+  app.patch("/api/payments/:id", asyncHandler(async (req, res) => {
     const payment = await storage.updatePayment(req.params.id, req.body);
     if (!payment) return res.status(404).json({ error: "Payment not found" });
     res.json(payment);
-  });
+  }));
 
-  app.delete("/api/payments/:id", async (req, res) => {
+  app.delete("/api/payments/:id", asyncHandler(async (req, res) => {
     const success = await storage.deletePayment(req.params.id);
     if (!success) return res.status(404).json({ error: "Payment not found" });
     res.json({ success: true });
-  });
+  }));
 
   // ============== VENDOR ENDPOINTS ==============
-  app.get("/api/vendors", async (_req, res) => {
+  app.get("/api/vendors", asyncHandler(async (_req, res) => {
     const vendors = await storage.getVendors();
     res.json(vendors);
-  });
+  }));
 
-  app.get("/api/vendors/:id", async (req, res) => {
+  app.get("/api/vendors/:id", asyncHandler(async (req, res) => {
     const vendor = await storage.getVendor(req.params.id);
     if (!vendor) return res.status(404).json({ error: "Vendor not found" });
     res.json(vendor);
-  });
+  }));
 
-  app.post("/api/vendors", async (req, res) => {
+  app.post("/api/vendors", asyncHandler(async (req, res) => {
     const parsed = insertVendorSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const vendor = await storage.createVendor(parsed.data);
     res.json(vendor);
-  });
+  }));
 
-  app.patch("/api/vendors/:id", async (req, res) => {
+  app.patch("/api/vendors/:id", asyncHandler(async (req, res) => {
     const vendor = await storage.updateVendor(req.params.id, req.body);
     if (!vendor) return res.status(404).json({ error: "Vendor not found" });
     res.json(vendor);
-  });
+  }));
 
-  app.delete("/api/vendors/:id", async (req, res) => {
+  app.delete("/api/vendors/:id", asyncHandler(async (req, res) => {
     const success = await storage.deleteVendor(req.params.id);
     if (!success) return res.status(404).json({ error: "Vendor not found" });
     res.json({ success: true });
-  });
+  }));
 
   // ============== EXPENSE ENDPOINTS ==============
-  app.get("/api/expenses", async (_req, res) => {
+  app.get("/api/expenses", asyncHandler(async (_req, res) => {
     const expenses = await storage.getExpenses();
     res.json(expenses);
-  });
+  }));
 
-  app.get("/api/expenses/:id", async (req, res) => {
+  app.get("/api/expenses/:id", asyncHandler(async (req, res) => {
     const expense = await storage.getExpense(req.params.id);
     if (!expense) return res.status(404).json({ error: "Expense not found" });
     res.json(expense);
-  });
+  }));
 
-  app.post("/api/expenses", async (req, res) => {
+  app.post("/api/expenses", asyncHandler(async (req, res) => {
     const parsed = insertExpenseSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const expense = await storage.createExpense(parsed.data);
     res.json(expense);
-  });
+  }));
 
-  app.patch("/api/expenses/:id", async (req, res) => {
+  app.patch("/api/expenses/:id", asyncHandler(async (req, res) => {
     const expense = await storage.updateExpense(req.params.id, req.body);
     if (!expense) return res.status(404).json({ error: "Expense not found" });
     res.json(expense);
-  });
+  }));
 
-  app.delete("/api/expenses/:id", async (req, res) => {
+  app.delete("/api/expenses/:id", asyncHandler(async (req, res) => {
     const success = await storage.deleteExpense(req.params.id);
     if (!success) return res.status(404).json({ error: "Expense not found" });
     res.json({ success: true });
-  });
+  }));
 
   // ============== CHART OF ACCOUNTS ENDPOINTS ==============
-  app.get("/api/chart-of-accounts", async (_req, res) => {
+  app.get("/api/chart-of-accounts", asyncHandler(async (_req, res) => {
     const accounts = await storage.getChartOfAccounts();
     res.json(accounts);
-  });
+  }));
 
-  app.get("/api/chart-of-accounts/:id", async (req, res) => {
+  app.get("/api/chart-of-accounts/:id", asyncHandler(async (req, res) => {
     const account = await storage.getChartOfAccount(req.params.id);
     if (!account) return res.status(404).json({ error: "Account not found" });
     res.json(account);
-  });
+  }));
 
-  app.post("/api/chart-of-accounts", async (req, res) => {
+  app.post("/api/chart-of-accounts", asyncHandler(async (req, res) => {
     const parsed = insertChartOfAccountsSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const account = await storage.createChartOfAccount(parsed.data);
     res.json(account);
-  });
+  }));
 
-  app.patch("/api/chart-of-accounts/:id", async (req, res) => {
+  app.patch("/api/chart-of-accounts/:id", asyncHandler(async (req, res) => {
     const account = await storage.updateChartOfAccount(req.params.id, req.body);
     if (!account) return res.status(404).json({ error: "Account not found" });
     res.json(account);
-  });
+  }));
 
-  app.delete("/api/chart-of-accounts/:id", async (req, res) => {
+  app.delete("/api/chart-of-accounts/:id", asyncHandler(async (req, res) => {
     const success = await storage.deleteChartOfAccount(req.params.id);
     if (!success) return res.status(404).json({ error: "Account not found" });
     res.json({ success: true });
-  });
+  }));
 
   // ============== LEDGER ENTRY ENDPOINTS ==============
   app.get("/api/ledger-entries", async (req, res) => {
@@ -2291,104 +2309,104 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/ledger-entries/:id", async (req, res) => {
+  app.get("/api/ledger-entries/:id", asyncHandler(async (req, res) => {
     const entry = await storage.getLedgerEntry(req.params.id);
     if (!entry) return res.status(404).json({ error: "Ledger entry not found" });
     res.json(entry);
-  });
+  }));
 
-  app.get("/api/ledger-entries/account/:accountId", async (req, res) => {
+  app.get("/api/ledger-entries/account/:accountId", asyncHandler(async (req, res) => {
     const entries = await storage.getLedgerEntriesByAccount(req.params.accountId);
     res.json(entries);
-  });
+  }));
 
-  app.post("/api/ledger-entries", async (req, res) => {
+  app.post("/api/ledger-entries", asyncHandler(async (req, res) => {
     const parsed = insertLedgerEntrySchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const entry = await storage.createLedgerEntry(parsed.data);
     res.json(entry);
-  });
+  }));
 
-  app.patch("/api/ledger-entries/:id", async (req, res) => {
+  app.patch("/api/ledger-entries/:id", asyncHandler(async (req, res) => {
     const entry = await storage.updateLedgerEntry(req.params.id, req.body);
     if (!entry) return res.status(404).json({ error: "Ledger entry not found" });
     res.json(entry);
-  });
+  }));
 
-  app.delete("/api/ledger-entries/:id", async (req, res) => {
+  app.delete("/api/ledger-entries/:id", asyncHandler(async (req, res) => {
     const success = await storage.deleteLedgerEntry(req.params.id);
     if (!success) return res.status(404).json({ error: "Ledger entry not found" });
     res.json({ success: true });
-  });
+  }));
 
   // ============== JOURNAL ENTRY ENDPOINTS ==============
-  app.get("/api/journal-entries", async (_req, res) => {
+  app.get("/api/journal-entries", asyncHandler(async (_req, res) => {
     const entries = await storage.getJournalEntries();
     res.json(entries);
-  });
+  }));
 
-  app.get("/api/journal-entries/:id", async (req, res) => {
+  app.get("/api/journal-entries/:id", asyncHandler(async (req, res) => {
     const entry = await storage.getJournalEntry(req.params.id);
     if (!entry) return res.status(404).json({ error: "Journal entry not found" });
     res.json(entry);
-  });
+  }));
 
-  app.post("/api/journal-entries", async (req, res) => {
+  app.post("/api/journal-entries", asyncHandler(async (req, res) => {
     const parsed = insertJournalEntrySchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const entry = await storage.createJournalEntry(parsed.data);
     res.json(entry);
-  });
+  }));
 
-  app.patch("/api/journal-entries/:id", async (req, res) => {
+  app.patch("/api/journal-entries/:id", asyncHandler(async (req, res) => {
     const entry = await storage.updateJournalEntry(req.params.id, req.body);
     if (!entry) return res.status(404).json({ error: "Journal entry not found" });
     res.json(entry);
-  });
+  }));
 
-  app.delete("/api/journal-entries/:id", async (req, res) => {
+  app.delete("/api/journal-entries/:id", asyncHandler(async (req, res) => {
     const success = await storage.deleteJournalEntry(req.params.id);
     if (!success) return res.status(404).json({ error: "Journal entry not found" });
     res.json({ success: true });
-  });
+  }));
 
   // ============== POS MODULE ==============
-  app.get("/api/pos-items", async (_req, res) => {
+  app.get("/api/pos-items", asyncHandler(async (_req, res) => {
     const items = await storage.getPosItems();
     res.json(items);
-  });
+  }));
 
-  app.get("/api/pos-items/:id", async (req, res) => {
+  app.get("/api/pos-items/:id", asyncHandler(async (req, res) => {
     const item = await storage.getPosItem(req.params.id);
     if (!item) return res.status(404).json({ error: "Item not found" });
     res.json(item);
-  });
+  }));
 
-  app.post("/api/pos-items", async (req, res) => {
+  app.post("/api/pos-items", asyncHandler(async (req, res) => {
     const parsed = insertPosItemSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
     const item = await storage.createPosItem(parsed.data);
     res.status(201).json(item);
-  });
+  }));
 
-  app.patch("/api/pos-items/:id", async (req, res) => {
+  app.patch("/api/pos-items/:id", asyncHandler(async (req, res) => {
     const item = await storage.updatePosItem(req.params.id, req.body);
     if (!item) return res.status(404).json({ error: "Item not found" });
     res.json(item);
-  });
+  }));
 
-  app.delete("/api/pos-items/:id", async (req, res) => {
+  app.delete("/api/pos-items/:id", asyncHandler(async (req, res) => {
     const success = await storage.deletePosItem(req.params.id);
     if (!success) return res.status(404).json({ error: "Item not found" });
     res.json({ success: true });
-  });
+  }));
 
-  app.get("/api/sales", async (_req, res) => {
+  app.get("/api/sales", asyncHandler(async (_req, res) => {
     const sales = await storage.getSales();
     res.json(sales);
-  });
+  }));
 
-  app.post("/api/sales", async (req, res) => {
+  app.post("/api/sales", asyncHandler(async (req, res) => {
     const parsed = insertSaleSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error });
 
@@ -2404,7 +2422,7 @@ export async function registerRoutes(
 
     const sale = await storage.createSale(parsed.data);
     res.status(201).json(sale);
-  });
+  }));
 
   // WebSocket server setup for real-time notifications
   const wss = new WebSocketServer({ server: httpServer, path: "/ws" });
