@@ -18,7 +18,7 @@ export const studentNavItems = [
   { label: "Attendance", path: "/curriculum/student-attendance", icon: CalendarCheck },
 ];
 
-const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("emblazers_token")}` });
+const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("student_token") || localStorage.getItem("emblazers_token")}` });
 
 export function useStudentDashboard() {
   return useQuery<any>({

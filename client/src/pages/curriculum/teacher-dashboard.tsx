@@ -52,7 +52,7 @@ export default function TeacherDashboard() {
       setPendingGradingCount(0);
       return;
     }
-    const token = localStorage.getItem("emblazers_token");
+    const token = localStorage.getItem("teacher_token") || localStorage.getItem("emblazers_token");
     if (!token) return;
 
     setGradingLoading(true);

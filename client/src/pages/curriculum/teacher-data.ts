@@ -16,11 +16,13 @@ export const teacherNavItems = [
   { label: "Quiz Results", path: "/curriculum/teacher-quiz-results", icon: BarChart3 },
 ];
 
+const teacherAuthHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("teacher_token") || localStorage.getItem("emblazers_token")}` });
+
 export function useTeacherAssignments(staffId?: string) {
   return useQuery<any[]>({
     queryKey: ['/api/teacher/my-assignments', staffId],
     queryFn: async () => {
-      const res = await fetch('/api/teacher/my-assignments', { headers: { Authorization: `Bearer ${localStorage.getItem("emblazers_token")}` } });
+      const res = await fetch('/api/teacher/my-assignments', { headers: teacherAuthHeaders() });
       if (!res.ok) throw new Error("Failed to fetch assignments");
       return res.json();
     },
@@ -32,7 +34,7 @@ export function useTeacherContent(staffId?: string) {
   const { data = [], isLoading } = useQuery<any[]>({
     queryKey: ['/api/teacher/content', staffId],
     queryFn: async () => {
-      const res = await fetch('/api/teacher/content', { headers: { Authorization: `Bearer ${localStorage.getItem("emblazers_token")}` } });
+      const res = await fetch('/api/teacher/content', { headers: teacherAuthHeaders() });
       if (!res.ok) throw new Error("Failed to fetch content");
       return res.json();
     },
@@ -76,7 +78,7 @@ export function useTeacherQuizzes(staffId?: string) {
   const { data = [], isLoading } = useQuery<any[]>({
     queryKey: ['/api/teacher/quizzes', staffId],
     queryFn: async () => {
-      const res = await fetch('/api/teacher/quizzes', { headers: { Authorization: `Bearer ${localStorage.getItem("emblazers_token")}` } });
+      const res = await fetch('/api/teacher/quizzes', { headers: teacherAuthHeaders() });
       if (!res.ok) throw new Error("Failed to fetch quizzes");
       return res.json();
     },
@@ -129,7 +131,7 @@ export function useQuizAttempts(quizId: string) {
   return useQuery<any[]>({
     queryKey: ['/api/teacher/quizzes', quizId, 'attempts'],
     queryFn: async () => {
-      const res = await fetch(`/api/teacher/quizzes/${quizId}/attempts`, { headers: { Authorization: `Bearer ${localStorage.getItem("emblazers_token")}` } });
+      const res = await fetch(`/api/teacher/quizzes/${quizId}/attempts`, { headers: teacherAuthHeaders() });
       if (!res.ok) throw new Error("Failed to fetch attempts");
       return res.json();
     },

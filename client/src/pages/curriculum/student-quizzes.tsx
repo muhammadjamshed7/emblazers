@@ -168,7 +168,7 @@ export default function StudentQuizzesPage() {
     setLoadingQuiz(true);
     try {
       const res = await fetch(`/api/student-portal/quizzes/${quizId}/start`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("emblazers_token")}` },
+        headers: { Authorization: `Bearer ${localStorage.getItem("student_token") || localStorage.getItem("emblazers_token")}` },
       });
       if (!res.ok) {
         const data = await res.json();

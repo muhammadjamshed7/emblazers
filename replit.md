@@ -22,6 +22,14 @@ Core entities include Students, Staff, Fee Vouchers, Payroll, Finance, Attendanc
 ### Authentication & Authorization
 The system uses JWT-based authentication with module-specific credentials ({module}@emblazers.com / 12345678). JWT tokens, containing user and module information, expire in 2 hours and are stored client-side. The `moduleAuthMiddleware` enforces strict module isolation, ensuring users only access API routes assigned to their logged-in module, with unmapped routes denied by default. Passwords are hashed using bcrypt and stored in the ModuleUser collection, allowing users to change their passwords.
 
+Three role-specific middleware functions in `server/middleware/module-auth.ts`: `requireCurriculumAdmin` (checks curriculum module + admin role), `requireTeacher` (checks teacher role + staffId), `requireStudent` (checks student role + studentId).
+
+Teacher passwords are stored in the `teacherAuthPasswords` collection (TeacherAuthPassword model) with bcrypt hashes. On first login attempt, if no record exists, one is auto-created with the default password (staffId value). The teacher change-password route actually persists the new hashed password.
+
+Session separation uses three localStorage key pairs: `emblazers_token`/`emblazers_session` (admin), `teacher_token`/`teacher_session` (teacher), `student_token`/`student_session` (student). Teacher and student data hooks prefer their role-specific tokens with fallback to the standard token.
+
+Shared grade calculation utility at `server/utils/grade.ts`: A+ (>=90), A (>=80), B (>=70), C (>=60), D (>=50), F (<50).
+
 ### Curriculum Multi-Role System
 The Curriculum module supports 3 user roles with separate login flows:
 - **Admin**: Standard module login (curriculum@emblazers.com / 12345678), full access to curriculum management plus Teacher Assignments and Student Accounts pages. Admin routes: `/api/curriculum/staff-teachers`, `/api/curriculum/teacher-assignments`, `/api/curriculum/student-accounts/*`, `/api/curriculum/quiz-overview`.

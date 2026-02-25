@@ -1181,6 +1181,7 @@ export async function registerRoutes(
 
     const TeacherAssignmentModel = (await import("./models/TeacherAssignment")).default;
     const StaffModel = (await import("./models/Staff")).default;
+    const TeacherAuthPasswordModel = (await import("./models/TeacherAuthPassword")).default;
 
     const staff = await StaffModel.findOne({ email: { $regex: new RegExp(`^${staffEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } });
     if (!staff) return res.status(401).json({ error: "No staff account found with this email" });
@@ -1190,8 +1191,19 @@ export async function registerRoutes(
       return res.status(401).json({ error: "You have not been assigned any class yet. Contact admin." });
     }
 
-    const defaultPassword = staff.staffId || staff._id.toString();
-    if (password !== defaultPassword) {
+    const staffIdValue = staff.staffId || staff._id.toString();
+    let authRecord = await TeacherAuthPasswordModel.findOne({ staffId: staffIdValue });
+
+    if (!authRecord) {
+      const defaultHash = await bcrypt.hash(staffIdValue, 10);
+      authRecord = await TeacherAuthPasswordModel.create({
+        staffId: staffIdValue,
+        passwordHash: defaultHash,
+      });
+    }
+
+    const isValid = await bcrypt.compare(password, authRecord.passwordHash);
+    if (!isValid) {
       return res.status(401).json({ error: "Invalid password" });
     }
 
@@ -1224,6 +1236,9 @@ export async function registerRoutes(
   }));
 
   app.post("/api/teacher/change-password", asyncHandler(async (req, res) => {
+    const user = (req as any).user;
+    if (!user?.staffId) return res.status(401).json({ error: "Not authenticated as teacher" });
+
     const { currentPassword, newPassword } = req.body;
     if (!currentPassword || !newPassword) {
       return res.status(400).json({ error: "Current password and new password are required" });
@@ -1231,7 +1246,34 @@ export async function registerRoutes(
     if (newPassword.length < 6) {
       return res.status(400).json({ error: "New password must be at least 6 characters" });
     }
-    return res.json({ success: true, message: "Password change noted. Currently using staffId-based auth." });
+
+    const StaffModel = (await import("./models/Staff")).default;
+    const TeacherAuthPasswordModel = (await import("./models/TeacherAuthPassword")).default;
+
+    const staff = await StaffModel.findById(user.staffId);
+    if (!staff) return res.status(404).json({ error: "Staff not found" });
+
+    const staffIdValue = staff.staffId || staff._id.toString();
+    let authRecord = await TeacherAuthPasswordModel.findOne({ staffId: staffIdValue });
+
+    if (!authRecord) {
+      const defaultHash = await bcrypt.hash(staffIdValue, 10);
+      authRecord = await TeacherAuthPasswordModel.create({
+        staffId: staffIdValue,
+        passwordHash: defaultHash,
+      });
+    }
+
+    const isValid = await bcrypt.compare(currentPassword, authRecord.passwordHash);
+    if (!isValid) {
+      return res.status(401).json({ error: "Current password is incorrect" });
+    }
+
+    authRecord.passwordHash = await bcrypt.hash(newPassword, 10);
+    authRecord.updatedAt = new Date();
+    await authRecord.save();
+
+    return res.json({ success: true, message: "Password changed successfully" });
   }));
 
   // ============== TEACHER PORTAL ROUTES ==============
@@ -1359,13 +1401,8 @@ export async function registerRoutes(
     attempt.percentage = attempt.totalMarks > 0 ? Math.round((totalMarksObtained / attempt.totalMarks) * 100) : 0;
     attempt.isPassed = totalMarksObtained >= quiz.passingMarks;
 
-    let grade = "F";
-    if (attempt.percentage >= 90) grade = "A+";
-    else if (attempt.percentage >= 80) grade = "A";
-    else if (attempt.percentage >= 70) grade = "B";
-    else if (attempt.percentage >= 60) grade = "C";
-    else if (attempt.percentage >= 50) grade = "D";
-    attempt.grade = grade;
+    const { calculateGrade } = await import("./utils/grade");
+    attempt.grade = calculateGrade(attempt.percentage);
 
     await attempt.save();
     res.json({ id: attempt._id.toString(), ...attempt.toObject(), _id: undefined, __v: undefined });
@@ -1682,12 +1719,8 @@ export async function registerRoutes(
     const percentage = quiz.totalMarks > 0 ? Math.round((totalMarksObtained / quiz.totalMarks) * 100) : 0;
     const isPassed = totalMarksObtained >= quiz.passingMarks;
 
-    let grade = "F";
-    if (percentage >= 90) grade = "A+";
-    else if (percentage >= 80) grade = "A";
-    else if (percentage >= 70) grade = "B";
-    else if (percentage >= 60) grade = "C";
-    else if (percentage >= 50) grade = "D";
+    const { calculateGrade } = await import("./utils/grade");
+    const grade = calculateGrade(percentage);
 
     const doc = await StudentQuizAttemptModel.create({
       quizId: req.params.id,

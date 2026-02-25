@@ -1,0 +1,31 @@
+PART 4 — IMPORTANT IMPLEMENTATION NOTES
+
+File Storage: Convert PDF and image files to base64 string on the frontend using FileReader API before sending to backend. Store as base64 string in MongoDB. For display, use <iframe src="data:application/pdf;base64,..." for PDFs and <img src="data:image/jpeg;base64,..." for images. Do not use any external file storage service.
+JWT Middleware: Create separate middleware functions:
+
+requireCurriculumAdmin — checks existing curriculum token
+requireTeacher — checks teacher JWT, attaches staffId to req
+requireStudent — checks student JWT, attaches studentId, className, section to req
+Each middleware checks role field in JWT payload.
+
+
+Grade Calculation Function (reuse across codebase):
+
+   A+ = percentage >= 90
+   A  = percentage >= 80
+   B  = percentage >= 70
+   C  = percentage >= 60
+   D  = percentage >= 50
+   F  = percentage < 50
+
+Student ID Lookup for Fees and Attendance: The student's studentId field in studentPortalAccounts (e.g., C5-A-2026-0007) is the same studentId field used in the existing feevouchers and attendancerecords collections. Use it directly for cross-collection queries.
+Teacher Default Password: When a teacher logs in for the first time, their default password is their staffId value from the staff collection (e.g., STF-2024-001). Store this as bcrypt hash in a new teacherAuthPasswords collection with fields { staffId, passwordHash, updatedAt }. On first teacher login attempt, if no record exists in this collection, auto-create one with the default password.
+Time Slot Enforcement: On the backend /api/student-portal/quizzes/:id/start, always check new Date() >= quiz.startDateTime && new Date() <= quiz.endDateTime before returning quiz questions. Never trust the frontend for this check.
+Prevent Double Submission: Before saving a quiz attempt, always query quizAttempts collection for existing { quizId, studentId } record. If found, return 400 error.
+Routing: Add all new routes to the existing Wouter router in the frontend. Teacher routes under /curriculum/teacher/... and student routes under /curriculum/student/.... The existing curriculum admin routes remain unchanged under /curriculum/....
+Sidebar: Teacher portal and Student portal each have their own sidebar component. They do NOT use the existing curriculum admin sidebar.
+Session Separation: Three different localStorage keys for three different sessions:
+
+curriculum_token — existing admin (unchanged)
+teacher_token — new teacher JWT
+student_token — new student JWT

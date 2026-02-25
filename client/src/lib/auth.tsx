@@ -9,6 +9,10 @@ import {
 
 const TOKEN_KEY = "emblazers_token";
 const SESSION_KEY = "emblazers_session";
+const TEACHER_TOKEN_KEY = "teacher_token";
+const TEACHER_SESSION_KEY = "teacher_session";
+const STUDENT_TOKEN_KEY = "student_token";
+const STUDENT_SESSION_KEY = "student_session";
 
 interface AuthContextType {
   session: AuthSession | null;
@@ -119,6 +123,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
         localStorage.setItem(TOKEN_KEY, data.token);
         localStorage.setItem(SESSION_KEY, JSON.stringify(newSession));
+        localStorage.setItem(TEACHER_TOKEN_KEY, data.token);
+        localStorage.setItem(TEACHER_SESSION_KEY, JSON.stringify(newSession));
         setToken(data.token);
         setSession(newSession);
         return { success: true };
@@ -154,6 +160,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
         localStorage.setItem(TOKEN_KEY, data.token);
         localStorage.setItem(SESSION_KEY, JSON.stringify(newSession));
+        localStorage.setItem(STUDENT_TOKEN_KEY, data.token);
+        localStorage.setItem(STUDENT_SESSION_KEY, JSON.stringify(newSession));
         setToken(data.token);
         setSession(newSession);
         return { success: true, isFirstLogin: data.user?.isFirstLogin };
@@ -165,6 +173,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
+    const role = session?.role;
+    if (role === "teacher") {
+      localStorage.removeItem(TEACHER_TOKEN_KEY);
+      localStorage.removeItem(TEACHER_SESSION_KEY);
+    } else if (role === "student") {
+      localStorage.removeItem(STUDENT_TOKEN_KEY);
+      localStorage.removeItem(STUDENT_SESSION_KEY);
+    }
     setToken(null);
     setSession(null);
   };
@@ -223,6 +239,10 @@ export function getAuthToken(): string | null {
 export function forceLogout(): void {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(TEACHER_TOKEN_KEY);
+  localStorage.removeItem(TEACHER_SESSION_KEY);
+  localStorage.removeItem(STUDENT_TOKEN_KEY);
+  localStorage.removeItem(STUDENT_SESSION_KEY);
   window.location.href = "/";
 }
 

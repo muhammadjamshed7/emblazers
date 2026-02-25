@@ -131,6 +131,33 @@ function getBaseRoute(path: string): string {
   return "/" + parts.slice(0, 2).join("/");
 }
 
+export function requireCurriculumAdmin(req: Request, res: Response, next: NextFunction) {
+  const user = (req as any).user;
+  if (!user) return res.status(401).json({ error: "Authentication required" });
+  if (user.module !== "curriculum" || (user.role && user.role !== "admin")) {
+    return res.status(403).json({ error: "Curriculum admin access required" });
+  }
+  next();
+}
+
+export function requireTeacher(req: Request, res: Response, next: NextFunction) {
+  const user = (req as any).user;
+  if (!user) return res.status(401).json({ error: "Authentication required" });
+  if (user.role !== "teacher" || !user.staffId) {
+    return res.status(403).json({ error: "Teacher access required" });
+  }
+  next();
+}
+
+export function requireStudent(req: Request, res: Response, next: NextFunction) {
+  const user = (req as any).user;
+  if (!user) return res.status(401).json({ error: "Authentication required" });
+  if (user.role !== "student" || !user.studentId) {
+    return res.status(403).json({ error: "Student access required" });
+  }
+  next();
+}
+
 export function moduleAuthMiddleware(req: Request, res: Response, next: NextFunction) {
   if (!req.path.startsWith("/api")) {
     return next();
