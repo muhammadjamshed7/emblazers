@@ -22,15 +22,7 @@ import {
   ArrowLeft,
   ClipboardList,
 } from "lucide-react";
-
-function getGrade(percentage: number): { grade: string; color: string } {
-  if (percentage >= 90) return { grade: "A+", color: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200" };
-  if (percentage >= 80) return { grade: "A", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" };
-  if (percentage >= 70) return { grade: "B", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" };
-  if (percentage >= 60) return { grade: "C", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" };
-  if (percentage >= 50) return { grade: "D", color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" };
-  return { grade: "F", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" };
-}
+import { getGradeFromPercentage as getGrade } from "@/lib/grade-utils";
 
 function QuizAttemptDetails({ attempt, quiz, quizId }: { attempt: any; quiz: any; quizId: string }) {
   const { toast } = useToast();
@@ -47,7 +39,7 @@ function QuizAttemptDetails({ attempt, quiz, quizId }: { attempt: any; quiz: any
       return;
     }
     try {
-      await gradeShortAnswer.mutateAsync({ attemptId: attempt._id, questionIndex, marksAwarded: marks });
+      await gradeShortAnswer.mutateAsync({ attemptId: attempt.id || attempt._id, questionIndex, marksAwarded: marks });
       toast({ title: "Marks saved", description: `Awarded ${marks}/${maxMarks} marks` });
     } catch {
       toast({ title: "Error", description: "Failed to save marks", variant: "destructive" });
@@ -60,29 +52,29 @@ function QuizAttemptDetails({ attempt, quiz, quizId }: { attempt: any; quiz: any
         <Badge data-testid="badge-student-name">{attempt.studentName || "Unknown Student"}</Badge>
         <Badge variant="outline" data-testid="badge-student-id">{attempt.studentId || "N/A"}</Badge>
         <Badge variant="outline" data-testid="badge-attempt-score">
-          Score: {attempt.totalMarks ?? attempt.score ?? 0}/{attempt.maxMarks ?? quiz?.totalMarks ?? 0}
+          Score: {attempt.totalMarksObtained ?? attempt.totalMarks ?? attempt.score ?? 0}/{quiz?.totalMarks ?? attempt.maxMarks ?? 0}
         </Badge>
       </div>
 
       <div className="space-y-3">
         {questions.map((q: any, idx: number) => {
           const studentAnswer = answers[idx];
-          const isShortAnswer = q.type === "short-answer" || q.type === "shortAnswer";
+          const isShortAnswer = q.questionType === "short" || q.type === "short-answer" || q.type === "shortAnswer";
           const marksAwarded = studentAnswer?.marksAwarded ?? studentAnswer?.marks;
 
           return (
             <Card key={idx} data-testid={`card-question-${idx}`}>
               <CardContent className="p-4 space-y-2">
                 <div className="flex items-start justify-between gap-2 flex-wrap">
-                  <p className="font-medium text-sm">Q{idx + 1}: {q.question || q.text}</p>
+                  <p className="font-medium text-sm">Q{idx + 1}: {q.questionText || q.question || q.text}</p>
                   <Badge variant="outline" className="text-xs">{q.marks || 1} marks</Badge>
                 </div>
 
-                {q.type === "mcq" && (
+                {(q.questionType === "mcq" || q.type === "mcq") && (
                   <div className="space-y-1 text-sm">
                     {(q.options || []).map((opt: string, oi: number) => {
-                      const isCorrect = oi === q.correctOption || opt === q.correctAnswer;
-                      const isSelected = studentAnswer?.selectedOption === oi || studentAnswer?.answer === opt;
+                      const isCorrect = opt === q.correctAnswer || oi === q.correctOption;
+                      const isSelected = studentAnswer?.givenAnswer === opt || studentAnswer?.selectedOption === oi || studentAnswer?.answer === opt;
                       return (
                         <div
                           key={oi}
@@ -95,9 +87,9 @@ function QuizAttemptDetails({ attempt, quiz, quizId }: { attempt: any; quiz: any
                   </div>
                 )}
 
-                {(q.type === "true-false" || q.type === "trueFalse") && (
+                {(q.questionType === "truefalse" || q.type === "true-false" || q.type === "trueFalse") && (
                   <div className="text-sm space-y-1">
-                    <p>Student answered: <span className="font-medium">{String(studentAnswer?.answer ?? studentAnswer?.selectedOption ?? "N/A")}</span></p>
+                    <p>Student answered: <span className="font-medium">{String(studentAnswer?.givenAnswer ?? studentAnswer?.answer ?? "N/A")}</span></p>
                     <p>Correct answer: <span className="font-medium text-green-600 dark:text-green-400">{String(q.correctAnswer ?? q.correctOption)}</span></p>
                   </div>
                 )}
@@ -106,7 +98,7 @@ function QuizAttemptDetails({ attempt, quiz, quizId }: { attempt: any; quiz: any
                   <div className="space-y-2 text-sm">
                     <div>
                       <p className="text-muted-foreground">Student's answer:</p>
-                      <p className="mt-1 p-2 rounded-md bg-muted">{studentAnswer?.answer || studentAnswer?.text || "No answer provided"}</p>
+                      <p className="mt-1 p-2 rounded-md bg-muted">{studentAnswer?.givenAnswer || studentAnswer?.answer || studentAnswer?.text || "No answer provided"}</p>
                     </div>
                     {q.modelAnswer && (
                       <div>
@@ -161,7 +153,7 @@ function QuizAttemptsView({ quizId, quiz, onBack }: { quizId: string; quiz: any;
     const total = attempts.length;
     const maxMarks = quiz?.totalMarks || 100;
     const passingMarks = quiz?.passingMarks || Math.ceil(maxMarks * 0.4);
-    const scores = attempts.map((a: any) => a.totalMarks ?? a.score ?? 0);
+    const scores = attempts.map((a: any) => a.totalMarksObtained ?? a.totalMarks ?? a.score ?? 0);
     const passed = scores.filter((s: number) => s >= passingMarks).length;
     const failed = total - passed;
     const avg = scores.reduce((a: number, b: number) => a + b, 0) / total;
@@ -243,7 +235,7 @@ function QuizAttemptsView({ quizId, quiz, onBack }: { quizId: string; quiz: any;
                 </TableHeader>
                 <TableBody>
                   {attempts.map((attempt: any, idx: number) => {
-                    const score = attempt.totalMarks ?? attempt.score ?? 0;
+                    const score = attempt.totalMarksObtained ?? attempt.totalMarks ?? attempt.score ?? 0;
                     const maxMarks = quiz?.totalMarks || 100;
                     const percentage = maxMarks > 0 ? Math.round((score / maxMarks) * 100) : 0;
                     const { grade, color } = getGrade(percentage);
@@ -251,7 +243,7 @@ function QuizAttemptsView({ quizId, quiz, onBack }: { quizId: string; quiz: any;
                     const passed = score >= passingMarks;
 
                     return (
-                      <TableRow key={attempt._id || idx} data-testid={`row-attempt-${idx}`}>
+                      <TableRow key={attempt.id || attempt._id || idx} data-testid={`row-attempt-${idx}`}>
                         <TableCell data-testid={`text-student-name-${idx}`}>{attempt.studentName || "Unknown"}</TableCell>
                         <TableCell data-testid={`text-student-id-${idx}`}>{attempt.studentId || "N/A"}</TableCell>
                         <TableCell data-testid={`text-score-${idx}`}>{score}/{maxMarks}</TableCell>
@@ -318,7 +310,7 @@ export default function TeacherQuizResults() {
 
   const [selectedQuizId, setSelectedQuizId] = useState<string | null>(urlQuizId);
 
-  const selectedQuiz = quizzes.find((q: any) => q._id === selectedQuizId);
+  const selectedQuiz = quizzes.find((q: any) => (q.id || q._id) === selectedQuizId);
 
   return (
     <ModuleLayout module="curriculum" navItems={teacherNavItems}>
@@ -374,27 +366,27 @@ export default function TeacherQuizResults() {
 
                   return (
                     <Card
-                      key={quiz._id}
+                      key={quiz.id || quiz._id}
                       className="hover-elevate cursor-pointer"
-                      onClick={() => setSelectedQuizId(quiz._id)}
-                      data-testid={`card-quiz-${quiz._id}`}
+                      onClick={() => setSelectedQuizId(quiz.id || quiz._id)}
+                      data-testid={`card-quiz-${quiz.id || quiz._id}`}
                     >
                       <CardContent className="p-4 flex items-center justify-between gap-3 flex-wrap">
                         <div className="flex items-center gap-3 flex-wrap">
                           <ClipboardList className="h-5 w-5 text-muted-foreground" />
                           <div>
-                            <p className="font-medium" data-testid={`text-quiz-title-${quiz._id}`}>{quiz.title}</p>
+                            <p className="font-medium" data-testid={`text-quiz-title-${quiz.id || quiz._id}`}>{quiz.title}</p>
                             <p className="text-sm text-muted-foreground">
                               {quiz.className} {quiz.section} - {quiz.subject}
                             </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <Badge className={statusColor} data-testid={`badge-quiz-status-${quiz._id}`}>{status}</Badge>
-                          <Badge variant="outline" data-testid={`badge-quiz-questions-${quiz._id}`}>
+                          <Badge className={statusColor} data-testid={`badge-quiz-status-${quiz.id || quiz._id}`}>{status}</Badge>
+                          <Badge variant="outline" data-testid={`badge-quiz-questions-${quiz.id || quiz._id}`}>
                             {quiz.questions?.length || 0} questions
                           </Badge>
-                          <Button variant="outline" size="sm" data-testid={`button-view-attempts-${quiz._id}`}>
+                          <Button variant="outline" size="sm" data-testid={`button-view-attempts-${quiz.id || quiz._id}`}>
                             View Attempts
                           </Button>
                         </div>

@@ -6,18 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Award, TrendingUp, ClipboardList, ChevronRight, CheckCircle2, XCircle, Clock } from "lucide-react";
-
-function getGradeColor(grade: string) {
-  switch (grade) {
-    case "A+": return "bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300 border-violet-300 dark:border-violet-700";
-    case "A": return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700";
-    case "B": return "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 border-blue-300 dark:border-blue-700";
-    case "C": return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300 border-yellow-300 dark:border-yellow-700";
-    case "D": return "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 border-orange-300 dark:border-orange-700";
-    case "F": return "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 border-red-300 dark:border-red-700";
-    default: return "bg-muted text-muted-foreground";
-  }
-}
+import { getGradeColor } from "@/lib/grade-utils";
 
 export default function StudentResultsPage() {
   const { data: results = [], isLoading } = useStudentResults();
@@ -192,10 +181,10 @@ export default function StudentResultsPage() {
                 <div className="space-y-3">
                   <h3 className="font-semibold text-sm">Per-Question Breakdown</h3>
                   {selectedResult.answers.map((ans: any, idx: number) => {
-                    const isShortAnswer = ans.questionType === "short_answer" || ans.questionType === "short-answer";
-                    const isPending = isShortAnswer && ans.marksObtained === undefined;
-                    const isCorrect = !isShortAnswer && ans.isCorrect;
-                    const isWrong = !isShortAnswer && !ans.isCorrect;
+                    const isShort = ans.questionType === "short" || ans.questionType === "short_answer" || ans.questionType === "short-answer";
+                    const isPending = isShort && (ans.marksAwarded === undefined || ans.marksAwarded === null || ans.marksAwarded === 0) && !ans.isCorrect;
+                    const isCorrect = ans.isCorrect;
+                    const isWrong = !isShort && !ans.isCorrect;
 
                     let bgClass = "";
                     if (isPending) bgClass = "bg-muted/50";
@@ -226,7 +215,7 @@ export default function StudentResultsPage() {
                         <div className="mt-2 text-sm space-y-1">
                           <p>
                             <span className="text-muted-foreground">Your answer: </span>
-                            <span className="font-medium">{ans.selectedAnswer || ans.answer || "-"}</span>
+                            <span className="font-medium">{ans.givenAnswer || ans.selectedAnswer || ans.answer || "-"}</span>
                           </p>
                           {isWrong && ans.correctAnswer && (
                             <p>
@@ -234,9 +223,9 @@ export default function StudentResultsPage() {
                               <span className="font-medium text-emerald-600 dark:text-emerald-400">{ans.correctAnswer}</span>
                             </p>
                           )}
-                          {ans.marksObtained !== undefined && (
+                          {ans.marksAwarded !== undefined && (
                             <p className="text-muted-foreground">
-                              Marks: {ans.marksObtained}/{ans.marks || ans.totalMarks || "-"}
+                              Marks: {ans.marksAwarded}/{ans.marks || ans.totalMarks || "-"}
                             </p>
                           )}
                         </div>

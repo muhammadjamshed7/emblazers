@@ -12,18 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ClipboardList, BarChart3, CreditCard, CalendarCheck, ArrowRight, LogOut, Info, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-function getGradeBadgeVariant(grade: string): string {
-  switch (grade?.toUpperCase()) {
-    case "A+": return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
-    case "A": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
-    case "B": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
-    case "C": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
-    case "D": return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200";
-    case "F": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
-    default: return "bg-muted text-muted-foreground";
-  }
-}
+import { getGradeColor } from "@/lib/grade-utils";
 
 export default function StudentDashboard() {
   const { session, logout } = useAuth();
@@ -116,7 +105,7 @@ export default function StudentDashboard() {
           <CardContent className="flex items-center justify-between gap-4 flex-wrap py-4">
             <div className="flex items-center gap-6 flex-wrap text-sm" data-testid="text-welcome-bar">
               <span className="font-semibold text-base" data-testid="text-welcome-name">Welcome, {session?.name || dashboard?.profile?.name || "Student"}</span>
-              <span className="text-muted-foreground" data-testid="text-class-info">Class {dashboard?.profile?.class || className} - {dashboard?.profile?.section || section}</span>
+              <span className="text-muted-foreground" data-testid="text-class-info">Class {dashboard?.profile?.className || className} - {dashboard?.profile?.section || section}</span>
               <span className="text-muted-foreground" data-testid="text-student-id">Student ID: <span className="font-mono font-medium">{dashboard?.profile?.studentId || session?.studentId || "—"}</span></span>
             </div>
             <div className="flex items-center gap-2">
@@ -172,7 +161,7 @@ export default function StudentDashboard() {
               <div className="space-y-3">
                 {recentResults.map((result: any, idx: number) => (
                   <div
-                    key={result._id || idx}
+                    key={result.id || result._id || idx}
                     className="flex items-center justify-between gap-4 flex-wrap py-2 border-b last:border-b-0"
                     data-testid={`row-recent-result-${idx}`}
                   >
@@ -180,18 +169,18 @@ export default function StudentDashboard() {
                       <p className="text-sm font-medium truncate" data-testid={`text-quiz-title-${idx}`}>{result.quizTitle || result.title || "Quiz"}</p>
                       <p className="text-xs text-muted-foreground">
                         {result.subject && <span>{result.subject} · </span>}
-                        {result.completedAt ? new Date(result.completedAt).toLocaleDateString() : ""}
+                        {result.submittedAt ? new Date(result.submittedAt).toLocaleDateString() : result.completedAt ? new Date(result.completedAt).toLocaleDateString() : ""}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-muted-foreground" data-testid={`text-score-${idx}`}>
-                        {result.obtainedMarks ?? result.score ?? 0}/{result.totalMarks ?? result.total ?? 0}
+                        {result.totalMarksObtained ?? result.obtainedMarks ?? result.score ?? 0}/{result.totalMarks ?? result.total ?? 0}
                       </span>
-                      <Badge className={`no-default-hover-elevate no-default-active-elevate ${getGradeBadgeVariant(result.grade)}`} data-testid={`badge-grade-${idx}`}>
+                      <Badge className={`no-default-hover-elevate no-default-active-elevate ${getGradeColor(result.grade)}`} data-testid={`badge-grade-${idx}`}>
                         {result.grade || "—"}
                       </Badge>
-                      <Badge variant={result.passed ? "default" : "destructive"} data-testid={`badge-status-${idx}`}>
-                        {result.passed ? "Pass" : "Fail"}
+                      <Badge variant={result.isPassed ?? result.passed ? "default" : "destructive"} data-testid={`badge-status-${idx}`}>
+                        {(result.isPassed ?? result.passed) ? "Pass" : "Fail"}
                       </Badge>
                     </div>
                   </div>

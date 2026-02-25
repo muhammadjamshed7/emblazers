@@ -1389,11 +1389,15 @@ export async function registerRoutes(
   }));
 
   app.patch("/api/teacher/quizzes/:id/attempts/:attemptId/grade-short", asyncHandler(async (req, res) => {
+    const { attemptId } = req.params;
+    if (!attemptId || attemptId === "null" || attemptId === "undefined" || !/^[a-f\d]{24}$/i.test(attemptId)) {
+      return res.status(400).json({ error: "Invalid attempt ID" });
+    }
     const StudentQuizAttemptModel = (await import("./models/StudentQuizAttempt")).default;
     const TeacherQuizModel = (await import("./models/TeacherQuiz")).default;
     const { questionIndex, marksAwarded } = req.body;
 
-    const attempt = await StudentQuizAttemptModel.findById(req.params.attemptId);
+    const attempt = await StudentQuizAttemptModel.findById(attemptId);
     if (!attempt) return res.status(404).json({ error: "Attempt not found" });
 
     const quiz = await TeacherQuizModel.findById(req.params.id);

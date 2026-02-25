@@ -28,7 +28,7 @@ Teacher passwords are stored in the `teacherAuthPasswords` collection (TeacherAu
 
 Session separation uses three localStorage key pairs: `emblazers_token`/`emblazers_session` (admin), `teacher_token`/`teacher_session` (teacher), `student_token`/`student_session` (student). Teacher and student data hooks prefer their role-specific tokens with fallback to the standard token.
 
-Shared grade calculation utility at `server/utils/grade.ts`: A+ (>=90), A (>=80), B (>=70), C (>=60), D (>=50), F (<50).
+Shared grade calculation utility at `server/utils/grade.ts`: A+ (>=90), A (>=80), B (>=70), C (>=60), D (>=50), F (<50). Frontend grade color utility at `client/src/lib/grade-utils.ts` provides `getGradeColor(grade)` and `getGradeFromPercentage(percentage)` — used by student-dashboard, student-results, student-quizzes, and teacher-quiz-results pages.
 
 ### Curriculum Multi-Role System
 The Curriculum module supports 3 user roles with separate login flows:
