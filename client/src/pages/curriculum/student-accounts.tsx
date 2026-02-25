@@ -10,12 +10,16 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { UserPlus, RotateCcw, Users, ShieldCheck, ShieldOff } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { UserPlus, RotateCcw, Users, ShieldCheck, ShieldOff, InfoIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+const sections = ["A", "B", "C", "D"];
 
 export default function StudentAccountsPage() {
   const { toast } = useToast();
   const [filterClass, setFilterClass] = useState("all");
+  const [filterSection, setFilterSection] = useState("all");
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
 
   const { data: students = [] } = useQuery<Student[]>({ queryKey: ['/api/students'] });
@@ -78,8 +82,8 @@ export default function StudentAccountsPage() {
 
   const accountStudentIds = new Set(accounts.map((a: any) => a.studentId));
   const unregistered = students.filter(s => !accountStudentIds.has(s.studentId));
-  const filteredUnregistered = filterClass === "all" ? unregistered : unregistered.filter(s => s.class === filterClass);
-  const filteredAccounts = filterClass === "all" ? accounts : accounts.filter((a: any) => a.className === filterClass);
+  const filteredUnregistered = filterClass === "all" ? unregistered : unregistered.filter(s => s.class === filterClass && (filterSection === "all" || s.section === filterSection));
+  const filteredAccounts = filterClass === "all" ? accounts : accounts.filter((a: any) => a.className === filterClass && (filterSection === "all" || a.section === filterSection));
 
   const toggleSelection = (sid: string) => {
     setSelectedStudentIds(prev => prev.includes(sid) ? prev.filter(x => x !== sid) : [...prev, sid]);
@@ -107,15 +111,47 @@ export default function StudentAccountsPage() {
           </div>
         </div>
 
-        <div className="flex gap-2 items-center">
-          <Label className="text-sm">Filter by class:</Label>
-          <Select value={filterClass} onValueChange={setFilterClass}>
-            <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Classes</SelectItem>
-              {classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-            </SelectContent>
-          </Select>
+        <Alert className="border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950">
+          <InfoIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          <AlertDescription className="text-blue-900 dark:text-blue-100">
+            Default password = Student's Date of Birth (DDMMYYYY format). Student must change on first login.
+          </AlertDescription>
+        </Alert>
+
+        <div className="flex gap-4 items-end flex-wrap">
+          <div className="flex flex-col gap-2">
+            <Label className="text-sm font-medium">Filter by class:</Label>
+            <Select value={filterClass} onValueChange={setFilterClass}>
+              <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Classes</SelectItem>
+                {classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label className="text-sm font-medium">Filter by section:</Label>
+            <Select value={filterSection} onValueChange={setFilterSection}>
+              <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Sections</SelectItem>
+                {sections.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button 
+            onClick={() => {
+              if (filterClass !== "all") {
+                bulkCreateByClassMutation.mutate({ className: filterClass, section: filterSection !== "all" ? filterSection : undefined });
+              } else {
+                toast({ title: "Please select a class first" });
+              }
+            }}
+            disabled={bulkCreateByClassMutation.isPending}
+            data-testid="button-bulk-create-class"
+          >
+            <Users className="w-4 h-4 mr-1" /> Bulk Create Accounts for This Class
+          </Button>
         </div>
 
         {filteredUnregistered.length > 0 && (
@@ -174,11 +210,8 @@ export default function StudentAccountsPage() {
                 <thead className="bg-muted/50">
                   <tr>
                     <th className="text-left p-3">Student ID</th>
-                    <th className="text-left p-3">Name</th>
-                    <th className="text-left p-3">Class</th>
-                    <th className="text-left p-3">Section</th>
-                    <th className="text-left p-3">Status</th>
-                    <th className="text-left p-3">First Login</th>
+                    <th className="text-left p-3">Student Name</th>
+                    <th className="text-left p-3">Portal Account</th>
                     <th className="text-left p-3">Last Login</th>
                     <th className="text-left p-3">Actions</th>
                   </tr>
@@ -188,21 +221,25 @@ export default function StudentAccountsPage() {
                     <tr key={a.id} className="border-t" data-testid={`row-account-${a.id}`}>
                       <td className="p-3 font-mono">{a.studentId}</td>
                       <td className="p-3">{a.studentName}</td>
-                      <td className="p-3">{a.className}</td>
-                      <td className="p-3">{a.section}</td>
-                      <td className="p-3"><Badge variant={a.isActive ? "default" : "destructive"}>{a.isActive ? "Active" : "Disabled"}</Badge></td>
-                      <td className="p-3"><Badge variant={a.isFirstLogin ? "secondary" : "outline"}>{a.isFirstLogin ? "Pending" : "Done"}</Badge></td>
+                      <td className="p-3">
+                        <Badge variant={a.isActive ? "default" : "secondary"}>
+                          {a.isActive ? "Active" : "Not Created"}
+                        </Badge>
+                      </td>
                       <td className="p-3 text-muted-foreground">{a.lastLogin ? new Date(a.lastLogin).toLocaleDateString() : "Never"}</td>
                       <td className="p-3">
                         <div className="flex gap-1">
-                          <Button size="sm" variant="outline" onClick={() => {
-                            if (confirm("Reset password to DOB default?")) resetPasswordMutation.mutate(a.studentId);
-                          }} title="Reset Password" data-testid={`button-reset-${a.id}`}>
-                            <RotateCcw className="w-3 h-3" />
-                          </Button>
-                          <Button size="sm" variant={a.isActive ? "destructive" : "default"} onClick={() => toggleAccountMutation.mutate({ id: a.id, isActive: !a.isActive })} title={a.isActive ? "Disable" : "Enable"} data-testid={`button-toggle-${a.id}`}>
-                            {a.isActive ? <ShieldOff className="w-3 h-3" /> : <ShieldCheck className="w-3 h-3" />}
-                          </Button>
+                          {a.isActive ? (
+                            <Button size="sm" variant="outline" onClick={() => {
+                              if (confirm("Reset password to DOB default?")) resetPasswordMutation.mutate(a.studentId);
+                            }} title="Reset Password" data-testid={`button-reset-${a.id}`}>
+                              <RotateCcw className="w-3 h-3 mr-1" /> Reset Password
+                            </Button>
+                          ) : (
+                            <Button size="sm" onClick={() => createAccountsMutation.mutate([a.studentId])} disabled={createAccountsMutation.isPending} data-testid={`button-create-${a.id}`}>
+                              <UserPlus className="w-3 h-3 mr-1" /> Create Account
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>

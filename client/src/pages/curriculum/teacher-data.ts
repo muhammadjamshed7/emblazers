@@ -4,12 +4,16 @@ import {
   LayoutDashboard,
   FileText,
   ClipboardList,
+  BookOpen,
+  BarChart3,
 } from "lucide-react";
 
 export const teacherNavItems = [
   { label: "Dashboard", path: "/curriculum/teacher-dashboard", icon: LayoutDashboard },
-  { label: "My Content", path: "/curriculum/teacher-content", icon: FileText },
+  { label: "My Assignments", path: "/curriculum/teacher-assignments-view", icon: BookOpen },
+  { label: "Upload Content", path: "/curriculum/teacher-content", icon: FileText },
   { label: "My Quizzes", path: "/curriculum/teacher-quizzes", icon: ClipboardList },
+  { label: "Quiz Results", path: "/curriculum/teacher-quiz-results", icon: BarChart3 },
 ];
 
 export function useTeacherAssignments(staffId?: string) {

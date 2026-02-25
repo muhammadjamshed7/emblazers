@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ModuleLayout } from "@/components/layout/module-layout";
-import { curriculumNavItems, useCurriculumData, classes, subjects } from "./curriculum-data";
+import { curriculumNavItems, classes } from "./curriculum-data";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,9 +19,17 @@ const sections = ["A", "B", "C", "D"];
 export default function TeacherAssignmentsPage() {
   const { session } = useAuth();
   const { toast } = useToast();
-  const { staff } = useCurriculumData();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [filterClass, setFilterClass] = useState("all");
+
+  const { data: staffTeachers = [], isLoading: staffLoading } = useQuery<any[]>({
+    queryKey: ['/api/curriculum/staff-teachers'],
+    queryFn: async () => {
+      const res = await fetch('/api/curriculum/staff-teachers', { headers: { Authorization: `Bearer ${localStorage.getItem("emblazers_token")}` } });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    }
+  });
 
   const { data: assignments = [], isLoading } = useQuery<any[]>({
     queryKey: ['/api/curriculum/teacher-assignments'],
@@ -47,10 +55,10 @@ export default function TeacherAssignmentsPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/curriculum/teacher-assignments'] }),
   });
 
-  const [form, setForm] = useState({ staffId: "", className: "", section: "", subject: "" });
+  const [form, setForm] = useState({ staffId: "", className: "", section: "", subject: "", dateAssigned: "" });
 
   const handleSubmit = async () => {
-    const selectedStaff = staff.find(s => s.id === form.staffId);
+    const selectedStaff = staffTeachers.find(s => s.id === form.staffId);
     if (!selectedStaff || !form.className || !form.section || !form.subject) {
       toast({ title: "All fields required", variant: "destructive" });
       return;
@@ -64,11 +72,12 @@ export default function TeacherAssignmentsPage() {
         section: form.section,
         subject: form.subject,
         assignedBy: session?.name || "Admin",
+        dateAssigned: form.dateAssigned || new Date().toISOString().split('T')[0],
         isActive: true,
       });
       toast({ title: "Assignment created" });
       setDialogOpen(false);
-      setForm({ staffId: "", className: "", section: "", subject: "" });
+      setForm({ staffId: "", className: "", section: "", subject: "", dateAssigned: "" });
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     }
@@ -102,7 +111,7 @@ export default function TeacherAssignmentsPage() {
                   <Select value={form.staffId} onValueChange={v => setForm(f => ({ ...f, staffId: v }))}>
                     <SelectTrigger data-testid="select-staff"><SelectValue placeholder="Select staff" /></SelectTrigger>
                     <SelectContent>
-                      {staff.map(s => <SelectItem key={s.id} value={s.id}>{s.name} ({s.email})</SelectItem>)}
+                      {staffTeachers.map(s => <SelectItem key={s.id} value={s.id}>{s.name} ({s.email})</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -121,13 +130,24 @@ export default function TeacherAssignmentsPage() {
                       <SelectContent>{sections.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Subject</Label>
-                    <Select value={form.subject} onValueChange={v => setForm(f => ({ ...f, subject: v }))}>
-                      <SelectTrigger data-testid="select-subject"><SelectValue placeholder="Subject" /></SelectTrigger>
-                      <SelectContent>{subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Subject</Label>
+                  <Input
+                    value={form.subject}
+                    onChange={e => setForm(f => ({ ...f, subject: e.target.value }))}
+                    placeholder="Enter subject"
+                    data-testid="input-subject"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Date Assigned</Label>
+                  <Input
+                    type="date"
+                    value={form.dateAssigned}
+                    onChange={e => setForm(f => ({ ...f, dateAssigned: e.target.value }))}
+                    data-testid="input-date-assigned"
+                  />
                 </div>
                 <Button onClick={handleSubmit} disabled={createMutation.isPending} className="w-full" data-testid="button-submit-assignment">
                   {createMutation.isPending ? "Creating..." : "Create Assignment"}
@@ -162,6 +182,7 @@ export default function TeacherAssignmentsPage() {
                   <th className="text-left p-3 text-sm font-medium">Class</th>
                   <th className="text-left p-3 text-sm font-medium">Section</th>
                   <th className="text-left p-3 text-sm font-medium">Subject</th>
+                  <th className="text-left p-3 text-sm font-medium">Date Assigned</th>
                   <th className="text-left p-3 text-sm font-medium">Status</th>
                   <th className="text-left p-3 text-sm font-medium">Actions</th>
                 </tr>
@@ -174,6 +195,7 @@ export default function TeacherAssignmentsPage() {
                     <td className="p-3 text-sm">{a.className}</td>
                     <td className="p-3 text-sm">{a.section}</td>
                     <td className="p-3"><Badge variant="outline">{a.subject}</Badge></td>
+                    <td className="p-3 text-sm">{a.dateAssigned ? new Date(a.dateAssigned).toLocaleDateString() : "-"}</td>
                     <td className="p-3"><Badge variant={a.isActive ? "default" : "secondary"}>{a.isActive ? "Active" : "Inactive"}</Badge></td>
                     <td className="p-3">
                       <Button size="sm" variant="destructive" onClick={() => handleDelete(a.id)} data-testid={`button-delete-${a.id}`}>

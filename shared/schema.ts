@@ -899,6 +899,7 @@ export const teacherAssignmentSchema = z.object({
   section: z.string(),
   subject: z.string(),
   assignedBy: z.string(),
+  dateAssigned: z.string().optional(),
   isActive: z.boolean().default(true),
   createdAt: z.string().optional(),
 });

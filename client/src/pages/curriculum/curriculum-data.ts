@@ -227,7 +227,7 @@ export function useQuizData() {
   };
 }
 
-export const classes = ["Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6", "Class 7", "Class 8", "Class 9", "Class 10"];
+export const classes = ["Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6", "Class 7", "Class 8", "Class 9", "Class 10", "Class 11", "Class 12"];
 export const subjects = ["Math", "English", "Science", "Urdu", "Islamiat", "Computer", "Art", "PT"];
 export const topicStatuses = ["Not Started", "In Progress", "Completed"] as const;
 export const grades = ["A+", "A", "B+", "B", "C+", "C", "D", "F"];

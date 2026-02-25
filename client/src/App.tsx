@@ -74,10 +74,12 @@ import CurriculumQuizzes from "@/pages/curriculum/quizzes";
 import CurriculumQuizResults from "@/pages/curriculum/quiz-results";
 import CurriculumLogin from "@/pages/curriculum/login";
 import CurriculumTeacherAssignments from "@/pages/curriculum/teacher-assignments";
+import CurriculumTeacherAssignmentsView from "@/pages/curriculum/teacher-assignments-view";
 import CurriculumStudentAccounts from "@/pages/curriculum/student-accounts";
 import CurriculumTeacherDashboard from "@/pages/curriculum/teacher-dashboard";
 import CurriculumTeacherContent from "@/pages/curriculum/teacher-content";
 import CurriculumTeacherQuizzes from "@/pages/curriculum/teacher-quizzes";
+import CurriculumTeacherQuizResults from "@/pages/curriculum/teacher-quiz-results";
 import CurriculumStudentDashboard from "@/pages/curriculum/student-dashboard";
 import CurriculumStudentContent from "@/pages/curriculum/student-content";
 import CurriculumStudentQuizzes from "@/pages/curriculum/student-quizzes";
@@ -181,10 +183,12 @@ function Router() {
       <Route path="/curriculum/quizzes" component={CurriculumQuizzes} />
       <Route path="/curriculum/quiz-results" component={CurriculumQuizResults} />
       <Route path="/curriculum/teacher-assignments" component={CurriculumTeacherAssignments} />
+      <Route path="/curriculum/teacher-assignments-view" component={CurriculumTeacherAssignmentsView} />
       <Route path="/curriculum/student-accounts" component={CurriculumStudentAccounts} />
       <Route path="/curriculum/teacher-dashboard" component={CurriculumTeacherDashboard} />
       <Route path="/curriculum/teacher-content" component={CurriculumTeacherContent} />
       <Route path="/curriculum/teacher-quizzes" component={CurriculumTeacherQuizzes} />
+      <Route path="/curriculum/teacher-quiz-results" component={CurriculumTeacherQuizResults} />
       <Route path="/curriculum/student-dashboard" component={CurriculumStudentDashboard} />
       <Route path="/curriculum/student-content" component={CurriculumStudentContent} />
       <Route path="/curriculum/student-quizzes" component={CurriculumStudentQuizzes} />

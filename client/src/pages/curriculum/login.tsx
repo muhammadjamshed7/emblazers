@@ -182,7 +182,7 @@ export default function CurriculumLoginPage() {
                     </button>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">Default password: teacher123</p>
+                <p className="text-xs text-muted-foreground">Default password is your Staff ID. Contact admin if you cannot login.</p>
                 <Button type="submit" className="w-full bg-emerald-500 hover:bg-emerald-600" disabled={isLoading} data-testid="button-teacher-submit">
                   {isLoading ? "Signing in..." : "Sign in as Teacher"}
                 </Button>
@@ -207,7 +207,7 @@ export default function CurriculumLoginPage() {
                     </button>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">First login? Your default password is your Student ID.</p>
+                <p className="text-xs text-muted-foreground">Default password is your Date of Birth (DDMMYYYY format). You must change it on first login.</p>
                 <Button type="submit" className="w-full bg-blue-500 hover:bg-blue-600" disabled={isLoading} data-testid="button-student-submit">
                   {isLoading ? "Signing in..." : "Sign in as Student"}
                 </Button>
