@@ -1,94 +1,218 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { ModuleLayout } from "@/components/layout/module-layout";
-import { studentNavItems, useStudentDashboard, useChangePassword } from "./student-data";
+import { studentNavItems, useStudentDashboard, useChangePassword, useStudentResults } from "./student-data";
 import { useAuth } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FileText, ClipboardList, BarChart3, CreditCard, CalendarCheck } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ClipboardList, BarChart3, CreditCard, CalendarCheck, ArrowRight, LogOut, Info, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+function getGradeBadgeVariant(grade: string): string {
+  switch (grade?.toUpperCase()) {
+    case "A+": return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
+    case "A": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+    case "B": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+    case "C": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
+    case "D": return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200";
+    case "F": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+    default: return "bg-muted text-muted-foreground";
+  }
+}
+
 export default function StudentDashboard() {
-  const { session } = useAuth();
+  const { session, logout } = useAuth();
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const className = session?.className || "";
   const section = session?.section || "";
 
   const { data: dashboard, isLoading } = useStudentDashboard();
+  const { data: results } = useStudentResults();
   const changePasswordMutation = useChangePassword();
 
-  const [showPasswordDialog, setShowPasswordDialog] = useState(session?.isFirstLogin || false);
+  const isFirstLogin = (session as any)?.isFirstLogin || false;
+  const [showPasswordDialog, setShowPasswordDialog] = useState(isFirstLogin);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
-  const stats = [
-    { label: "Active Quizzes", value: dashboard?.activeQuizzesCount ?? 0, icon: ClipboardList, color: "text-blue-600" },
-    { label: "Completed Quizzes", value: dashboard?.completedQuizzesCount ?? 0, icon: BarChart3, color: "text-violet-600" },
-    { label: "Pending Fees", value: dashboard?.pendingFeesTotal ? `Rs. ${dashboard.pendingFeesTotal.toLocaleString()}` : "Rs. 0", icon: CreditCard, color: "text-amber-600" },
-    { label: "Attendance", value: `${dashboard?.thisMonthAttendance ?? 0}%`, icon: CalendarCheck, color: "text-emerald-600" },
+  const recentResults = (results || []).slice(0, 5);
+
+  const summaryCards = [
+    {
+      label: "Active Quizzes",
+      value: dashboard?.activeQuizzesCount ?? 0,
+      icon: ClipboardList,
+      color: "text-blue-600 dark:text-blue-400",
+      bgColor: "bg-blue-50 dark:bg-blue-950",
+      link: "/curriculum/student-quizzes",
+      linkText: "Take Now",
+    },
+    {
+      label: "Completed Quizzes",
+      value: dashboard?.completedQuizzesCount ?? 0,
+      icon: BarChart3,
+      color: "text-violet-600 dark:text-violet-400",
+      bgColor: "bg-violet-50 dark:bg-violet-950",
+      link: "/curriculum/student-results",
+      linkText: "View",
+    },
+    {
+      label: "Pending Fees",
+      value: dashboard?.pendingFeesTotal ? `Rs. ${dashboard.pendingFeesTotal.toLocaleString()}` : "Rs. 0",
+      icon: CreditCard,
+      color: "text-amber-600 dark:text-amber-400",
+      bgColor: "bg-amber-50 dark:bg-amber-950",
+      link: "/curriculum/student-fees",
+      linkText: "Pay Info",
+    },
+    {
+      label: "Attendance This Month",
+      value: `${dashboard?.thisMonthAttendance ?? 0}%`,
+      icon: CalendarCheck,
+      color: "text-emerald-600 dark:text-emerald-400",
+      bgColor: "bg-emerald-50 dark:bg-emerald-950",
+      link: "/curriculum/student-attendance",
+      linkText: "View",
+    },
   ];
 
   const handleChangePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      toast({ title: "Error", description: "Passwords do not match", variant: "destructive" });
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast({ title: "Error", description: "Password must be at least 8 characters", variant: "destructive" });
+      return;
+    }
     try {
       await changePasswordMutation.mutateAsync({ currentPassword, newPassword });
       toast({ title: "Password changed successfully" });
       setShowPasswordDialog(false);
       setCurrentPassword("");
       setNewPassword("");
+      setConfirmPassword("");
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     }
   };
 
+  const handleLogout = () => {
+    logout?.();
+    navigate("/curriculum/login");
+  };
+
   return (
     <ModuleLayout module="curriculum" navItems={studentNavItems}>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold" data-testid="text-page-title">Student Dashboard</h1>
-            <p className="text-muted-foreground">Welcome, {session?.name} ({className} - {section})</p>
-          </div>
-          <Button variant="outline" size="sm" onClick={() => setShowPasswordDialog(true)} data-testid="button-change-password">
-            Change Password
-          </Button>
-        </div>
-
-        {dashboard?.profile && (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div><span className="text-muted-foreground">Name:</span> <span className="font-medium">{dashboard.profile.name}</span></div>
-                <div><span className="text-muted-foreground">Student ID:</span> <span className="font-medium font-mono">{dashboard.profile.studentId}</span></div>
-                <div><span className="text-muted-foreground">Class:</span> <span className="font-medium">{dashboard.profile.class} - {dashboard.profile.section}</span></div>
-                <div><span className="text-muted-foreground">Parent:</span> <span className="font-medium">{dashboard.profile.parentName}</span></div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        <Card>
+          <CardContent className="flex items-center justify-between gap-4 flex-wrap py-4">
+            <div className="flex items-center gap-6 flex-wrap text-sm" data-testid="text-welcome-bar">
+              <span className="font-semibold text-base" data-testid="text-welcome-name">Welcome, {session?.name || dashboard?.profile?.name || "Student"}</span>
+              <span className="text-muted-foreground" data-testid="text-class-info">Class {dashboard?.profile?.class || className} - {dashboard?.profile?.section || section}</span>
+              <span className="text-muted-foreground" data-testid="text-student-id">Student ID: <span className="font-mono font-medium">{dashboard?.profile?.studentId || session?.studentId || "—"}</span></span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setShowPasswordDialog(true)} data-testid="button-change-password">
+                <Lock className="w-4 h-4 mr-1" />
+                Change Password
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleLogout} data-testid="button-logout">
+                <LogOut className="w-4 h-4 mr-1" />
+                Logout
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((s) => (
-            <Card key={s.label}>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">{s.label}</p>
-                    <p className="text-3xl font-bold" data-testid={`stat-${s.label.toLowerCase().replace(/\s/g, '-')}`}>{isLoading ? "..." : s.value}</p>
+          {summaryCards.map((card) => (
+            <Card
+              key={card.label}
+              className="cursor-pointer hover-elevate transition-colors"
+              onClick={() => navigate(card.link)}
+              data-testid={`card-${card.label.toLowerCase().replace(/\s/g, '-')}`}
+            >
+              <CardContent className="pt-5 pb-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">{card.label}</p>
+                    <p className="text-2xl font-bold" data-testid={`stat-${card.label.toLowerCase().replace(/\s/g, '-')}`}>
+                      {isLoading ? "..." : card.value}
+                    </p>
                   </div>
-                  <s.icon className={`w-8 h-8 ${s.color}`} />
+                  <div className={`p-2 rounded-md ${card.bgColor}`}>
+                    <card.icon className={`w-5 h-5 ${card.color}`} />
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center gap-1 text-sm font-medium" style={{ color: "hsl(var(--primary))" }}>
+                  <span data-testid={`link-${card.label.toLowerCase().replace(/\s/g, '-')}`}>{card.linkText}</span>
+                  <ArrowRight className="w-3 h-3" />
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
 
-        <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg" data-testid="text-recent-activity-title">Recent Activity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {recentResults.length === 0 ? (
+              <p className="text-sm text-muted-foreground" data-testid="text-no-activity">No quiz results yet. Take a quiz to see your activity here.</p>
+            ) : (
+              <div className="space-y-3">
+                {recentResults.map((result: any, idx: number) => (
+                  <div
+                    key={result._id || idx}
+                    className="flex items-center justify-between gap-4 flex-wrap py-2 border-b last:border-b-0"
+                    data-testid={`row-recent-result-${idx}`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate" data-testid={`text-quiz-title-${idx}`}>{result.quizTitle || result.title || "Quiz"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {result.subject && <span>{result.subject} · </span>}
+                        {result.completedAt ? new Date(result.completedAt).toLocaleDateString() : ""}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground" data-testid={`text-score-${idx}`}>
+                        {result.obtainedMarks ?? result.score ?? 0}/{result.totalMarks ?? result.total ?? 0}
+                      </span>
+                      <Badge className={`no-default-hover-elevate no-default-active-elevate ${getGradeBadgeVariant(result.grade)}`} data-testid={`badge-grade-${idx}`}>
+                        {result.grade || "—"}
+                      </Badge>
+                      <Badge variant={result.passed ? "default" : "destructive"} data-testid={`badge-status-${idx}`}>
+                        {result.passed ? "Pass" : "Fail"}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Dialog open={showPasswordDialog} onOpenChange={(open) => { if (!isFirstLogin) setShowPasswordDialog(open); }}>
           <DialogContent>
-            <DialogHeader><DialogTitle>{session?.isFirstLogin ? "Set Your Password" : "Change Password"}</DialogTitle></DialogHeader>
-            {session?.isFirstLogin && (
-              <p className="text-sm text-muted-foreground">This is your first login. Please set a new password to continue.</p>
+            <DialogHeader>
+              <DialogTitle>{isFirstLogin ? "Set Your Password" : "Change Password"}</DialogTitle>
+            </DialogHeader>
+            {isFirstLogin && (
+              <Alert>
+                <Info className="w-4 h-4" />
+                <AlertDescription>
+                  You must set a new password before continuing. Please choose a password with at least 8 characters.
+                </AlertDescription>
+              </Alert>
             )}
             <div className="space-y-4">
               <div className="space-y-2">
@@ -97,9 +221,18 @@ export default function StudentDashboard() {
               </div>
               <div className="space-y-2">
                 <Label>New Password</Label>
-                <Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="At least 6 characters" data-testid="input-new-password" />
+                <Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="At least 8 characters" data-testid="input-new-password" />
               </div>
-              <Button onClick={handleChangePassword} disabled={changePasswordMutation.isPending || !currentPassword || newPassword.length < 6} className="w-full" data-testid="button-submit-password">
+              <div className="space-y-2">
+                <Label>Confirm New Password</Label>
+                <Input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Re-enter new password" data-testid="input-confirm-password" />
+              </div>
+              <Button
+                onClick={handleChangePassword}
+                disabled={changePasswordMutation.isPending || !currentPassword || newPassword.length < 8 || newPassword !== confirmPassword}
+                className="w-full"
+                data-testid="button-submit-password"
+              >
                 {changePasswordMutation.isPending ? "Changing..." : "Change Password"}
               </Button>
             </div>

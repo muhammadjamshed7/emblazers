@@ -1,20 +1,41 @@
+import { useState } from "react";
 import { ModuleLayout } from "@/components/layout/module-layout";
 import { studentNavItems, useStudentResults } from "./student-data";
-import { useAuth } from "@/lib/auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Award, TrendingUp, ClipboardList, ChevronRight, CheckCircle2, XCircle, Clock } from "lucide-react";
+
+function getGradeColor(grade: string) {
+  switch (grade) {
+    case "A+": return "bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300 border-violet-300 dark:border-violet-700";
+    case "A": return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700";
+    case "B": return "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 border-blue-300 dark:border-blue-700";
+    case "C": return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300 border-yellow-300 dark:border-yellow-700";
+    case "D": return "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 border-orange-300 dark:border-orange-700";
+    case "F": return "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 border-red-300 dark:border-red-700";
+    default: return "bg-muted text-muted-foreground";
+  }
+}
 
 export default function StudentResultsPage() {
-  const { session } = useAuth();
   const { data: results = [], isLoading } = useStudentResults();
+  const [selectedResult, setSelectedResult] = useState<any>(null);
 
   const totalAttempts = results.length;
-  const totalPassed = results.filter((a: any) => a.isPassed).length;
-  const avgPercentage = totalAttempts > 0 ? Math.round(results.reduce((sum: number, a: any) => sum + (a.percentage || 0), 0) / totalAttempts) : 0;
-  const bestGrade = totalAttempts > 0 ? results.reduce((best: string, a: any) => {
-    const order = ["A+", "A", "B", "C", "D", "F"];
-    return order.indexOf(a.grade) < order.indexOf(best) ? a.grade : best;
-  }, "F") : "-";
+  const bestScore = totalAttempts > 0
+    ? Math.max(...results.map((a: any) => a.percentage || 0))
+    : 0;
+  const avgGrade = totalAttempts > 0
+    ? (() => {
+        const order = ["A+", "A", "B", "C", "D", "F"];
+        const grades = results.map((a: any) => order.indexOf(a.grade)).filter((i: number) => i >= 0);
+        if (grades.length === 0) return "-";
+        const avgIdx = Math.round(grades.reduce((s: number, v: number) => s + v, 0) / grades.length);
+        return order[Math.min(avgIdx, order.length - 1)];
+      })()
+    : "-";
 
   return (
     <ModuleLayout module="curriculum" navItems={studentNavItems}>
@@ -24,79 +45,220 @@ export default function StudentResultsPage() {
           <p className="text-muted-foreground">View your quiz and exam results</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card>
             <CardContent className="pt-6">
-              <p className="text-sm text-muted-foreground">Total Quizzes</p>
-              <p className="text-3xl font-bold">{totalAttempts}</p>
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-md bg-violet-100 dark:bg-violet-900">
+                  <Award className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground" data-testid="text-avg-grade-label">Average Grade</p>
+                  <p className="text-2xl font-bold" data-testid="text-avg-grade-value">{avgGrade}</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
-              <p className="text-sm text-muted-foreground">Passed</p>
-              <p className="text-3xl font-bold text-emerald-600">{totalPassed}</p>
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-md bg-emerald-100 dark:bg-emerald-900">
+                  <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground" data-testid="text-best-score-label">Best Score</p>
+                  <p className="text-2xl font-bold" data-testid="text-best-score-value">{bestScore}%</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
-              <p className="text-sm text-muted-foreground">Avg. Score</p>
-              <p className="text-3xl font-bold">{avgPercentage}%</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-sm text-muted-foreground">Best Grade</p>
-              <p className="text-3xl font-bold text-violet-600">{bestGrade}</p>
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-md bg-blue-100 dark:bg-blue-900">
+                  <ClipboardList className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground" data-testid="text-total-quizzes-label">Total Quizzes Attempted</p>
+                  <p className="text-2xl font-bold" data-testid="text-total-quizzes-value">{totalAttempts}</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
 
         {isLoading ? (
-          <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-20 rounded-lg bg-muted animate-pulse" />)}</div>
-        ) : results.length === 0 ? (
-          <Card><CardContent className="py-12 text-center text-muted-foreground">No results yet. Take a quiz to see your results here.</CardContent></Card>
-        ) : (
-          <div className="rounded-lg border overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-muted/50">
-                <tr>
-                  <th className="text-left p-3 text-sm font-medium">Quiz</th>
-                  <th className="text-left p-3 text-sm font-medium">Subject</th>
-                  <th className="text-left p-3 text-sm font-medium">Teacher</th>
-                  <th className="text-left p-3 text-sm font-medium">Score</th>
-                  <th className="text-left p-3 text-sm font-medium">Percentage</th>
-                  <th className="text-left p-3 text-sm font-medium">Grade</th>
-                  <th className="text-left p-3 text-sm font-medium">Status</th>
-                  <th className="text-left p-3 text-sm font-medium">Time</th>
-                  <th className="text-left p-3 text-sm font-medium">Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {results.map((a: any) => (
-                  <tr key={a.id} className="border-t" data-testid={`row-result-${a.id}`}>
-                    <td className="p-3 text-sm font-medium">{a.quizTitle}</td>
-                    <td className="p-3 text-sm">{a.subject}</td>
-                    <td className="p-3 text-sm text-muted-foreground">{a.teacherName}</td>
-                    <td className="p-3 text-sm">{a.totalMarksObtained}/{a.totalMarks}</td>
-                    <td className="p-3 text-sm">
-                      <div className="flex items-center gap-2">
-                        <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
-                          <div className="h-full bg-violet-500 rounded-full" style={{ width: `${a.percentage}%` }} />
-                        </div>
-                        <span>{a.percentage}%</span>
-                      </div>
-                    </td>
-                    <td className="p-3"><Badge variant="outline">{a.grade}</Badge></td>
-                    <td className="p-3"><Badge variant={a.isPassed ? "default" : "destructive"}>{a.isPassed ? "Pass" : "Fail"}</Badge></td>
-                    <td className="p-3 text-sm text-muted-foreground">{a.timeTakenMinutes} min</td>
-                    <td className="p-3 text-sm text-muted-foreground">{a.submittedAt ? new Date(a.submittedAt).toLocaleDateString() : "-"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-3">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-16 rounded-md bg-muted animate-pulse" />
+            ))}
           </div>
+        ) : results.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center text-muted-foreground">
+              No results yet. Take a quiz to see your results here.
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <div className="overflow-x-auto">
+              <table className="w-full" data-testid="table-results">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="text-left p-3 text-sm font-medium">Quiz Title</th>
+                    <th className="text-left p-3 text-sm font-medium">Subject</th>
+                    <th className="text-left p-3 text-sm font-medium">Teacher</th>
+                    <th className="text-left p-3 text-sm font-medium">Date</th>
+                    <th className="text-left p-3 text-sm font-medium">Score</th>
+                    <th className="text-left p-3 text-sm font-medium">Grade</th>
+                    <th className="text-left p-3 text-sm font-medium">Status</th>
+                    <th className="p-3"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {results.map((r: any) => (
+                    <tr
+                      key={r.id}
+                      className="border-b last:border-b-0 hover-elevate cursor-pointer"
+                      onClick={() => setSelectedResult(r)}
+                      data-testid={`row-result-${r.id}`}
+                    >
+                      <td className="p-3 text-sm font-medium">{r.quizTitle}</td>
+                      <td className="p-3 text-sm text-muted-foreground">{r.subject}</td>
+                      <td className="p-3 text-sm text-muted-foreground">{r.teacherName}</td>
+                      <td className="p-3 text-sm text-muted-foreground">
+                        {r.submittedAt ? new Date(r.submittedAt).toLocaleDateString() : "-"}
+                      </td>
+                      <td className="p-3 text-sm">
+                        <span className="font-medium">{r.totalMarksObtained}</span>
+                        <span className="text-muted-foreground">/{r.totalMarks}</span>
+                        <span className="ml-2 text-muted-foreground">({r.percentage}%)</span>
+                      </td>
+                      <td className="p-3">
+                        <Badge variant="outline" className={`${getGradeColor(r.grade)} no-default-hover-elevate no-default-active-elevate`} data-testid={`badge-grade-${r.id}`}>
+                          {r.grade}
+                        </Badge>
+                      </td>
+                      <td className="p-3">
+                        <Badge variant={r.isPassed ? "default" : "destructive"} data-testid={`badge-status-${r.id}`}>
+                          {r.isPassed ? "Pass" : "Fail"}
+                        </Badge>
+                      </td>
+                      <td className="p-3">
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
         )}
       </div>
+
+      <Dialog open={!!selectedResult} onOpenChange={(open) => { if (!open) setSelectedResult(null); }}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle data-testid="text-result-detail-title">
+              {selectedResult?.quizTitle} - Result Details
+            </DialogTitle>
+          </DialogHeader>
+          {selectedResult && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center gap-4 p-4 rounded-md bg-muted/50">
+                <div>
+                  <p className="text-sm text-muted-foreground">Score</p>
+                  <p className="text-lg font-bold">{selectedResult.totalMarksObtained}/{selectedResult.totalMarks}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Percentage</p>
+                  <p className="text-lg font-bold">{selectedResult.percentage}%</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Grade</p>
+                  <Badge variant="outline" className={`${getGradeColor(selectedResult.grade)} text-base no-default-hover-elevate no-default-active-elevate`}>
+                    {selectedResult.grade}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Status</p>
+                  <Badge variant={selectedResult.isPassed ? "default" : "destructive"}>
+                    {selectedResult.isPassed ? "Pass" : "Fail"}
+                  </Badge>
+                </div>
+              </div>
+
+              {selectedResult.answers && selectedResult.answers.length > 0 ? (
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-sm">Per-Question Breakdown</h3>
+                  {selectedResult.answers.map((ans: any, idx: number) => {
+                    const isShortAnswer = ans.questionType === "short_answer" || ans.questionType === "short-answer";
+                    const isPending = isShortAnswer && ans.marksObtained === undefined;
+                    const isCorrect = !isShortAnswer && ans.isCorrect;
+                    const isWrong = !isShortAnswer && !ans.isCorrect;
+
+                    let bgClass = "";
+                    if (isPending) bgClass = "bg-muted/50";
+                    else if (isCorrect) bgClass = "bg-emerald-50 dark:bg-emerald-950/30";
+                    else if (isWrong) bgClass = "bg-red-50 dark:bg-red-950/30";
+
+                    return (
+                      <div
+                        key={idx}
+                        className={`p-3 rounded-md border ${bgClass}`}
+                        data-testid={`question-result-${idx}`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-sm font-medium">
+                            Q{idx + 1}. {ans.questionText || `Question ${idx + 1}`}
+                          </p>
+                          {isPending ? (
+                            <Badge variant="outline" className="shrink-0 no-default-hover-elevate no-default-active-elevate">
+                              <Clock className="h-3 w-3 mr-1" />
+                              Pending teacher review
+                            </Badge>
+                          ) : isCorrect ? (
+                            <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+                          ) : (
+                            <XCircle className="h-5 w-5 text-red-600 shrink-0" />
+                          )}
+                        </div>
+                        <div className="mt-2 text-sm space-y-1">
+                          <p>
+                            <span className="text-muted-foreground">Your answer: </span>
+                            <span className="font-medium">{ans.selectedAnswer || ans.answer || "-"}</span>
+                          </p>
+                          {isWrong && ans.correctAnswer && (
+                            <p>
+                              <span className="text-muted-foreground">Correct answer: </span>
+                              <span className="font-medium text-emerald-600 dark:text-emerald-400">{ans.correctAnswer}</span>
+                            </p>
+                          )}
+                          {ans.marksObtained !== undefined && (
+                            <p className="text-muted-foreground">
+                              Marks: {ans.marksObtained}/{ans.marks || ans.totalMarks || "-"}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Detailed question breakdown is not available for this result.
+                </p>
+              )}
+
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={() => setSelectedResult(null)} data-testid="button-close-detail">
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </ModuleLayout>
   );
 }

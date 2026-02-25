@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { ModuleLayout } from "@/components/layout/module-layout";
 import { studentNavItems, useStudentQuizzes, useSubmitQuiz } from "./student-data";
 import { useAuth } from "@/lib/auth";
@@ -8,9 +8,89 @@ import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ClipboardList, Clock, Award, AlertCircle, CheckCircle, XCircle } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  ClipboardList,
+  Clock,
+  Award,
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+  ChevronLeft,
+  ChevronRight,
+  Send,
+  Home,
+  Eye,
+  Timer,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+type QuizView = "list" | "taking" | "result";
+
+interface QuizResult {
+  totalMarksObtained: number;
+  totalMarks: number;
+  percentage: number;
+  grade: string;
+  isPassed: boolean;
+  answers?: Array<{
+    questionText: string;
+    questionType: string;
+    givenAnswer: string;
+    correctAnswer: string;
+    isCorrect: boolean;
+    marks: number;
+    marksObtained: number;
+    options?: string[];
+  }>;
+}
+
+function getGradeColor(grade: string) {
+  switch (grade) {
+    case "A+": return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
+    case "A": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+    case "B": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+    case "C": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
+    case "D": return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200";
+    case "F": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+    default: return "bg-muted text-muted-foreground";
+  }
+}
+
+function CountdownDisplay({ endDateTime }: { endDateTime: string }) {
+  const [remaining, setRemaining] = useState("");
+
+  useEffect(() => {
+    const update = () => {
+      const diff = new Date(endDateTime).getTime() - Date.now();
+      if (diff <= 0) {
+        setRemaining("Expired");
+        return;
+      }
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      if (h > 0) {
+        setRemaining(`${h}h ${m}m remaining`);
+      } else {
+        setRemaining(`${m}m ${s}s remaining`);
+      }
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [endDateTime]);
+
+  return <span data-testid="text-countdown">{remaining}</span>;
+}
 
 export default function StudentQuizzesPage() {
   const { session } = useAuth();
@@ -19,25 +99,62 @@ export default function StudentQuizzesPage() {
   const { data: quizzes = [], isLoading } = useStudentQuizzes();
   const submitQuizMutation = useSubmitQuiz();
 
+  const [view, setView] = useState<QuizView>("list");
   const [activeQuizId, setActiveQuizId] = useState<string | null>(null);
   const [activeQuizData, setActiveQuizData] = useState<any>(null);
   const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [currentQuestion, setCurrentQuestion] = useState(0);
   const [timeLeft, setTimeLeft] = useState(0);
   const [loadingQuiz, setLoadingQuiz] = useState(false);
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
+  const [quizResult, setQuizResult] = useState<QuizResult | null>(null);
+  const [showDetailedResults, setShowDetailedResults] = useState(false);
+  const [selectedCompletedQuiz, setSelectedCompletedQuiz] = useState<any>(null);
   const timerRef = useRef<any>(null);
+  const autoSubmitRef = useRef(false);
 
   const activeQuizzes = quizzes.filter((q: any) => q.status === "active" && !q.attempted);
   const upcomingQuizzes = quizzes.filter((q: any) => q.status === "upcoming");
   const completedQuizzes = quizzes.filter((q: any) => q.attempted);
-  const expiredQuizzes = quizzes.filter((q: any) => q.status === "expired" && !q.attempted);
+
+  const handleSubmitQuiz = useCallback(async () => {
+    if (!activeQuizId || !activeQuizData) return;
+    clearInterval(timerRef.current);
+
+    const answerArray = (activeQuizData.questions || []).map((_: any, idx: number) => ({
+      questionIndex: idx,
+      givenAnswer: answers[idx] || "",
+    }));
+
+    const timeTaken = activeQuizData.timeLimitMinutes - Math.floor(timeLeft / 60);
+
+    try {
+      const result = await submitQuizMutation.mutateAsync({
+        quizId: activeQuizId,
+        answers: answerArray,
+        timeTakenMinutes: Math.max(1, timeTaken),
+      });
+      setQuizResult(result);
+      setView("result");
+      toast({ title: `Quiz submitted! Score: ${result.percentage}% (${result.grade})` });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+      setView("list");
+      setActiveQuizId(null);
+      setActiveQuizData(null);
+    }
+  }, [activeQuizId, activeQuizData, answers, timeLeft, submitQuizMutation, toast]);
 
   useEffect(() => {
-    if (activeQuizData && timeLeft > 0) {
+    if (view === "taking" && activeQuizData && timeLeft > 0) {
       timerRef.current = setInterval(() => {
-        setTimeLeft(t => {
+        setTimeLeft((t) => {
           if (t <= 1) {
             clearInterval(timerRef.current);
-            handleSubmitQuiz();
+            if (!autoSubmitRef.current) {
+              autoSubmitRef.current = true;
+              handleSubmitQuiz();
+            }
             return 0;
           }
           return t - 1;
@@ -45,7 +162,7 @@ export default function StudentQuizzesPage() {
       }, 1000);
       return () => clearInterval(timerRef.current);
     }
-  }, [activeQuizData]);
+  }, [view, activeQuizData]);
 
   const startQuiz = async (quizId: string, timeLimitMinutes: number) => {
     setLoadingQuiz(true);
@@ -63,206 +180,644 @@ export default function StudentQuizzesPage() {
       setActiveQuizId(quizId);
       setActiveQuizData(data);
       setAnswers({});
+      setCurrentQuestion(0);
       setTimeLeft(timeLimitMinutes * 60);
+      autoSubmitRef.current = false;
+      setView("taking");
     } catch {
       toast({ title: "Connection error", variant: "destructive" });
     }
     setLoadingQuiz(false);
   };
 
-  const handleSubmitQuiz = async () => {
-    if (!activeQuizId || !activeQuizData) return;
-    clearInterval(timerRef.current);
-
-    const answerArray = (activeQuizData.questions || []).map((_: any, idx: number) => ({
-      questionIndex: idx,
-      givenAnswer: answers[idx] || "",
-    }));
-
-    const timeTaken = activeQuizData.timeLimitMinutes - Math.floor(timeLeft / 60);
-
-    try {
-      const result = await submitQuizMutation.mutateAsync({
-        quizId: activeQuizId,
-        answers: answerArray,
-        timeTakenMinutes: Math.max(1, timeTaken),
-      });
-      toast({ title: `Quiz submitted! Score: ${result.percentage}% (${result.grade})` });
-      setActiveQuizId(null);
-      setActiveQuizData(null);
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
-    }
-  };
-
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
+    return `${m}:${s.toString().padStart(2, "0")}`;
   };
+
+  const answeredCount = Object.keys(answers).filter((k) => answers[Number(k)]?.trim()).length;
+  const totalQuestions = activeQuizData?.questions?.length || 0;
+
+  const goHome = () => {
+    setView("list");
+    setActiveQuizId(null);
+    setActiveQuizData(null);
+    setQuizResult(null);
+    setShowDetailedResults(false);
+    setCurrentQuestion(0);
+    setAnswers({});
+  };
+
+  if (view === "taking" && activeQuizData) {
+    const questions = activeQuizData.questions || [];
+    const q = questions[currentQuestion];
+    const isTimerCritical = timeLeft < 300;
+
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col bg-background" data-testid="quiz-fullscreen">
+        <div className="flex items-center justify-between gap-2 px-4 py-3 border-b bg-card">
+          <h2 className="font-semibold text-lg truncate" data-testid="text-quiz-title">
+            {activeQuizData.title}
+          </h2>
+          <div className="flex items-center gap-4 flex-wrap">
+            <span className="text-sm text-muted-foreground" data-testid="text-question-progress">
+              Question {currentQuestion + 1} of {totalQuestions}
+            </span>
+            <div
+              className={`flex items-center gap-1 text-sm font-mono px-3 py-1 rounded-md ${
+                isTimerCritical
+                  ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200"
+                  : "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200"
+              }`}
+              data-testid="text-timer"
+            >
+              <Timer className="w-4 h-4" />
+              {formatTime(timeLeft)}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 md:p-8">
+          <div className="max-w-2xl mx-auto">
+            {q && (
+              <Card>
+                <CardContent className="pt-6 space-y-4">
+                  <div className="flex items-start justify-between gap-2 flex-wrap">
+                    <p className="font-medium text-base" data-testid="text-question">
+                      Q{currentQuestion + 1}. {q.questionText}
+                    </p>
+                    <Badge variant="outline">{q.marks} marks</Badge>
+                  </div>
+
+                  {q.questionType === "mcq" && (
+                    <RadioGroup
+                      value={answers[q.questionIndex] || ""}
+                      onValueChange={(v) =>
+                        setAnswers((a) => ({ ...a, [q.questionIndex]: v }))
+                      }
+                    >
+                      {(q.options || []).map((opt: string, oi: number) => {
+                        const letter = String.fromCharCode(65 + oi);
+                        return (
+                          <div
+                            key={oi}
+                            className="flex items-center space-x-3 py-2 px-3 rounded-md hover-elevate"
+                          >
+                            <RadioGroupItem
+                              value={opt}
+                              id={`q${currentQuestion}-o${oi}`}
+                              data-testid={`radio-q${currentQuestion}-o${oi}`}
+                            />
+                            <Label
+                              htmlFor={`q${currentQuestion}-o${oi}`}
+                              className="cursor-pointer flex-1"
+                            >
+                              <span className="font-medium mr-2">{letter}.</span>
+                              {opt}
+                            </Label>
+                          </div>
+                        );
+                      })}
+                    </RadioGroup>
+                  )}
+
+                  {q.questionType === "truefalse" && (
+                    <RadioGroup
+                      value={answers[q.questionIndex] || ""}
+                      onValueChange={(v) =>
+                        setAnswers((a) => ({ ...a, [q.questionIndex]: v }))
+                      }
+                    >
+                      {["True", "False"].map((opt) => (
+                        <div
+                          key={opt}
+                          className="flex items-center space-x-3 py-2 px-3 rounded-md hover-elevate"
+                        >
+                          <RadioGroupItem
+                            value={opt}
+                            id={`q${currentQuestion}-${opt}`}
+                            data-testid={`radio-q${currentQuestion}-${opt.toLowerCase()}`}
+                          />
+                          <Label
+                            htmlFor={`q${currentQuestion}-${opt}`}
+                            className="cursor-pointer flex-1"
+                          >
+                            {opt}
+                          </Label>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  )}
+
+                  {q.questionType === "short" && (
+                    <Input
+                      value={answers[q.questionIndex] || ""}
+                      onChange={(e) =>
+                        setAnswers((a) => ({
+                          ...a,
+                          [q.questionIndex]: e.target.value,
+                        }))
+                      }
+                      placeholder="Type your answer here..."
+                      data-testid={`input-answer-${currentQuestion}`}
+                    />
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            <div className="flex items-center justify-between gap-2 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setCurrentQuestion((c) => Math.max(0, c - 1))}
+                disabled={currentQuestion === 0}
+                data-testid="button-prev-question"
+              >
+                <ChevronLeft className="w-4 h-4 mr-1" /> Previous
+              </Button>
+              {currentQuestion < totalQuestions - 1 ? (
+                <Button
+                  onClick={() => setCurrentQuestion((c) => c + 1)}
+                  data-testid="button-next-question"
+                >
+                  Next <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => setShowSubmitConfirm(true)}
+                  data-testid="button-open-submit"
+                >
+                  <Send className="w-4 h-4 mr-1" /> Submit Quiz
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t bg-card px-4 py-3">
+          <div className="max-w-2xl mx-auto">
+            <p className="text-xs text-muted-foreground mb-2">
+              {answeredCount} of {totalQuestions} answered
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {questions.map((_: any, idx: number) => {
+                const isAnswered = !!answers[questions[idx]?.questionIndex]?.trim();
+                const isCurrent = idx === currentQuestion;
+                let classes =
+                  "w-8 h-8 text-xs font-medium rounded-md flex items-center justify-center cursor-pointer border";
+                if (isCurrent) {
+                  classes +=
+                    " bg-blue-500 text-white border-blue-600 dark:bg-blue-600 dark:border-blue-500";
+                } else if (isAnswered) {
+                  classes +=
+                    " bg-green-500 text-white border-green-600 dark:bg-green-600 dark:border-green-500";
+                } else {
+                  classes += " bg-card border-border text-foreground";
+                }
+                return (
+                  <button
+                    key={idx}
+                    className={classes}
+                    onClick={() => setCurrentQuestion(idx)}
+                    data-testid={`button-palette-${idx}`}
+                  >
+                    {idx + 1}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <Dialog open={showSubmitConfirm} onOpenChange={setShowSubmitConfirm}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Submit Quiz?</DialogTitle>
+              <DialogDescription>
+                You have answered {answeredCount} of {totalQuestions} questions. Are you sure you
+                want to submit?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowSubmitConfirm(false)}
+                data-testid="button-cancel-submit"
+              >
+                Continue Quiz
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowSubmitConfirm(false);
+                  handleSubmitQuiz();
+                }}
+                disabled={submitQuizMutation.isPending}
+                data-testid="button-confirm-submit"
+              >
+                {submitQuizMutation.isPending ? "Submitting..." : "Yes, Submit"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
+
+  if (view === "result" && quizResult) {
+    const pct = quizResult.percentage || 0;
+
+    if (showDetailedResults && quizResult.answers) {
+      return (
+        <div className="fixed inset-0 z-50 flex flex-col bg-background" data-testid="quiz-detailed-results">
+          <div className="flex items-center justify-between gap-2 px-4 py-3 border-b bg-card">
+            <h2 className="font-semibold text-lg">Detailed Results</h2>
+            <Button variant="outline" onClick={() => setShowDetailedResults(false)} data-testid="button-back-results">
+              <ChevronLeft className="w-4 h-4 mr-1" /> Back to Summary
+            </Button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 md:p-8">
+            <div className="max-w-2xl mx-auto space-y-4">
+              {quizResult.answers.map((a, idx) => (
+                <Card
+                  key={idx}
+                  className={
+                    a.questionType === "short" && !a.isCorrect
+                      ? ""
+                      : a.isCorrect
+                      ? "border-green-300 dark:border-green-700"
+                      : "border-red-300 dark:border-red-700"
+                  }
+                  data-testid={`card-result-q${idx}`}
+                >
+                  <CardContent className="pt-6 space-y-2">
+                    <div className="flex items-start justify-between gap-2 flex-wrap">
+                      <p className="font-medium">
+                        Q{idx + 1}. {a.questionText}
+                      </p>
+                      <span className="text-sm text-muted-foreground">
+                        {a.marksObtained}/{a.marks} marks
+                      </span>
+                    </div>
+
+                    <div className="space-y-1 text-sm">
+                      <p>
+                        <span className="text-muted-foreground">Your answer: </span>
+                        <span className={a.isCorrect ? "text-green-700 dark:text-green-400 font-medium" : "text-red-700 dark:text-red-400 font-medium"}>
+                          {a.givenAnswer || "(No answer)"}
+                        </span>
+                      </p>
+                      {!a.isCorrect && a.questionType !== "short" && (
+                        <p>
+                          <span className="text-muted-foreground">Correct answer: </span>
+                          <span className="text-green-700 dark:text-green-400 font-medium">
+                            {a.correctAnswer}
+                          </span>
+                        </p>
+                      )}
+                      {a.questionType === "short" && !a.isCorrect && (
+                        <Badge variant="outline" className="mt-1" data-testid={`badge-pending-review-${idx}`}>
+                          Pending teacher review
+                        </Badge>
+                      )}
+                    </div>
+
+                    <div className="pt-1">
+                      {a.questionType === "short" ? (
+                        <Badge variant="outline">
+                          <AlertCircle className="w-3 h-3 mr-1" /> Manual grading
+                        </Badge>
+                      ) : a.isCorrect ? (
+                        <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 no-default-hover-elevate no-default-active-elevate">
+                          <CheckCircle className="w-3 h-3 mr-1" /> Correct
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 no-default-hover-elevate no-default-active-elevate">
+                          <XCircle className="w-3 h-3 mr-1" /> Wrong
+                        </Badge>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+
+              <div className="pt-4">
+                <Button onClick={goHome} data-testid="button-go-home-detailed">
+                  <Home className="w-4 h-4 mr-1" /> Go Home
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background" data-testid="quiz-result-screen">
+        <div className="max-w-md w-full mx-4">
+          <Card>
+            <CardContent className="pt-8 pb-8 text-center space-y-6">
+              <div>
+                <Award className="w-16 h-16 mx-auto text-amber-500 mb-3" />
+                <h1 className="text-2xl font-bold" data-testid="text-quiz-complete">
+                  Quiz Complete!
+                </h1>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-lg" data-testid="text-score">
+                  Score:{" "}
+                  <span className="font-bold">
+                    {quizResult.totalMarksObtained} / {quizResult.totalMarks}
+                  </span>
+                </p>
+
+                <div className="w-full bg-muted rounded-full h-4 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${
+                      pct >= 80
+                        ? "bg-green-500"
+                        : pct >= 50
+                        ? "bg-yellow-500"
+                        : "bg-red-500"
+                    }`}
+                    style={{ width: `${Math.min(pct, 100)}%` }}
+                    data-testid="progress-percentage"
+                  />
+                </div>
+                <p className="text-2xl font-bold" data-testid="text-percentage">
+                  {pct}%
+                </p>
+
+                <div className="flex items-center justify-center gap-3">
+                  <Badge
+                    className={`text-sm px-3 py-1 no-default-hover-elevate no-default-active-elevate ${getGradeColor(quizResult.grade)}`}
+                    data-testid="badge-grade"
+                  >
+                    Grade: {quizResult.grade}
+                  </Badge>
+                  <Badge
+                    className={`text-sm px-3 py-1 no-default-hover-elevate no-default-active-elevate ${
+                      quizResult.isPassed
+                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                        : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                    }`}
+                    data-testid="badge-pass-fail"
+                  >
+                    {quizResult.isPassed ? "Passed" : "Failed"}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2 pt-2">
+                {quizResult.answers && quizResult.answers.length > 0 && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowDetailedResults(true)}
+                    data-testid="button-view-detailed"
+                  >
+                    <Eye className="w-4 h-4 mr-1" /> View Detailed Results
+                  </Button>
+                )}
+                <Button onClick={goHome} data-testid="button-go-home">
+                  <Home className="w-4 h-4 mr-1" /> Go Home
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <ModuleLayout module="curriculum" navItems={studentNavItems}>
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold" data-testid="text-page-title">Quizzes</h1>
+          <h1 className="text-2xl font-bold" data-testid="text-page-title">
+            Quizzes
+          </h1>
           <p className="text-muted-foreground">Take quizzes and test your knowledge</p>
         </div>
 
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[1,2,3].map(i => <div key={i} className="h-32 rounded-lg bg-muted animate-pulse" />)}
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-40 rounded-md bg-muted animate-pulse" />
+            ))}
           </div>
         ) : (
-          <>
-            {activeQuizzes.length > 0 && (
-              <div>
-                <h2 className="text-lg font-semibold mb-3 flex items-center gap-2"><ClipboardList className="w-5 h-5 text-blue-600" /> Available Now ({activeQuizzes.length})</h2>
+          <Tabs defaultValue="active">
+            <TabsList data-testid="tabs-quiz-list">
+              <TabsTrigger value="active" data-testid="tab-active">
+                Active ({activeQuizzes.length})
+              </TabsTrigger>
+              <TabsTrigger value="upcoming" data-testid="tab-upcoming">
+                Upcoming ({upcomingQuizzes.length})
+              </TabsTrigger>
+              <TabsTrigger value="completed" data-testid="tab-completed">
+                Completed ({completedQuizzes.length})
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="active" className="mt-4">
+              {activeQuizzes.length === 0 ? (
+                <Card>
+                  <CardContent className="py-12 text-center text-muted-foreground">
+                    No active quizzes right now.
+                  </CardContent>
+                </Card>
+              ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {activeQuizzes.map((q: any) => (
-                    <Card key={q.id} data-testid={`card-quiz-${q.id}`}>
-                      <CardContent className="pt-6">
-                        <h3 className="font-semibold text-lg mb-1">{q.title}</h3>
-                        <p className="text-sm text-muted-foreground mb-2">{q.subject} - by {q.teacherName}</p>
-                        <div className="flex gap-3 text-sm text-muted-foreground mb-3">
+                    <Card
+                      key={q.id}
+                      className="border-green-300 dark:border-green-700"
+                      data-testid={`card-quiz-active-${q.id}`}
+                    >
+                      <CardContent className="pt-6 space-y-3">
+                        <div className="flex items-start justify-between gap-2 flex-wrap">
+                          <h3 className="font-semibold text-lg">{q.title}</h3>
+                          <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 no-default-hover-elevate no-default-active-elevate">
+                            Active
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {q.subject} - by {q.teacherName}
+                        </p>
+                        <div className="flex gap-3 text-sm text-muted-foreground flex-wrap">
                           <span>{q.questionsCount} questions</span>
                           <span>{q.totalMarks} marks</span>
-                          <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {q.timeLimitMinutes} min</span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" /> {q.timeLimitMinutes} min
+                          </span>
                         </div>
-                        {q.instructions && <p className="text-sm mb-3 text-muted-foreground">{q.instructions}</p>}
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
-                          <span>Ends: {new Date(q.endDateTime).toLocaleString()}</span>
+                        {q.instructions && (
+                          <p className="text-sm text-muted-foreground">{q.instructions}</p>
+                        )}
+                        <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+                          <Clock className="w-3 h-3" />
+                          <CountdownDisplay endDateTime={q.endDateTime} />
                         </div>
-                        <Button onClick={() => startQuiz(q.id, q.timeLimitMinutes)} disabled={loadingQuiz} data-testid={`button-start-quiz-${q.id}`}>
+                        <Button
+                          onClick={() => startQuiz(q.id, q.timeLimitMinutes)}
+                          disabled={loadingQuiz}
+                          data-testid={`button-start-quiz-${q.id}`}
+                        >
                           {loadingQuiz ? "Loading..." : "Start Quiz"}
                         </Button>
                       </CardContent>
                     </Card>
                   ))}
                 </div>
-              </div>
-            )}
+              )}
+            </TabsContent>
 
-            {completedQuizzes.length > 0 && (
-              <div>
-                <h2 className="text-lg font-semibold mb-3 flex items-center gap-2"><CheckCircle className="w-5 h-5 text-emerald-600" /> Completed ({completedQuizzes.length})</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {completedQuizzes.map((q: any) => (
-                    <Card key={q.id} className="border-emerald-200">
-                      <CardContent className="pt-6">
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-semibold">{q.title}</h3>
-                          <Badge variant={q.myResult?.isPassed ? "default" : "destructive"}>{q.myResult?.grade}</Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground">{q.subject}</p>
-                        <div className="flex items-center gap-3 mt-2 text-sm">
-                          <span>{q.myResult?.totalMarksObtained}/{q.totalMarks}</span>
-                          <span>{q.myResult?.percentage}%</span>
-                          <Badge variant={q.myResult?.isPassed ? "default" : "destructive"} className="text-xs">{q.myResult?.isPassed ? "Passed" : "Failed"}</Badge>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {upcomingQuizzes.length > 0 && (
-              <div>
-                <h2 className="text-lg font-semibold mb-3 flex items-center gap-2"><Clock className="w-5 h-5 text-amber-600" /> Upcoming ({upcomingQuizzes.length})</h2>
+            <TabsContent value="upcoming" className="mt-4">
+              {upcomingQuizzes.length === 0 ? (
+                <Card>
+                  <CardContent className="py-12 text-center text-muted-foreground">
+                    No upcoming quizzes scheduled.
+                  </CardContent>
+                </Card>
+              ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {upcomingQuizzes.map((q: any) => (
-                    <Card key={q.id} className="opacity-75">
-                      <CardContent className="pt-6">
-                        <h3 className="font-semibold">{q.title}</h3>
-                        <p className="text-sm text-muted-foreground">{q.subject} | Starts: {new Date(q.startDateTime).toLocaleString()}</p>
-                        <p className="text-sm text-muted-foreground">{q.questionsCount} questions | {q.totalMarks} marks | {q.timeLimitMinutes} min</p>
+                    <Card
+                      key={q.id}
+                      className="border-blue-300 dark:border-blue-700"
+                      data-testid={`card-quiz-upcoming-${q.id}`}
+                    >
+                      <CardContent className="pt-6 space-y-3">
+                        <div className="flex items-start justify-between gap-2 flex-wrap">
+                          <h3 className="font-semibold text-lg">{q.title}</h3>
+                          <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 no-default-hover-elevate no-default-active-elevate">
+                            Upcoming
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {q.subject} - by {q.teacherName}
+                        </p>
+                        <div className="flex gap-3 text-sm text-muted-foreground flex-wrap">
+                          <span>{q.questionsCount} questions</span>
+                          <span>{q.totalMarks} marks</span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" /> {q.timeLimitMinutes} min
+                          </span>
+                        </div>
+                        <Button variant="outline" disabled data-testid={`button-upcoming-${q.id}`}>
+                          Opens on {new Date(q.startDateTime).toLocaleString()}
+                        </Button>
                       </CardContent>
                     </Card>
                   ))}
                 </div>
-              </div>
-            )}
+              )}
+            </TabsContent>
 
-            {expiredQuizzes.length > 0 && (
-              <div>
-                <h2 className="text-lg font-semibold mb-3 flex items-center gap-2"><XCircle className="w-5 h-5 text-red-500" /> Expired ({expiredQuizzes.length})</h2>
+            <TabsContent value="completed" className="mt-4">
+              {completedQuizzes.length === 0 ? (
+                <Card>
+                  <CardContent className="py-12 text-center text-muted-foreground">
+                    You haven't completed any quizzes yet.
+                  </CardContent>
+                </Card>
+              ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {expiredQuizzes.map((q: any) => (
-                    <Card key={q.id} className="opacity-50">
-                      <CardContent className="pt-6">
-                        <h3 className="font-semibold">{q.title}</h3>
-                        <p className="text-sm text-muted-foreground">{q.subject} | Ended: {new Date(q.endDateTime).toLocaleString()}</p>
+                  {completedQuizzes.map((q: any) => (
+                    <Card key={q.id} data-testid={`card-quiz-completed-${q.id}`}>
+                      <CardContent className="pt-6 space-y-3">
+                        <div className="flex items-start justify-between gap-2 flex-wrap">
+                          <h3 className="font-semibold text-lg">{q.title}</h3>
+                          <Badge
+                            className={`no-default-hover-elevate no-default-active-elevate ${getGradeColor(
+                              q.myResult?.grade
+                            )}`}
+                            data-testid={`badge-grade-${q.id}`}
+                          >
+                            {q.myResult?.grade}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{q.subject}</p>
+                        <div className="flex items-center gap-3 text-sm flex-wrap">
+                          <span>
+                            {q.myResult?.totalMarksObtained}/{q.totalMarks} marks
+                          </span>
+                          <span>{q.myResult?.percentage}%</span>
+                          <Badge
+                            className={`no-default-hover-elevate no-default-active-elevate ${
+                              q.myResult?.isPassed
+                                ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                                : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                            }`}
+                          >
+                            {q.myResult?.isPassed ? "Passed" : "Failed"}
+                          </Badge>
+                        </div>
+                        <Button
+                          variant="outline"
+                          onClick={() => setSelectedCompletedQuiz(q)}
+                          data-testid={`button-view-details-${q.id}`}
+                        >
+                          <Eye className="w-4 h-4 mr-1" /> View Details
+                        </Button>
                       </CardContent>
                     </Card>
                   ))}
                 </div>
-              </div>
-            )}
-
-            {activeQuizzes.length === 0 && upcomingQuizzes.length === 0 && completedQuizzes.length === 0 && (
-              <Card><CardContent className="py-12 text-center text-muted-foreground">No quizzes available at the moment.</CardContent></Card>
-            )}
-          </>
+              )}
+            </TabsContent>
+          </Tabs>
         )}
 
-        <Dialog open={!!activeQuizData} onOpenChange={(open) => { if (!open && confirm("Are you sure? Your progress will be lost.")) { clearInterval(timerRef.current); setActiveQuizId(null); setActiveQuizData(null); } }}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            {activeQuizData && (
+        <Dialog
+          open={!!selectedCompletedQuiz}
+          onOpenChange={(open) => !open && setSelectedCompletedQuiz(null)}
+        >
+          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+            {selectedCompletedQuiz && (
               <>
                 <DialogHeader>
-                  <div className="flex items-center justify-between">
-                    <DialogTitle>{activeQuizData.title}</DialogTitle>
-                    <div className={`flex items-center gap-1 text-sm font-mono px-3 py-1 rounded-full ${timeLeft < 60 ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}`}>
-                      <Clock className="w-4 h-4" /> {formatTime(timeLeft)}
-                    </div>
-                  </div>
+                  <DialogTitle>{selectedCompletedQuiz.title}</DialogTitle>
+                  <DialogDescription>{selectedCompletedQuiz.subject}</DialogDescription>
                 </DialogHeader>
-                <div className="space-y-6">
-                  {(activeQuizData.questions || []).map((q: any, idx: number) => (
-                    <Card key={idx}>
-                      <CardContent className="pt-6">
-                        <div className="flex items-start justify-between mb-3">
-                          <Label className="font-medium text-base">Q{idx + 1}. {q.questionText}</Label>
-                          <Badge variant="outline">{q.marks} marks</Badge>
-                        </div>
-
-                        {q.questionType === "mcq" && (
-                          <RadioGroup value={answers[q.questionIndex] || ""} onValueChange={v => setAnswers(a => ({ ...a, [q.questionIndex]: v }))}>
-                            {(q.options || []).map((opt: string, oi: number) => (
-                              <div key={oi} className="flex items-center space-x-2 py-1">
-                                <RadioGroupItem value={opt} id={`q${idx}-o${oi}`} data-testid={`radio-q${idx}-o${oi}`} />
-                                <Label htmlFor={`q${idx}-o${oi}`} className="cursor-pointer">{opt}</Label>
-                              </div>
-                            ))}
-                          </RadioGroup>
-                        )}
-
-                        {q.questionType === "truefalse" && (
-                          <RadioGroup value={answers[q.questionIndex] || ""} onValueChange={v => setAnswers(a => ({ ...a, [q.questionIndex]: v }))}>
-                            {["True", "False"].map(opt => (
-                              <div key={opt} className="flex items-center space-x-2 py-1">
-                                <RadioGroupItem value={opt} id={`q${idx}-${opt}`} data-testid={`radio-q${idx}-${opt.toLowerCase()}`} />
-                                <Label htmlFor={`q${idx}-${opt}`} className="cursor-pointer">{opt}</Label>
-                              </div>
-                            ))}
-                          </RadioGroup>
-                        )}
-
-                        {q.questionType === "short" && (
-                          <Input value={answers[q.questionIndex] || ""} onChange={e => setAnswers(a => ({ ...a, [q.questionIndex]: e.target.value }))} placeholder="Type your answer" data-testid={`input-answer-${idx}`} />
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
-
-                  <div className="flex items-center justify-between pt-4 border-t">
-                    <p className="text-sm text-muted-foreground">
-                      {Object.keys(answers).length}/{activeQuizData.questions?.length || 0} answered
-                    </p>
-                    <Button onClick={handleSubmitQuiz} disabled={submitQuizMutation.isPending} data-testid="button-submit-quiz">
-                      {submitQuizMutation.isPending ? "Submitting..." : "Submit Quiz"}
-                    </Button>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Score</p>
+                      <p className="font-semibold">
+                        {selectedCompletedQuiz.myResult?.totalMarksObtained}/
+                        {selectedCompletedQuiz.totalMarks}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Percentage</p>
+                      <p className="font-semibold">
+                        {selectedCompletedQuiz.myResult?.percentage}%
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Grade</p>
+                      <Badge
+                        className={`no-default-hover-elevate no-default-active-elevate ${getGradeColor(
+                          selectedCompletedQuiz.myResult?.grade
+                        )}`}
+                      >
+                        {selectedCompletedQuiz.myResult?.grade}
+                      </Badge>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Status</p>
+                      <Badge
+                        className={`no-default-hover-elevate no-default-active-elevate ${
+                          selectedCompletedQuiz.myResult?.isPassed
+                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                            : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                        }`}
+                      >
+                        {selectedCompletedQuiz.myResult?.isPassed ? "Passed" : "Failed"}
+                      </Badge>
+                    </div>
                   </div>
                 </div>
               </>

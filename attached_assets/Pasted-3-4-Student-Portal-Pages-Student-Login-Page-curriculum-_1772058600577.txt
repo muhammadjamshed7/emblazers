@@ -1,0 +1,151 @@
+3.4 — Student Portal Pages
+Student Login Page (/curriculum/student-login)
+
+Fields: Student ID (placeholder: e.g. C5-A-2026-0007), Password
+Login button
+Note below: "Contact your class teacher if you forgot your password"
+
+First Login — Force Password Change
+
+If isFirstLogin = true in response, show this screen BEFORE dashboard
+Form: New Password, Confirm New Password (minimum 8 characters)
+Info box: "You must set a new password before continuing"
+After success → go to dashboard
+
+Student Dashboard (/curriculum/student/dashboard)
+Top header bar:
+👋 Welcome, Ahmed Ali  |  Class 5 - A  |  Student ID: C5-A-2026-0007  |  [Logout]
+Summary cards row:
+┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+│  Quizzes     │ │  Quizzes     │ │  Pending     │ │  Attendance  │
+│  Active: 2   │ │  Done: 5     │ │  Fees: 3500  │ │  This Month  │
+│  Take Now →  │ │  View →      │ │  Pay Info →  │ │  87%         │
+└──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘
+Recent Activity section:
+
+Last 5 quiz results with grade badges
+
+Sidebar navigation:
+
+🏠 Dashboard
+📚 Study Material
+📝 My Quizzes
+📊 My Results
+💰 My Fees
+📅 Attendance
+
+Study Material Page (/curriculum/student/content)
+Top filter: Subject tabs (Mathematics | Science | English | Urdu | etc.)
+Content cards grid (2 or 3 per row):
+┌──────────────────────┐
+│  📄  PDF             │
+│  Chapter 3 Notes     │
+│  Mathematics         │
+│  By: Mr. Ali         │
+│  2 days ago          │
+│  [  View Content  ]  │
+└──────────────────────┘
+View behavior:
+
+PDF → opens in a modal with <iframe src="data:application/pdf;base64,..."> embedded viewer
+Image → lightbox modal showing the image
+Note → modal with formatted text
+Link → opens in new browser tab
+
+My Quizzes Page (/curriculum/student/quizzes)
+Three tabs:
+Tab 1: Active (can attempt now)
+Cards with green border:
+┌─────────────────────────────────────┐
+│  📝 Chapter 3 Quiz                  │
+│  Mathematics  |  Mr. Ali            │
+│  Questions: 10  |  Total: 20 marks  │
+│  Time Limit: 30 minutes             │
+│  ⏰ Ends in: 2 hours 14 minutes     │
+│                                     │
+│         [ Start Quiz ]              │
+└─────────────────────────────────────┘
+Tab 2: Upcoming (time not started yet)
+Cards with blue border — show countdown to start time. "Start Quiz" button disabled with "Opens on [date time]"
+Tab 3: Completed
+Cards with result:
+┌─────────────────────────────────────┐
+│  📝 Chapter 2 Quiz                  │
+│  Mathematics  |  Mr. Ali            │
+│  Score: 16/20  |  80%  |  Grade: A  │
+│  ✅ PASSED                          │
+│  Submitted: 2 days ago              │
+│         [ View Details ]            │
+└─────────────────────────────────────┘
+Quiz Taking Screen (/curriculum/student/quizzes/:id/take)
+This is a FULL SCREEN page (hide all navigation/sidebar):
+┌─────────────────────────────────────────────────────┐
+│  Chapter 3 Quiz  |  Question 4 of 10  |  ⏰ 24:35  │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│  Q4. What is the result of 15 × 8?                  │
+│                                                     │
+│  ○  A)  100                                         │
+│  ○  B)  120                                         │
+│  ○  C)  115                                         │
+│  ○  D)  130                                         │
+│                                                     │
+│  ┌──────────────────────────────────────────────┐   │
+│  │ 1✓ 2✓ 3✓ 4• 5  6  7  8  9  10              │   │
+│  └──────────────────────────────────────────────┘   │
+│                                                     │
+│           [← Previous]    [Next →]                  │
+│                              [Submit Quiz]          │
+└─────────────────────────────────────────────────────┘
+Rules:
+
+Timer counts down from timeLimitMinutes — shown in red when under 5 minutes
+Question palette at bottom: green = answered, white = not answered, blue = current
+"Submit Quiz" shows confirmation modal: "You have answered 8 of 10 questions. Are you sure you want to submit?"
+Auto-submit when timer hits 0:00
+After submit → immediately show result screen
+
+Quiz Result Screen (shown right after submission)
+┌─────────────────────────────────────┐
+│         Quiz Complete! 🎉           │
+│                                     │
+│         16 / 20 marks               │
+│                                     │
+│    ████████████████░░░░   80%       │
+│                                     │
+│         Grade: A                    │
+│         ✅ PASSED                   │
+│                                     │
+│  [View Detailed Results]  [Go Home] │
+└─────────────────────────────────────┘
+Detailed results show each question:
+
+✅ Correct answers with green background
+❌ Wrong answers with red background + what the correct answer was
+⏳ Short answers with "Pending teacher review" badge
+
+My Results Page (/curriculum/student/results)
+Table:
+| Quiz Title | Subject | Teacher | Date | Score | Grade | Status |
+Grade badges with colors (A+ purple, A green, B blue, C yellow, D orange, F red)
+Clicking any row → opens result detail modal showing per-question breakdown
+Summary stats at top:
+
+Average Grade
+Best Score
+Total Quizzes Attempted
+
+My Fees Page (/curriculum/student/fees)
+Pull data from existing feevouchers collection.
+Table:
+| Month | Total Amount | Paid | Balance | Due Date | Status |
+Status badges: Paid (green) | Partial (yellow) | Pending (orange) | Overdue (red)
+Summary at top:
+Total Outstanding: Rs. 3,500  |  Total Paid This Year: Rs. 42,000
+Note: This is READ-ONLY. No payment processing — just shows fee records.
+Attendance Page (/curriculum/student/attendance)
+Pull from existing attendancerecords collection.
+Month-by-month table:
+| Month | Present Days | Absent Days | Total Days | Attendance % |
+Color code the percentage: ≥90% green, 75-89% yellow, <75% red
+Overall attendance % shown as a circular progress indicator at top.
