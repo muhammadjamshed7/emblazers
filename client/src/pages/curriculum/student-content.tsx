@@ -14,12 +14,15 @@ export default function StudentContentPage() {
   const { session } = useAuth();
   const className = session?.className || "";
   const section = session?.section || "";
-  const { data: content = [], isLoading } = useStudentContent(className, section);
+  const { data, isLoading } = useStudentContent();
   const [filterSubject, setFilterSubject] = useState("all");
   const [selectedContent, setSelectedContent] = useState<any>(null);
 
-  const uniqueSubjects = [...new Set(content.map((c: any) => c.subject))];
-  const filtered = filterSubject === "all" ? content : content.filter((c: any) => c.subject === filterSubject);
+  const contentMap: Record<string, any[]> = data?.content || {};
+  const subjects = Object.keys(contentMap);
+  const allContent = filterSubject === "all"
+    ? subjects.flatMap(s => contentMap[s])
+    : contentMap[filterSubject] || [];
 
   const typeIcons: Record<string, any> = { pdf: FileText, image: Image, note: StickyNote, link: Link2 };
   const typeLabels: Record<string, string> = { pdf: "PDF", image: "Image", note: "Note", link: "Link" };
@@ -29,7 +32,7 @@ export default function StudentContentPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold" data-testid="text-page-title">Study Material</h1>
-          <p className="text-muted-foreground">Browse learning content for {className} - {section}</p>
+          <p className="text-muted-foreground">Browse learning content for {className} - {section} ({data?.total || 0} items)</p>
         </div>
 
         <div className="flex gap-2 items-center">
@@ -38,7 +41,7 @@ export default function StudentContentPage() {
             <SelectTrigger className="w-[200px]" data-testid="select-filter-subject"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Subjects</SelectItem>
-              {uniqueSubjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              {subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -47,11 +50,11 @@ export default function StudentContentPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[1,2,3].map(i => <div key={i} className="h-40 rounded-lg bg-muted animate-pulse" />)}
           </div>
-        ) : filtered.length === 0 ? (
+        ) : allContent.length === 0 ? (
           <Card><CardContent className="py-12 text-center text-muted-foreground">No study material available yet.</CardContent></Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map((item: any) => {
+            {allContent.map((item: any) => {
               const TypeIcon = typeIcons[item.contentType] || FileText;
               return (
                 <Card key={item.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelectedContent(item)} data-testid={`card-content-${item.id}`}>

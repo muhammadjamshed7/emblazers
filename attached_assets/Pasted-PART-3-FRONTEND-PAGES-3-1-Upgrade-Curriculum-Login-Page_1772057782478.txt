@@ -1,0 +1,192 @@
+PART 3 — FRONTEND PAGES
+3.1 — Upgrade Curriculum Login Page (/curriculum/login)
+Change the existing single login form into a role selector screen:
+┌─────────────────────────────────────────┐
+│           📚 Curriculum Portal           │
+│                                         │
+│  ┌──────────┐ ┌──────────┐ ┌─────────┐ │
+│  │  🔐      │ │  👨‍🏫     │ │  🎓    │ │
+│  │  Admin   │ │  Teacher │ │ Student │ │
+│  └──────────┘ └──────────┘ └─────────┘ │
+└─────────────────────────────────────────┘
+When user clicks a role, show that role's login form below (or navigate to sub-page). Admin login remains exactly as it is now. Teacher and Student get new login forms.
+
+3.2 — Curriculum Admin New Pages
+Page: Manage Teachers (/curriculum/teachers)
+Add to existing curriculum sidebar.
+Layout:
+
+Top: "Assign Teacher to Class" button → opens modal with form:
+
+Dropdown: Select Teacher (populated from /api/curriculum/staff-teachers)
+Dropdown: Class (Class 1 through Class 12)
+Dropdown: Section (A, B, C, D)
+Text input: Subject
+Save button
+
+
+Table below showing all assignments:
+| Teacher Name | Email | Class | Section | Subject | Date Assigned | Actions |
+
+Actions: Delete assignment
+
+
+
+Page: Student Accounts (/curriculum/student-accounts)
+Add to existing curriculum sidebar.
+Layout:
+
+Filter bar: Select Class + Section → click "Load Students"
+Table showing students from that class with columns:
+| Student ID | Student Name | Portal Account | Last Login | Actions |
+
+Portal Account column: "Active" badge (green) or "Not Created" badge (gray)
+Actions: "Create Account" button (if not created) or "Reset Password" button (if exists)
+
+
+Top: "Bulk Create Accounts for This Class" button → creates accounts for all students in selected class at once
+Show info box: "Default password = Student's Date of Birth (DDMMYYYY format). Student must change on first login."
+
+
+3.3 — Teacher Portal Pages
+Teacher Login Page (/curriculum/teacher-login)
+
+Form: Staff Email, Password
+Below form: small note — "Default password is your Staff ID. Contact admin if you cannot login."
+On success → redirect to /curriculum/teacher/dashboard
+
+Teacher Dashboard (/curriculum/teacher/dashboard)
+
+Top bar shows: Teacher name, logout button
+Sidebar navigation:
+
+Dashboard
+My Assignments
+Upload Content
+My Quizzes
+Quiz Results
+
+
+
+Dashboard cards:
+
+Total Content Uploaded
+Total Quizzes Created
+Active Quizzes Right Now
+Pending Short-Answer Grading (needs attention badge)
+
+My Assignments section on dashboard:
+Show assigned classes as colored cards:
+┌─────────────────┐
+│  Class 5 - A    │
+│  Mathematics    │
+│  24 students    │
+└─────────────────┘
+Upload Content Page (/curriculum/teacher/content)
+Left panel — Content List:
+
+Filter tabs: All | PDF | Images | Notes | Links
+Filter by class/subject dropdowns
+Each content card:
+
+File type icon + Title
+Class/Section/Subject badges
+Published toggle (green = published, gray = draft)
+Delete button
+
+
+
+Right panel — Upload Form (shown as slide-in panel or modal):
+
+Title (text input)
+Description (textarea)
+Class (dropdown — only teacher's assigned classes)
+Section (dropdown — only teacher's assigned sections)
+Subject (dropdown — only teacher's assigned subjects)
+Content Type: Tab buttons → PDF | Image | Note | Link
+
+If PDF: File input (accept .pdf) — convert to base64 on frontend before sending
+If Image: File input (accept .jpg, .jpeg, .png) — convert to base64 on frontend
+If Note: Rich textarea for text content
+If Link: URL text input
+
+
+Publish immediately toggle
+Save button
+
+Quiz Creator Page (/curriculum/teacher/quizzes)
+Quiz List View:
+Table columns: Title | Class/Section | Subject | Questions | Marks | Time Slot | Status | Actions
+Status badges:
+
+Draft (gray) — not published
+Scheduled (blue) — published but start time in future
+Active (green) — currently within time slot
+Expired (red) — past end time
+
+Actions: Edit | View Attempts | Delete | Publish/Unpublish toggle
+"Create New Quiz" button → opens Create Quiz page (/curriculum/teacher/quizzes/create)
+Create Quiz — 3 step wizard:
+Step 1: Quiz Settings
+
+Quiz Title
+Instructions for students
+Class (from assignments)
+Section (from assignments)
+Subject (from assignments)
+Time Limit (minutes) — number input with +/- buttons
+Start Date & Time — date+time picker
+End Date & Time — date+time picker
+Total Marks (auto-calculated from questions, shown as read-only)
+Passing Marks — number input
+
+Step 2: Add Questions
+
+"Add Question" button → inline question form appears:
+
+Question Text (textarea)
+Question Type: [ MCQ ] [ True/False ] [ Short Answer ]
+If MCQ:
+
+4 option inputs labeled A, B, C, D
+Radio button next to each to mark correct answer
+
+
+If True/False:
+
+Toggle: Correct Answer is TRUE / FALSE
+
+
+If Short Answer:
+
+"Model Answer" textarea (for teacher reference only, not shown to students)
+
+
+Marks for this question (number input)
+"Add to Quiz" button
+
+
+Questions list below with drag-to-reorder
+Each question card shows: Q number, question preview, type badge, marks, edit/delete buttons
+Running total marks shown at bottom
+
+Step 3: Review & Publish
+
+Full preview of quiz as student would see it
+Summary: Total questions, Total marks, Time limit, Time slot
+Two buttons: "Save as Draft" | "Save & Publish"
+
+Quiz Attempts View (/curriculum/teacher/quizzes/:id/attempts)
+Top stats bar:
+Total Attempts: 18 | Passed: 14 | Failed: 4 | Avg Score: 72% | Highest: 95% | Lowest: 42%
+Attempts table:
+| Student Name | Student ID | Score | Percentage | Grade | Status | Time Taken | Submitted At | Actions |
+Grade color coding: A+ (purple), A (green), B (blue), C (yellow), D (orange), F (red)
+Actions column: "View Details" button → opens modal showing each question with student's answer vs correct answer, marks awarded
+For Short Answer questions in the modal:
+
+Show student's answer in a box
+Input field for marks (0 to max marks for that question)
+"Save Marks" button
+After grading, total recalculates automatically
+

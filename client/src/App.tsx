@@ -82,6 +82,8 @@ import CurriculumStudentDashboard from "@/pages/curriculum/student-dashboard";
 import CurriculumStudentContent from "@/pages/curriculum/student-content";
 import CurriculumStudentQuizzes from "@/pages/curriculum/student-quizzes";
 import CurriculumStudentResults from "@/pages/curriculum/student-results";
+import CurriculumStudentFees from "@/pages/curriculum/student-fees";
+import CurriculumStudentAttendance from "@/pages/curriculum/student-attendance";
 
 import PosDashboard from "@/pages/pos/dashboard";
 import PosSales from "@/pages/pos/sales";
@@ -187,6 +189,8 @@ function Router() {
       <Route path="/curriculum/student-content" component={CurriculumStudentContent} />
       <Route path="/curriculum/student-quizzes" component={CurriculumStudentQuizzes} />
       <Route path="/curriculum/student-results" component={CurriculumStudentResults} />
+      <Route path="/curriculum/student-fees" component={CurriculumStudentFees} />
+      <Route path="/curriculum/student-attendance" component={CurriculumStudentAttendance} />
 
       <Route path="/pos/dashboard" component={PosDashboard} />
       <Route path="/pos/sales" component={PosSales} />

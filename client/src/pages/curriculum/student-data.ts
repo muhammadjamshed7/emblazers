@@ -5,6 +5,8 @@ import {
   FileText,
   ClipboardList,
   BarChart3,
+  CreditCard,
+  CalendarCheck,
 } from "lucide-react";
 
 export const studentNavItems = [
@@ -12,61 +14,112 @@ export const studentNavItems = [
   { label: "Study Material", path: "/curriculum/student-content", icon: FileText },
   { label: "Quizzes", path: "/curriculum/student-quizzes", icon: ClipboardList },
   { label: "My Results", path: "/curriculum/student-results", icon: BarChart3 },
+  { label: "Fees", path: "/curriculum/student-fees", icon: CreditCard },
+  { label: "Attendance", path: "/curriculum/student-attendance", icon: CalendarCheck },
 ];
 
-export function useStudentContent(className?: string, section?: string) {
-  return useQuery<any[]>({
-    queryKey: ['/api/curriculum/published-content', className, section],
+const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("emblazers_token")}` });
+
+export function useStudentDashboard() {
+  return useQuery<any>({
+    queryKey: ['/api/student-portal/dashboard'],
     queryFn: async () => {
-      const params = new URLSearchParams();
-      if (className) params.set("className", className);
-      if (section) params.set("section", section);
-      const res = await fetch(`/api/curriculum/published-content?${params}`, { headers: { Authorization: `Bearer ${localStorage.getItem("emblazers_token")}` } });
+      const res = await fetch('/api/student-portal/dashboard', { headers: authHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch dashboard");
+      return res.json();
+    },
+  });
+}
+
+export function useStudentContent() {
+  return useQuery<any>({
+    queryKey: ['/api/student-portal/content'],
+    queryFn: async () => {
+      const res = await fetch('/api/student-portal/content', { headers: authHeaders() });
       if (!res.ok) throw new Error("Failed to fetch content");
       return res.json();
     },
-    enabled: !!className,
   });
 }
 
-export function useStudentQuizzes(className?: string, section?: string) {
+export function useStudentQuizzes() {
   return useQuery<any[]>({
-    queryKey: ['/api/curriculum/published-quizzes', className, section],
+    queryKey: ['/api/student-portal/quizzes'],
     queryFn: async () => {
-      const params = new URLSearchParams();
-      if (className) params.set("className", className);
-      if (section) params.set("section", section);
-      const res = await fetch(`/api/curriculum/published-quizzes?${params}`, { headers: { Authorization: `Bearer ${localStorage.getItem("emblazers_token")}` } });
+      const res = await fetch('/api/student-portal/quizzes', { headers: authHeaders() });
       if (!res.ok) throw new Error("Failed to fetch quizzes");
       return res.json();
     },
-    enabled: !!className,
   });
 }
 
-export function useStudentQuizAttempts(studentId?: string) {
-  const { data = [], isLoading } = useQuery<any[]>({
-    queryKey: ['/api/student-quiz-attempts', studentId],
+export function useStartQuiz(quizId: string) {
+  return useQuery<any>({
+    queryKey: ['/api/student-portal/quizzes', quizId, 'start'],
     queryFn: async () => {
-      const res = await fetch(`/api/student-quiz-attempts?studentId=${studentId}`, { headers: { Authorization: `Bearer ${localStorage.getItem("emblazers_token")}` } });
-      if (!res.ok) throw new Error("Failed to fetch attempts");
+      const res = await fetch(`/api/student-portal/quizzes/${quizId}/start`, { headers: authHeaders() });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Cannot start quiz");
+      }
       return res.json();
     },
-    enabled: !!studentId,
+    enabled: !!quizId,
   });
+}
 
-  const submitMutation = useMutation({
-    mutationFn: async (attemptData: any) => {
-      const res = await apiRequest('POST', '/api/student-quiz-attempts', attemptData);
+export function useSubmitQuiz() {
+  return useMutation({
+    mutationFn: async ({ quizId, answers, timeTakenMinutes }: { quizId: string; answers: any[]; timeTakenMinutes: number }) => {
+      const res = await apiRequest('POST', `/api/student-portal/quizzes/${quizId}/submit`, { answers, timeTakenMinutes });
       return res.json();
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/student-quiz-attempts', studentId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/student-portal/quizzes'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/student-portal/results'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/student-portal/dashboard'] });
+    },
   });
+}
 
-  return {
-    attempts: data,
-    isLoading,
-    submitAttempt: (d: any) => submitMutation.mutateAsync(d),
-    isPending: submitMutation.isPending,
-  };
+export function useStudentResults() {
+  return useQuery<any[]>({
+    queryKey: ['/api/student-portal/results'],
+    queryFn: async () => {
+      const res = await fetch('/api/student-portal/results', { headers: authHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch results");
+      return res.json();
+    },
+  });
+}
+
+export function useStudentFees() {
+  return useQuery<any[]>({
+    queryKey: ['/api/student-portal/fees'],
+    queryFn: async () => {
+      const res = await fetch('/api/student-portal/fees', { headers: authHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch fees");
+      return res.json();
+    },
+  });
+}
+
+export function useStudentAttendance() {
+  return useQuery<any[]>({
+    queryKey: ['/api/student-portal/attendance'],
+    queryFn: async () => {
+      const res = await fetch('/api/student-portal/attendance', { headers: authHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch attendance");
+      return res.json();
+    },
+  });
+}
+
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: async ({ currentPassword, newPassword }: { currentPassword: string; newPassword: string }) => {
+      const res = await apiRequest('POST', '/api/student-portal/change-password', { currentPassword, newPassword });
+      return res.json();
+    },
+  });
 }

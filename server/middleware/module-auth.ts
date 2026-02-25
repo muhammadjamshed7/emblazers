@@ -72,7 +72,6 @@ const routeToModulesMap: Record<string, ModuleType[]> = {
   "/api/curriculum/staff-teachers": ["curriculum"],
   "/api/curriculum/teacher-assignments": ["curriculum"],
   "/api/curriculum/student-accounts": ["curriculum"],
-  "/api/curriculum/student-change-password": ["curriculum"],
   "/api/curriculum/quiz-overview": ["curriculum"],
   "/api/curriculum/published-content": ["curriculum"],
   "/api/curriculum/published-quizzes": ["curriculum"],
@@ -80,7 +79,13 @@ const routeToModulesMap: Record<string, ModuleType[]> = {
   "/api/teacher/content": ["curriculum"],
   "/api/teacher/quizzes": ["curriculum"],
   "/api/teacher/change-password": ["curriculum"],
-  "/api/student-quiz-attempts": ["curriculum"],
+  "/api/student-portal/change-password": ["curriculum"],
+  "/api/student-portal/dashboard": ["curriculum"],
+  "/api/student-portal/content": ["curriculum"],
+  "/api/student-portal/quizzes": ["curriculum"],
+  "/api/student-portal/results": ["curriculum"],
+  "/api/student-portal/fees": ["curriculum"],
+  "/api/student-portal/attendance": ["curriculum"],
 };
 
 const publicRoutes = [
@@ -89,7 +94,7 @@ const publicRoutes = [
   "/api/public/vacancies",
   "/api/public/applications",
   "/api/teacher/login",
-  "/api/curriculum/student-login",
+  "/api/student-portal/login",
 ];
 
 function getBaseRoute(path: string): string {
@@ -116,6 +121,10 @@ function getBaseRoute(path: string): string {
   }
 
   if (parts[1] === "teacher" && parts.length > 2) {
+    return "/" + parts.slice(0, 3).join("/");
+  }
+
+  if (parts[1] === "student-portal" && parts.length > 2) {
     return "/" + parts.slice(0, 3).join("/");
   }
 

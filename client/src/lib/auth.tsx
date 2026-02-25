@@ -131,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginStudent = async (studentId: string, password: string): Promise<{ success: boolean; error?: string; isFirstLogin?: boolean }> => {
     try {
-      const response = await fetch("/api/curriculum/student-login", {
+      const response = await fetch("/api/student-portal/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ studentId, password }),

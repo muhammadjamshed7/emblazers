@@ -1,19 +1,17 @@
 import { ModuleLayout } from "@/components/layout/module-layout";
-import { studentNavItems, useStudentQuizAttempts } from "./student-data";
+import { studentNavItems, useStudentResults } from "./student-data";
 import { useAuth } from "@/lib/auth";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Award, TrendingUp, Target } from "lucide-react";
 
 export default function StudentResultsPage() {
   const { session } = useAuth();
-  const studentId = session?.studentId || "";
-  const { attempts, isLoading } = useStudentQuizAttempts(studentId);
+  const { data: results = [], isLoading } = useStudentResults();
 
-  const totalAttempts = attempts.length;
-  const totalPassed = attempts.filter((a: any) => a.isPassed).length;
-  const avgPercentage = totalAttempts > 0 ? Math.round(attempts.reduce((sum: number, a: any) => sum + (a.percentage || 0), 0) / totalAttempts) : 0;
-  const bestGrade = totalAttempts > 0 ? attempts.reduce((best: string, a: any) => {
+  const totalAttempts = results.length;
+  const totalPassed = results.filter((a: any) => a.isPassed).length;
+  const avgPercentage = totalAttempts > 0 ? Math.round(results.reduce((sum: number, a: any) => sum + (a.percentage || 0), 0) / totalAttempts) : 0;
+  const bestGrade = totalAttempts > 0 ? results.reduce((best: string, a: any) => {
     const order = ["A+", "A", "B", "C", "D", "F"];
     return order.indexOf(a.grade) < order.indexOf(best) ? a.grade : best;
   }, "F") : "-";
@@ -55,7 +53,7 @@ export default function StudentResultsPage() {
 
         {isLoading ? (
           <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-20 rounded-lg bg-muted animate-pulse" />)}</div>
-        ) : attempts.length === 0 ? (
+        ) : results.length === 0 ? (
           <Card><CardContent className="py-12 text-center text-muted-foreground">No results yet. Take a quiz to see your results here.</CardContent></Card>
         ) : (
           <div className="rounded-lg border overflow-hidden">
@@ -63,6 +61,8 @@ export default function StudentResultsPage() {
               <thead className="bg-muted/50">
                 <tr>
                   <th className="text-left p-3 text-sm font-medium">Quiz</th>
+                  <th className="text-left p-3 text-sm font-medium">Subject</th>
+                  <th className="text-left p-3 text-sm font-medium">Teacher</th>
                   <th className="text-left p-3 text-sm font-medium">Score</th>
                   <th className="text-left p-3 text-sm font-medium">Percentage</th>
                   <th className="text-left p-3 text-sm font-medium">Grade</th>
@@ -72,9 +72,11 @@ export default function StudentResultsPage() {
                 </tr>
               </thead>
               <tbody>
-                {attempts.map((a: any) => (
+                {results.map((a: any) => (
                   <tr key={a.id} className="border-t" data-testid={`row-result-${a.id}`}>
-                    <td className="p-3 text-sm font-medium">{a.className} {a.section}</td>
+                    <td className="p-3 text-sm font-medium">{a.quizTitle}</td>
+                    <td className="p-3 text-sm">{a.subject}</td>
+                    <td className="p-3 text-sm text-muted-foreground">{a.teacherName}</td>
                     <td className="p-3 text-sm">{a.totalMarksObtained}/{a.totalMarks}</td>
                     <td className="p-3 text-sm">
                       <div className="flex items-center gap-2">

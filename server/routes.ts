@@ -1394,9 +1394,9 @@ export async function registerRoutes(
     res.json(mapped);
   }));
 
-  // ============== STUDENT LOGIN & PORTAL ==============
+  // ============== STUDENT PORTAL ROUTES ==============
 
-  app.post("/api/curriculum/student-login", asyncHandler(async (req, res) => {
+  app.post("/api/student-portal/login", asyncHandler(async (req, res) => {
     const { studentId, password } = req.body;
     if (!studentId || !password) {
       return res.status(400).json({ error: "Student ID and password are required" });
@@ -1416,7 +1416,7 @@ export async function registerRoutes(
     await account.save();
 
     const token = jwt.sign(
-      { userId: account._id.toString(), email: studentId, role: "student", module: "curriculum", studentId: account.studentId, className: account.className, section: account.section },
+      { userId: account._id.toString(), email: studentId, role: "student", module: "curriculum", studentId: account.studentId, studentName: account.studentName, className: account.className, section: account.section },
       jwtSecret,
       { expiresIn: "3d" }
     );
@@ -1437,17 +1437,20 @@ export async function registerRoutes(
     });
   }));
 
-  app.post("/api/curriculum/student-change-password", asyncHandler(async (req, res) => {
-    const { studentId, currentPassword, newPassword } = req.body;
-    if (!studentId || !currentPassword || !newPassword) {
-      return res.status(400).json({ error: "All fields required" });
+  app.post("/api/student-portal/change-password", asyncHandler(async (req, res) => {
+    const user = (req as any).user;
+    if (!user?.studentId) return res.status(401).json({ error: "Not authenticated as student" });
+
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: "Current password and new password are required" });
     }
     if (newPassword.length < 6) {
       return res.status(400).json({ error: "New password must be at least 6 characters" });
     }
 
     const StudentPortalAccountModel = (await import("./models/StudentPortalAccount")).default;
-    const account = await StudentPortalAccountModel.findOne({ studentId, isActive: true });
+    const account = await StudentPortalAccountModel.findOne({ studentId: user.studentId, isActive: true });
     if (!account) return res.status(404).json({ error: "Account not found" });
 
     const isValid = await bcrypt.compare(currentPassword, account.passwordHash);
@@ -1460,36 +1463,210 @@ export async function registerRoutes(
     return res.json({ success: true, message: "Password changed successfully" });
   }));
 
-  // ============== STUDENT QUIZ ATTEMPTS ==============
-  app.get("/api/student-quiz-attempts", asyncHandler(async (req, res) => {
+  app.get("/api/student-portal/dashboard", asyncHandler(async (req, res) => {
+    const user = (req as any).user;
+    if (!user?.studentId) return res.status(401).json({ error: "Not authenticated as student" });
+
+    const TeacherQuizModel = (await import("./models/TeacherQuiz")).default;
     const StudentQuizAttemptModel = (await import("./models/StudentQuizAttempt")).default;
-    const query: any = {};
-    if (req.query.quizId) query.quizId = req.query.quizId;
-    if (req.query.studentId) query.studentId = req.query.studentId;
-    if (req.query.className) query.className = req.query.className;
-    const docs = await StudentQuizAttemptModel.find(query).sort({ submittedAt: -1 }).lean();
-    const mapped = (docs as any[]).map((d: any) => ({ id: d._id.toString(), ...d, _id: undefined, __v: undefined, submittedAt: d.submittedAt?.toISOString() }));
-    res.json(mapped);
+
+    const allStudents = await storage.getStudents();
+    const studentProfile = allStudents.find(s => s.studentId === user.studentId);
+
+    const now = new Date();
+    const publishedQuizzes = await TeacherQuizModel.find({
+      className: user.className,
+      section: user.section,
+      isPublished: true,
+    }).lean();
+
+    const myAttempts = await StudentQuizAttemptModel.find({ studentId: user.studentId }).lean();
+    const attemptedQuizIds = new Set((myAttempts as any[]).map((a: any) => a.quizId));
+
+    const activeQuizzesCount = (publishedQuizzes as any[]).filter((q: any) => {
+      const start = new Date(q.startDateTime);
+      const end = new Date(q.endDateTime);
+      return now >= start && now <= end && !attemptedQuizIds.has(q._id.toString());
+    }).length;
+
+    const completedQuizzesCount = myAttempts.length;
+
+    let pendingFeesTotal = 0;
+    try {
+      const FeeVoucherModel = (await import("./models/FeeVoucher")).default;
+      const feeVouchers = await FeeVoucherModel.find({ studentId: user.studentId, status: { $ne: "paid" } }).lean();
+      pendingFeesTotal = (feeVouchers as any[]).reduce((sum: number, v: any) => sum + ((v.totalAmount || 0) - (v.paidAmount || 0)), 0);
+    } catch {}
+
+    let thisMonthAttendance = 0;
+    try {
+      const AttendanceRecordModel = (await import("./models/AttendanceRecord")).default;
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      const records = await AttendanceRecordModel.find({
+        studentId: user.studentId,
+        date: { $gte: startOfMonth, $lte: endOfMonth },
+      }).lean();
+      const total = records.length;
+      const present = (records as any[]).filter((r: any) => r.status === "present" || r.status === "Present").length;
+      thisMonthAttendance = total > 0 ? Math.round((present / total) * 100) : 0;
+    } catch {}
+
+    res.json({
+      profile: studentProfile ? { name: studentProfile.name, studentId: studentProfile.studentId, class: studentProfile.class, section: studentProfile.section, dob: studentProfile.dob, parentName: studentProfile.parentName } : null,
+      activeQuizzesCount,
+      completedQuizzesCount,
+      pendingFeesTotal,
+      thisMonthAttendance,
+    });
   }));
 
-  app.post("/api/student-quiz-attempts", asyncHandler(async (req, res) => {
-    const StudentQuizAttemptModel = (await import("./models/StudentQuizAttempt")).default;
+  app.get("/api/student-portal/content", asyncHandler(async (req, res) => {
+    const user = (req as any).user;
+    if (!user?.studentId) return res.status(401).json({ error: "Not authenticated as student" });
+
+    const TeacherContentModel = (await import("./models/TeacherContent")).default;
+    const docs = await TeacherContentModel.find({
+      className: user.className,
+      section: user.section,
+      isPublished: true,
+    }).sort({ createdAt: -1 }).lean();
+
+    const grouped: Record<string, any[]> = {};
+    for (const d of docs as any[]) {
+      const subject = d.subject || "General";
+      if (!grouped[subject]) grouped[subject] = [];
+      grouped[subject].push({
+        id: d._id.toString(),
+        title: d.title,
+        description: d.description,
+        contentType: d.contentType,
+        fileData: d.fileData,
+        fileName: d.fileName,
+        teacherName: d.teacherName,
+        subject: d.subject,
+        createdAt: d.createdAt?.toISOString(),
+      });
+    }
+
+    res.json({ content: grouped, total: docs.length });
+  }));
+
+  app.get("/api/student-portal/quizzes", asyncHandler(async (req, res) => {
+    const user = (req as any).user;
+    if (!user?.studentId) return res.status(401).json({ error: "Not authenticated as student" });
+
     const TeacherQuizModel = (await import("./models/TeacherQuiz")).default;
+    const StudentQuizAttemptModel = (await import("./models/StudentQuizAttempt")).default;
 
-    const { quizId, studentId, studentName, className, section, answers, timeTakenMinutes } = req.body;
+    const quizzes = await TeacherQuizModel.find({
+      className: user.className,
+      section: user.section,
+      isPublished: true,
+    }).sort({ createdAt: -1 }).lean();
 
-    const quiz = await TeacherQuizModel.findById(quizId);
+    const myAttempts = await StudentQuizAttemptModel.find({ studentId: user.studentId }).lean();
+    const attemptMap = new Map((myAttempts as any[]).map((a: any) => [a.quizId, a]));
+
+    const now = new Date();
+    const result = (quizzes as any[]).map((q: any) => {
+      const start = new Date(q.startDateTime);
+      const end = new Date(q.endDateTime);
+      let status: "upcoming" | "active" | "expired" = "expired";
+      if (now < start) status = "upcoming";
+      else if (now >= start && now <= end) status = "active";
+
+      const attempt = attemptMap.get(q._id.toString());
+
+      return {
+        id: q._id.toString(),
+        title: q.title,
+        subject: q.subject,
+        instructions: q.instructions,
+        timeLimitMinutes: q.timeLimitMinutes,
+        totalMarks: q.totalMarks,
+        passingMarks: q.passingMarks,
+        questionsCount: q.questions?.length || 0,
+        startDateTime: q.startDateTime?.toISOString(),
+        endDateTime: q.endDateTime?.toISOString(),
+        teacherName: q.teacherName,
+        status,
+        attempted: !!attempt,
+        myResult: attempt ? {
+          grade: attempt.grade,
+          percentage: attempt.percentage,
+          isPassed: attempt.isPassed,
+          totalMarksObtained: attempt.totalMarksObtained,
+        } : null,
+      };
+    });
+
+    res.json(result);
+  }));
+
+  app.get("/api/student-portal/quizzes/:id/start", asyncHandler(async (req, res) => {
+    const user = (req as any).user;
+    if (!user?.studentId) return res.status(401).json({ error: "Not authenticated as student" });
+
+    const TeacherQuizModel = (await import("./models/TeacherQuiz")).default;
+    const StudentQuizAttemptModel = (await import("./models/StudentQuizAttempt")).default;
+
+    const quiz = await TeacherQuizModel.findById(req.params.id).lean() as any;
+    if (!quiz) return res.status(404).json({ error: "Quiz not found" });
+    if (!quiz.isPublished) return res.status(400).json({ error: "Quiz is not published" });
+
+    const now = new Date();
+    const start = new Date(quiz.startDateTime);
+    const end = new Date(quiz.endDateTime);
+    if (now < start) return res.status(400).json({ error: "Quiz has not started yet. Starts at " + start.toLocaleString() });
+    if (now > end) return res.status(400).json({ error: "Quiz time slot has expired" });
+
+    const existing = await StudentQuizAttemptModel.findOne({ quizId: req.params.id, studentId: user.studentId });
+    if (existing) return res.status(400).json({ error: "Already submitted" });
+
+    const sanitizedQuestions = (quiz.questions || []).map((q: any, idx: number) => ({
+      questionIndex: idx,
+      questionText: q.questionText,
+      questionType: q.questionType,
+      options: q.options || [],
+      marks: q.marks,
+    }));
+
+    res.json({
+      id: quiz._id.toString(),
+      title: quiz.title,
+      subject: quiz.subject,
+      instructions: quiz.instructions,
+      timeLimitMinutes: quiz.timeLimitMinutes,
+      totalMarks: quiz.totalMarks,
+      passingMarks: quiz.passingMarks,
+      questions: sanitizedQuestions,
+      startDateTime: quiz.startDateTime?.toISOString(),
+      endDateTime: quiz.endDateTime?.toISOString(),
+    });
+  }));
+
+  app.post("/api/student-portal/quizzes/:id/submit", asyncHandler(async (req, res) => {
+    const user = (req as any).user;
+    if (!user?.studentId) return res.status(401).json({ error: "Not authenticated as student" });
+
+    const TeacherQuizModel = (await import("./models/TeacherQuiz")).default;
+    const StudentQuizAttemptModel = (await import("./models/StudentQuizAttempt")).default;
+
+    const quiz = await TeacherQuizModel.findById(req.params.id);
     if (!quiz) return res.status(404).json({ error: "Quiz not found" });
 
-    const existing = await StudentQuizAttemptModel.findOne({ quizId, studentId });
-    if (existing) return res.status(409).json({ error: "You have already attempted this quiz" });
+    const existing = await StudentQuizAttemptModel.findOne({ quizId: req.params.id, studentId: user.studentId });
+    if (existing) return res.status(400).json({ error: "Already submitted" });
 
-    const gradedAnswers = (answers || []).map((ans: any, idx: number) => {
+    const { answers, timeTakenMinutes } = req.body;
+
+    const gradedAnswers = (answers || []).map((ans: any) => {
       const question = quiz.questions[ans.questionIndex];
       if (!question) return { ...ans, isCorrect: false, marksAwarded: 0 };
 
       if (question.questionType === "short") {
-        return { ...ans, isCorrect: false, marksAwarded: 0 };
+        return { questionIndex: ans.questionIndex, givenAnswer: ans.givenAnswer || "", isCorrect: false, marksAwarded: 0 };
       }
 
       const isCorrect = ans.givenAnswer?.trim().toLowerCase() === question.correctAnswer?.trim().toLowerCase();
@@ -1513,11 +1690,11 @@ export async function registerRoutes(
     else if (percentage >= 50) grade = "D";
 
     const doc = await StudentQuizAttemptModel.create({
-      quizId,
-      studentId,
-      studentName,
-      className,
-      section,
+      quizId: req.params.id,
+      studentId: user.studentId,
+      studentName: user.studentName || "Student",
+      className: user.className,
+      section: user.section,
       answers: gradedAnswers,
       totalMarksObtained,
       totalMarks: quiz.totalMarks,
@@ -1527,7 +1704,101 @@ export async function registerRoutes(
       timeTakenMinutes: timeTakenMinutes || 0,
     });
 
-    res.status(201).json({ id: doc._id.toString(), ...doc.toObject(), _id: undefined, __v: undefined });
+    res.status(201).json({
+      id: doc._id.toString(),
+      totalMarksObtained,
+      totalMarks: quiz.totalMarks,
+      percentage,
+      grade,
+      isPassed,
+      timeTakenMinutes: doc.timeTakenMinutes,
+    });
+  }));
+
+  app.get("/api/student-portal/results", asyncHandler(async (req, res) => {
+    const user = (req as any).user;
+    if (!user?.studentId) return res.status(401).json({ error: "Not authenticated as student" });
+
+    const StudentQuizAttemptModel = (await import("./models/StudentQuizAttempt")).default;
+    const TeacherQuizModel = (await import("./models/TeacherQuiz")).default;
+
+    const attempts = await StudentQuizAttemptModel.find({ studentId: user.studentId }).sort({ submittedAt: -1 }).lean();
+
+    const quizIds = [...new Set((attempts as any[]).map((a: any) => a.quizId))];
+    const quizzes = await TeacherQuizModel.find({ _id: { $in: quizIds } }).lean();
+    const quizMap = new Map((quizzes as any[]).map((q: any) => [q._id.toString(), q]));
+
+    const result = (attempts as any[]).map((a: any) => {
+      const quiz = quizMap.get(a.quizId);
+      return {
+        id: a._id.toString(),
+        quizId: a.quizId,
+        quizTitle: (quiz as any)?.title || "Unknown Quiz",
+        subject: (quiz as any)?.subject || "",
+        teacherName: (quiz as any)?.teacherName || "",
+        totalMarksObtained: a.totalMarksObtained,
+        totalMarks: a.totalMarks,
+        percentage: a.percentage,
+        grade: a.grade,
+        isPassed: a.isPassed,
+        timeTakenMinutes: a.timeTakenMinutes,
+        submittedAt: a.submittedAt?.toISOString(),
+      };
+    });
+
+    res.json(result);
+  }));
+
+  app.get("/api/student-portal/fees", asyncHandler(async (req, res) => {
+    const user = (req as any).user;
+    if (!user?.studentId) return res.status(401).json({ error: "Not authenticated as student" });
+
+    try {
+      const FeeVoucherModel = (await import("./models/FeeVoucher")).default;
+      const vouchers = await FeeVoucherModel.find({ studentId: user.studentId }).sort({ createdAt: -1 }).lean();
+      const mapped = (vouchers as any[]).map((v: any) => ({
+        id: v._id.toString(),
+        month: v.month || v.feeMonth,
+        totalAmount: v.totalAmount || v.amount,
+        paidAmount: v.paidAmount || 0,
+        dueDate: v.dueDate?.toISOString() || v.dueDate,
+        status: v.status,
+      }));
+      res.json(mapped);
+    } catch {
+      res.json([]);
+    }
+  }));
+
+  app.get("/api/student-portal/attendance", asyncHandler(async (req, res) => {
+    const user = (req as any).user;
+    if (!user?.studentId) return res.status(401).json({ error: "Not authenticated as student" });
+
+    try {
+      const AttendanceRecordModel = (await import("./models/AttendanceRecord")).default;
+      const records = await AttendanceRecordModel.find({ studentId: user.studentId }).sort({ date: -1 }).lean();
+
+      const monthlyMap: Record<string, { present: number; absent: number; total: number }> = {};
+      for (const r of records as any[]) {
+        const d = new Date(r.date);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        if (!monthlyMap[key]) monthlyMap[key] = { present: 0, absent: 0, total: 0 };
+        monthlyMap[key].total++;
+        if (r.status === "present" || r.status === "Present") monthlyMap[key].present++;
+        else monthlyMap[key].absent++;
+      }
+
+      const result = Object.entries(monthlyMap).map(([month, data]) => ({
+        month,
+        presentDays: data.present,
+        absentDays: data.absent,
+        percentage: data.total > 0 ? Math.round((data.present / data.total) * 100) : 0,
+      })).sort((a, b) => b.month.localeCompare(a.month));
+
+      res.json(result);
+    } catch {
+      res.json([]);
+    }
   }));
 
   // ============== QUIZ ROUTES ==============
