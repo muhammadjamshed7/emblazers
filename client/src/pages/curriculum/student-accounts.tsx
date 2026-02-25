@@ -20,9 +20,9 @@ export default function StudentAccountsPage() {
 
   const { data: students = [] } = useQuery<Student[]>({ queryKey: ['/api/students'] });
   const { data: accounts = [], isLoading } = useQuery<any[]>({
-    queryKey: ['/api/student-portal-accounts'],
+    queryKey: ['/api/curriculum/student-accounts'],
     queryFn: async () => {
-      const res = await fetch('/api/student-portal-accounts', { headers: { Authorization: `Bearer ${localStorage.getItem("emblazers_token")}` } });
+      const res = await fetch('/api/curriculum/student-accounts', { headers: { Authorization: `Bearer ${localStorage.getItem("emblazers_token")}` } });
       if (!res.ok) throw new Error("Failed");
       return res.json();
     }
@@ -30,32 +30,49 @@ export default function StudentAccountsPage() {
 
   const createAccountsMutation = useMutation({
     mutationFn: async (studentIds: string[]) => {
-      const res = await apiRequest('POST', '/api/curriculum/student-accounts', { studentIds });
-      return res.json();
+      const results = { created: 0, skipped: 0, errors: [] as string[] };
+      for (const sid of studentIds) {
+        const res = await apiRequest('POST', '/api/curriculum/student-accounts/create', { studentId: sid });
+        const data = await res.json();
+        results.created += data.created || 0;
+        results.skipped += data.skipped || 0;
+      }
+      return results;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/student-portal-accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/curriculum/student-accounts'] });
       toast({ title: `Created ${data.created} accounts, ${data.skipped} skipped` });
       setSelectedStudentIds([]);
     }
   });
 
-  const toggleAccountMutation = useMutation({
-    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
-      const res = await apiRequest('PATCH', `/api/student-portal-accounts/${id}`, { isActive });
+  const bulkCreateByClassMutation = useMutation({
+    mutationFn: async ({ className, section }: { className: string; section?: string }) => {
+      const res = await apiRequest('POST', '/api/curriculum/student-accounts/create', { className, section });
       return res.json();
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/student-portal-accounts'] }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/curriculum/student-accounts'] });
+      toast({ title: `Created ${data.created} accounts, ${data.skipped} skipped` });
+    }
+  });
+
+  const toggleAccountMutation = useMutation({
+    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
+      const res = await apiRequest('PATCH', `/api/curriculum/student-accounts/${id}`, { isActive });
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/curriculum/student-accounts'] }),
   });
 
   const resetPasswordMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await apiRequest('POST', `/api/student-portal-accounts/${id}/reset-password`, {});
+    mutationFn: async (studentId: string) => {
+      const res = await apiRequest('POST', `/api/curriculum/student-accounts/reset-password/${studentId}`, {});
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/student-portal-accounts'] });
-      toast({ title: "Password reset to Student ID" });
+      queryClient.invalidateQueries({ queryKey: ['/api/curriculum/student-accounts'] });
+      toast({ title: "Password reset to DOB default" });
     }
   });
 
@@ -179,7 +196,7 @@ export default function StudentAccountsPage() {
                       <td className="p-3">
                         <div className="flex gap-1">
                           <Button size="sm" variant="outline" onClick={() => {
-                            if (confirm("Reset password to Student ID?")) resetPasswordMutation.mutate(a.id);
+                            if (confirm("Reset password to DOB default?")) resetPasswordMutation.mutate(a.studentId);
                           }} title="Reset Password" data-testid={`button-reset-${a.id}`}>
                             <RotateCcw className="w-3 h-3" />
                           </Button>

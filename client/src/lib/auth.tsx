@@ -98,10 +98,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginTeacher = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      const response = await fetch("/api/curriculum/teacher-login", {
+      const response = await fetch("/api/teacher/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ staffEmail: email, password }),
       });
 
       const data = await response.json();

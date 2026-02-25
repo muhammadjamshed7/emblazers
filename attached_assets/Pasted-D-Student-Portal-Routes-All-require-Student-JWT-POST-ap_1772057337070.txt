@@ -1,0 +1,66 @@
+D. Student Portal Routes (All require Student JWT)
+POST /api/student-portal/login
+     Body: { studentId, password }
+     → Find in studentPortalAccounts
+     → Compare bcrypt password
+     → If isFirstLogin === true, include flag in response so frontend shows change-password screen
+     → JWT payload: { studentId, studentName, className, section, role: "student" }
+
+POST /api/student-portal/change-password
+     Auth: Student JWT
+     Body: { currentPassword, newPassword }
+     → After success, set isFirstLogin = false
+
+GET  /api/student-portal/dashboard
+     Auth: Student JWT
+     → Return:
+         - Student profile from `students` collection
+         - Active quizzes count (published, time slot currently active, not yet attempted)
+         - Completed quizzes count
+         - Pending fees total (from `feevouchers` collection where studentId matches)
+         - This month attendance % (from `attendancerecords` collection)
+
+GET  /api/student-portal/content
+     Auth: Student JWT
+     → Return teacherContent where className+section match AND isPublished = true
+     → Group by subject in response
+
+GET  /api/student-portal/quizzes
+     Auth: Student JWT
+     → Return teacherQuizzes where className+section match AND isPublished = true
+     → For each quiz add:
+         status: "upcoming" | "active" | "expired"  (compare current time vs startDateTime/endDateTime)
+         attempted: true/false  (check quizAttempts collection)
+         myResult: { grade, percentage, isPassed } if attempted
+
+GET  /api/student-portal/quizzes/:id/start
+     Auth: Student JWT
+     → Return quiz WITHOUT correctAnswer fields
+     → Validate: isPublished=true, current time is within slot, student has NOT attempted yet
+     → If already attempted: return 400 "Already submitted"
+     → If outside time slot: return 400 with message
+
+POST /api/student-portal/quizzes/:id/submit
+     Auth: Student JWT
+     Body: { answers: [{ questionIndex, givenAnswer }], timeTakenMinutes }
+     → Validate not already submitted
+     → Auto-grade MCQ and True/False by comparing with correctAnswer
+     → Short answer: isCorrect = null, marksAwarded = 0 (pending teacher grading)
+     → Calculate: totalMarksObtained, percentage, grade (A+≥90, A≥80, B≥70, C≥60, D≥50, F<50)
+     → isPassed = totalMarksObtained >= quiz.passingMarks
+     → Save to quizAttempts, return result immediately
+
+GET  /api/student-portal/results
+     Auth: Student JWT
+     → Return all quizAttempts for this studentId
+     → Join with quiz title, subject, teacher name
+
+GET  /api/student-portal/fees
+     Auth: Student JWT
+     → Query existing `feevouchers` collection where studentId = this student's ID
+     → Return: each voucher month, total amount, paid amount, due date, status
+
+GET  /api/student-portal/attendance
+     Auth: Student JWT
+     → Query existing `attendancerecords` for this student
+     → Return month-by-month: presentDays, absentDays, percentage

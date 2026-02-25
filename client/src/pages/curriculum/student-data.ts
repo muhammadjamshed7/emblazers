@@ -16,12 +16,12 @@ export const studentNavItems = [
 
 export function useStudentContent(className?: string, section?: string) {
   return useQuery<any[]>({
-    queryKey: ['/api/teacher-content', 'student', className, section],
+    queryKey: ['/api/curriculum/published-content', className, section],
     queryFn: async () => {
-      const params = new URLSearchParams({ isPublished: "true" });
+      const params = new URLSearchParams();
       if (className) params.set("className", className);
       if (section) params.set("section", section);
-      const res = await fetch(`/api/teacher-content?${params}`, { headers: { Authorization: `Bearer ${localStorage.getItem("emblazers_token")}` } });
+      const res = await fetch(`/api/curriculum/published-content?${params}`, { headers: { Authorization: `Bearer ${localStorage.getItem("emblazers_token")}` } });
       if (!res.ok) throw new Error("Failed to fetch content");
       return res.json();
     },
@@ -31,12 +31,12 @@ export function useStudentContent(className?: string, section?: string) {
 
 export function useStudentQuizzes(className?: string, section?: string) {
   return useQuery<any[]>({
-    queryKey: ['/api/teacher-quizzes', 'student', className, section],
+    queryKey: ['/api/curriculum/published-quizzes', className, section],
     queryFn: async () => {
-      const params = new URLSearchParams({ isPublished: "true" });
+      const params = new URLSearchParams();
       if (className) params.set("className", className);
       if (section) params.set("section", section);
-      const res = await fetch(`/api/teacher-quizzes?${params}`, { headers: { Authorization: `Bearer ${localStorage.getItem("emblazers_token")}` } });
+      const res = await fetch(`/api/curriculum/published-quizzes?${params}`, { headers: { Authorization: `Bearer ${localStorage.getItem("emblazers_token")}` } });
       if (!res.ok) throw new Error("Failed to fetch quizzes");
       return res.json();
     },

@@ -24,9 +24,9 @@ The system uses JWT-based authentication with module-specific credentials ({modu
 
 ### Curriculum Multi-Role System
 The Curriculum module supports 3 user roles with separate login flows:
-- **Admin**: Standard module login (curriculum@emblazers.com / 12345678), full access to curriculum management plus Teacher Assignments and Student Accounts pages
-- **Teacher**: Logs in via staff email + default password "teacher123" at `/api/curriculum/teacher-login`. Must have active TeacherAssignment records. Gets dedicated dashboard, content upload, and quiz creation pages.
-- **Student**: Logs in via Student ID + password at `/api/curriculum/student-login`. Default password is their Student ID (bcrypt hashed). Portal accounts created by admin. Gets dashboard, study material, quizzes (timed), and results pages.
+- **Admin**: Standard module login (curriculum@emblazers.com / 12345678), full access to curriculum management plus Teacher Assignments and Student Accounts pages. Admin routes: `/api/curriculum/staff-teachers`, `/api/curriculum/teacher-assignments`, `/api/curriculum/student-accounts/*`, `/api/curriculum/quiz-overview`.
+- **Teacher**: Logs in via staff email + default password = staffId (e.g. "STF-2024-001") at `POST /api/teacher/login`. Must have active TeacherAssignment records. Gets dedicated dashboard, content upload, and quiz creation pages. Teacher routes: `/api/teacher/my-assignments`, `/api/teacher/content`, `/api/teacher/quizzes`, `/api/teacher/quizzes/:id/toggle-publish`, `/api/teacher/quizzes/:id/attempts`, `/api/teacher/quizzes/:id/attempts/:attemptId/grade-short`, `/api/teacher/change-password`.
+- **Student**: Logs in via Student ID + password at `POST /api/curriculum/student-login`. Default password is DOB in DDMMYYYY format (bcrypt hashed). Portal accounts created by admin. Gets dashboard, study material (via `/api/curriculum/published-content`), quizzes (via `/api/curriculum/published-quizzes`), and results pages.
 
 New Mongoose models: TeacherAssignment, TeacherContent, TeacherQuiz, StudentQuizAttempt, StudentPortalAccount. Frontend pages under `/curriculum/teacher-*` and `/curriculum/student-*` with role-specific nav items and ModuleLayout.
 

@@ -14,10 +14,9 @@ export const teacherNavItems = [
 
 export function useTeacherAssignments(staffId?: string) {
   return useQuery<any[]>({
-    queryKey: ['/api/teacher-assignments', staffId],
+    queryKey: ['/api/teacher/my-assignments', staffId],
     queryFn: async () => {
-      const url = staffId ? `/api/teacher-assignments?staffId=${staffId}` : '/api/teacher-assignments';
-      const res = await fetch(url, { headers: { Authorization: `Bearer ${localStorage.getItem("emblazers_token")}` } });
+      const res = await fetch('/api/teacher/my-assignments', { headers: { Authorization: `Bearer ${localStorage.getItem("emblazers_token")}` } });
       if (!res.ok) throw new Error("Failed to fetch assignments");
       return res.json();
     },
@@ -27,10 +26,9 @@ export function useTeacherAssignments(staffId?: string) {
 
 export function useTeacherContent(staffId?: string) {
   const { data = [], isLoading } = useQuery<any[]>({
-    queryKey: ['/api/teacher-content', staffId],
+    queryKey: ['/api/teacher/content', staffId],
     queryFn: async () => {
-      const url = staffId ? `/api/teacher-content?staffId=${staffId}` : '/api/teacher-content';
-      const res = await fetch(url, { headers: { Authorization: `Bearer ${localStorage.getItem("emblazers_token")}` } });
+      const res = await fetch('/api/teacher/content', { headers: { Authorization: `Bearer ${localStorage.getItem("emblazers_token")}` } });
       if (!res.ok) throw new Error("Failed to fetch content");
       return res.json();
     },
@@ -39,43 +37,42 @@ export function useTeacherContent(staffId?: string) {
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await apiRequest('POST', '/api/teacher-content', data);
+      const res = await apiRequest('POST', '/api/teacher/content', data);
       return res.json();
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/teacher-content', staffId] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/teacher/content', staffId] }),
   });
 
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
-      const res = await apiRequest('PATCH', `/api/teacher-content/${id}`, updates);
+  const togglePublishMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest('PATCH', `/api/teacher/content/${id}/toggle-publish`, {});
       return res.json();
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/teacher-content', staffId] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/teacher/content', staffId] }),
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest('DELETE', `/api/teacher-content/${id}`);
+      await apiRequest('DELETE', `/api/teacher/content/${id}`);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/teacher-content', staffId] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/teacher/content', staffId] }),
   });
 
   return {
     content: data,
     isLoading,
     createContent: (d: any) => createMutation.mutateAsync(d),
-    updateContent: (id: string, updates: any) => updateMutation.mutateAsync({ id, updates }),
+    togglePublish: (id: string) => togglePublishMutation.mutateAsync(id),
     deleteContent: (id: string) => deleteMutation.mutateAsync(id),
-    isPending: createMutation.isPending || updateMutation.isPending || deleteMutation.isPending,
+    isPending: createMutation.isPending || togglePublishMutation.isPending || deleteMutation.isPending,
   };
 }
 
 export function useTeacherQuizzes(staffId?: string) {
   const { data = [], isLoading } = useQuery<any[]>({
-    queryKey: ['/api/teacher-quizzes', staffId],
+    queryKey: ['/api/teacher/quizzes', staffId],
     queryFn: async () => {
-      const url = staffId ? `/api/teacher-quizzes?staffId=${staffId}` : '/api/teacher-quizzes';
-      const res = await fetch(url, { headers: { Authorization: `Bearer ${localStorage.getItem("emblazers_token")}` } });
+      const res = await fetch('/api/teacher/quizzes', { headers: { Authorization: `Bearer ${localStorage.getItem("emblazers_token")}` } });
       if (!res.ok) throw new Error("Failed to fetch quizzes");
       return res.json();
     },
@@ -84,43 +81,64 @@ export function useTeacherQuizzes(staffId?: string) {
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await apiRequest('POST', '/api/teacher-quizzes', data);
+      const res = await apiRequest('POST', '/api/teacher/quizzes', data);
       return res.json();
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/teacher-quizzes', staffId] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/teacher/quizzes', staffId] }),
   });
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
-      const res = await apiRequest('PATCH', `/api/teacher-quizzes/${id}`, updates);
+      const res = await apiRequest('PUT', `/api/teacher/quizzes/${id}`, updates);
       return res.json();
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/teacher-quizzes', staffId] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/teacher/quizzes', staffId] }),
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest('DELETE', `/api/teacher-quizzes/${id}`);
+      await apiRequest('DELETE', `/api/teacher/quizzes/${id}`);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/teacher-quizzes', staffId] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/teacher/quizzes', staffId] }),
   });
 
-  const { data: attempts = [] } = useQuery<any[]>({
-    queryKey: ['/api/student-quiz-attempts'],
-    queryFn: async () => {
-      const res = await fetch('/api/student-quiz-attempts', { headers: { Authorization: `Bearer ${localStorage.getItem("emblazers_token")}` } });
-      if (!res.ok) throw new Error("Failed to fetch attempts");
+  const togglePublishMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest('PATCH', `/api/teacher/quizzes/${id}/toggle-publish`, {});
       return res.json();
     },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/teacher/quizzes', staffId] }),
   });
 
   return {
     quizzes: data,
-    attempts,
     isLoading,
     createQuiz: (d: any) => createMutation.mutateAsync(d),
     updateQuiz: (id: string, updates: any) => updateMutation.mutateAsync({ id, updates }),
     deleteQuiz: (id: string) => deleteMutation.mutateAsync(id),
-    isPending: createMutation.isPending || updateMutation.isPending || deleteMutation.isPending,
+    togglePublish: (id: string) => togglePublishMutation.mutateAsync(id),
+    isPending: createMutation.isPending || updateMutation.isPending || deleteMutation.isPending || togglePublishMutation.isPending,
   };
+}
+
+export function useQuizAttempts(quizId: string) {
+  return useQuery<any[]>({
+    queryKey: ['/api/teacher/quizzes', quizId, 'attempts'],
+    queryFn: async () => {
+      const res = await fetch(`/api/teacher/quizzes/${quizId}/attempts`, { headers: { Authorization: `Bearer ${localStorage.getItem("emblazers_token")}` } });
+      if (!res.ok) throw new Error("Failed to fetch attempts");
+      return res.json();
+    },
+    enabled: !!quizId,
+  });
+}
+
+export function useGradeShortAnswer(quizId: string) {
+  return useMutation({
+    mutationFn: async ({ attemptId, questionIndex, marksAwarded }: { attemptId: string; questionIndex: number; marksAwarded: number }) => {
+      const res = await apiRequest('PATCH', `/api/teacher/quizzes/${quizId}/attempts/${attemptId}/grade-short`, { questionIndex, marksAwarded });
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/teacher/quizzes', quizId, 'attempts'] }),
+  });
 }

@@ -24,9 +24,9 @@ export default function TeacherAssignmentsPage() {
   const [filterClass, setFilterClass] = useState("all");
 
   const { data: assignments = [], isLoading } = useQuery<any[]>({
-    queryKey: ['/api/teacher-assignments'],
+    queryKey: ['/api/curriculum/teacher-assignments'],
     queryFn: async () => {
-      const res = await fetch('/api/teacher-assignments', { headers: { Authorization: `Bearer ${localStorage.getItem("emblazers_token")}` } });
+      const res = await fetch('/api/curriculum/teacher-assignments', { headers: { Authorization: `Bearer ${localStorage.getItem("emblazers_token")}` } });
       if (!res.ok) throw new Error("Failed");
       return res.json();
     }
@@ -34,17 +34,17 @@ export default function TeacherAssignmentsPage() {
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await apiRequest('POST', '/api/teacher-assignments', data);
+      const res = await apiRequest('POST', '/api/curriculum/teacher-assignments', data);
       return res.json();
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/teacher-assignments'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/curriculum/teacher-assignments'] }),
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest('DELETE', `/api/teacher-assignments/${id}`);
+      await apiRequest('DELETE', `/api/curriculum/teacher-assignments/${id}`);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/teacher-assignments'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/curriculum/teacher-assignments'] }),
   });
 
   const [form, setForm] = useState({ staffId: "", className: "", section: "", subject: "" });
