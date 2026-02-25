@@ -1298,9 +1298,12 @@ export async function registerRoutes(
 
   app.post("/api/teacher/content", asyncHandler(async (req, res) => {
     const TeacherContentModel = (await import("./models/TeacherContent")).default;
+    const StaffModel = (await import("./models/Staff")).default;
     const staffId = (req as any).user?.staffId;
     if (!staffId) return res.status(401).json({ error: "Not authenticated as teacher" });
-    const doc = await TeacherContentModel.create({ ...req.body, staffId });
+    const staff = await StaffModel.findById(staffId).lean();
+    const teacherName = req.body.teacherName || staff?.name || "Teacher";
+    const doc = await TeacherContentModel.create({ ...req.body, staffId, teacherName });
     res.status(201).json({ id: doc._id.toString(), ...doc.toObject(), _id: undefined, __v: undefined });
   }));
 
@@ -1331,9 +1334,16 @@ export async function registerRoutes(
 
   app.post("/api/teacher/quizzes", asyncHandler(async (req, res) => {
     const TeacherQuizModel = (await import("./models/TeacherQuiz")).default;
+    const StaffModel = (await import("./models/Staff")).default;
     const staffId = (req as any).user?.staffId;
     if (!staffId) return res.status(401).json({ error: "Not authenticated as teacher" });
-    const doc = await TeacherQuizModel.create({ ...req.body, staffId });
+    const staff = await StaffModel.findById(staffId).lean();
+    const teacherName = req.body.teacherName || staff?.name || "Teacher";
+    const questions = (req.body.questions || []).map((q: any) => ({
+      ...q,
+      questionType: q.questionType === "true_false" ? "truefalse" : q.questionType,
+    }));
+    const doc = await TeacherQuizModel.create({ ...req.body, staffId, teacherName, questions });
     res.status(201).json({ id: doc._id.toString(), ...doc.toObject(), _id: undefined, __v: undefined });
   }));
 
