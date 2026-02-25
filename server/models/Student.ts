@@ -19,6 +19,7 @@ export interface IStudent extends Document {
   status: "Active" | "Inactive" | "Alumni" | "Left";
   notes?: string;
   photo?: string;
+  bform?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -43,6 +44,7 @@ const StudentSchema = new Schema<IStudent>(
     status: { type: String, enum: ["Active", "Inactive", "Alumni", "Left"], default: "Active" },
     notes: { type: String },
     photo: { type: String },
+    bform: { type: String },
   },
   { timestamps: true }
 );

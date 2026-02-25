@@ -176,7 +176,7 @@ export const accountSchema = z.object({
   id: z.string(),
   code: z.string(),
   name: z.string(),
-  type: z.enum(["Assets", "Liabilities", "Income", "Expense"]),
+  type: z.enum(["Asset", "Liability", "Equity", "Income", "Expense"]),
   balance: z.number(),
 });
 

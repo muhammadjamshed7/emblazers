@@ -2,256 +2,57 @@
 
 ## Overview
 
-Emblazers is a comprehensive school management system designed to handle 13 administrative modules across student management, HR, finance, academics, and facilities. The application follows a modular architecture where each department (Students, HR, Fees, Payroll, Finance, Attendance, Timetable, DateSheet, Curriculum, POS, Library, Transport, Hostel) operates as an independent module with its own authentication, dashboard, and feature set.
-
-The system is built as a full-stack TypeScript application using React for the frontend and Express for the backend, with a focus on creating a professional, information-dense admin interface suitable for school administrators.
+Emblazers is a comprehensive school management system designed to manage 13 administrative modules across student management, HR, finance, academics, and facilities. Each department (Students, HR, Fees, Payroll, Finance, Attendance, Timetable, DateSheet, Curriculum, POS, Library, Transport, Hostel) operates as an independent module with its own authentication, dashboard, and feature set. The system aims to provide a professional, information-dense admin interface for school administrators.
 
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
 
-## Deployment
-
-- **Status:** Public (Production)
-- **Domain:** https://emblazers.replit.app
-- **Deployment Target:** Autoscale
-- **Build:** `npm run build` (Vite for client, esbuild for server)
-- **Run:** `node dist/index.cjs`
-- **Access:** Public, module-based authentication required ({module}@emblazers.com / 12345678 default credentials)
-
-## Recent Changes (February 2026)
-
-### Curriculum Module - Quiz/Exam Feature (Full-Stack)
-- Complete quiz system integrated into Curriculum module with question bank, quiz builder, and auto-grading
-- Three Mongoose models: Question (MCQ/TrueFalse/ShortAnswer with difficulty/class/subject), Quiz (references questions with custom marks, Draft/Published/Closed status), QuizAttempt (student answers with auto-calculated scores)
-- Server-side auto-grading: MCQ and TrueFalse questions graded automatically on submission; ShortAnswer flagged for manual teacher review
-- Frontend pages: Quizzes (/curriculum/quizzes) with Question Bank tab + Quiz Manager tab, Quiz Results (/curriculum/quiz-results) with analytics, attempt detail view, and manual grading
-- Dashboard updated with quiz statistics (published quizzes, average quiz score, recent quiz attempts)
-- Navigation updated with Quizzes and Quiz Results sidebar items
-- Quiz routes (/api/questions, /api/quizzes, /api/quiz-attempts) restricted to curriculum module via module-auth middleware
-- React Query hooks in useQuizData() for all CRUD operations
-
-### Finance Module - Double-Entry Accounting System
-- Implemented complete double-entry accounting with balanced debit/credit enforcement
-- FinanceVoucher model rebuilt with entries[] array (each entry: accountId, accountName, debit, credit, description)
-- Voucher workflow: Draft -> Posted (creates ledger entries) -> Cancelled (creates reversal voucher)
-- Posted vouchers cannot be edited or deleted; cancellation creates an auto-posted reversal voucher
-- LedgerEntry records created on voucher posting with referenceType="Voucher"
-- Dashboard aggregates totals from ledger entries (totalAssets, totalLiabilities, totalIncome, totalExpenses)
-- Trial Balance, Income Statement, and Balance Sheet reports from ledger data
-- 17 default Chart of Accounts seeded on startup (Asset: 1001-1002, Liability: 2001, Equity: 3001, Income: 4001-4004, Expense: 5001-5009)
-- Expense-to-voucher integration: Paid expenses auto-create Payment vouchers mapped to correct expense/payment accounts
-- ID generation fixed across FinanceVoucher, Vendor, and Expense models using findOne().sort() pattern
-
-### Production Deployment & Bug Fixes
-- App deployed publicly at https://emblazers.replit.app
-- Fixed duplicate key errors in attendance records by switching MongoDB indexes from sparse to partialFilterExpression
-- Fixed staff/student ID generation to use highest existing ID instead of document count (prevents collisions after deletions)
-- Fixed notification 401 errors by adding auth headers to fetch requests
-
-### Attendance Module Rebuilt
-- Attendance module fully rebuilt from scratch with complete CRUD operations
-- System now operates with 13 modules: Student, HR, Fee, Payroll, Finance, Attendance, Timetable, DateSheet, Curriculum, POS, Library, Transport, Hostel
-- Mongoose model with unique compound indexes (studentId+date, staffId+date) using partialFilterExpression for UPSERT behavior
-- Supports both STUDENT and STAFF attendance with foreign key references
-- Status options: PRESENT, ABSENT, LEAVE
-- Backend: API routes for CRUD, bulk upsert, daily summary, and date-range reporting
-- Frontend pages: Dashboard (daily summary), Mark Students (class/section filter), Mark Staff, Records (editable inline), Reports (date range)
-- Module-auth middleware updated with attendance routes and cross-module access to students/staff data
-- Module credentials, seed data, and ModuleUser model updated
-
-## Previous Changes (January 2026)
-
-### Module CRUD Fixes
-The following modules have been updated with working dialog-based CRUD operations:
-
-**POS Module:**
-- `pos/items.tsx` - Full add/edit items with dialog forms
-- `pos/new.tsx` - Complete cart management and sale completion
-- `POSItem.ts` model aligned to use `itemCode` field (not `itemId`)
-
-**Hostel Module:**
-- `hostel/rooms.tsx` - Full add/edit rooms with dialog forms
-- `hostel/residents.tsx` - Full add/edit residents with proper schema fields
-- `Room.ts` model aligned with schema (hostelName, roomNumber, bedCount, occupiedBeds, status)
-
-**Curriculum Module:**
-- `curriculum/exams.tsx` - Full add/edit exams with dialog forms
-- Added `updateExam` function and `terms` export to curriculum-data.ts
-
-**DateSheet Module:**
-- `datesheet/create.tsx` - Complete form with dynamic subject entries using correct schema fields (examName, entries)
-
-### Schema Alignment Notes
-- All MongoDB models have been aligned with Zod schemas in `shared/schema.ts`
-- CRUD operations use async/await with try-catch error handling
-- Dialog forms close and show success toast on successful save
-
 ## System Architecture
 
 ### Frontend Architecture
-
-**Framework & Build System:**
-- React 18 with TypeScript for type safety
-- Vite as the build tool and development server with Hot Module Replacement (HMR)
-- Wouter for lightweight client-side routing
-- React Query (TanStack Query) for server state management with disabled automatic refetching
-
-**UI Component System:**
-- Radix UI primitives for accessible, unstyled components
-- shadcn/ui component library (New York style variant) for consistent design
-- Tailwind CSS for utility-first styling with custom design tokens
-- Class Variance Authority (CVA) for component variant management
-
-**Design System:**
-- Professional admin dashboard aesthetic inspired by Linear, Notion, and Vercel
-- Consistent spacing scale using Tailwind units (2, 4, 6, 8, 12, 16)
-- Typography using Inter (UI text) and JetBrains Mono (codes/numbers)
-- Custom color system with HSL values for light/dark theme support
-- Fixed sidebar width (240px/16rem) with collapsible mobile variant
-
-**State Management:**
-- Local authentication context using React Context API
-- Session data stored in localStorage
-- Theme preferences managed via ThemeProvider context
-- No global state library - relies on React Query for server state
-
-**Module Structure:**
-- Each module is self-contained under its own route namespace (e.g., `/student`, `/hr`, `/fee`)
-- Shared layout components: `ModuleLayout` (authenticated pages) and `ModuleLogin` (login pages)
-- Reusable components: `DataTable`, `StatsCard`, `RecentTable`, `PageHeader`
-- Module-specific navigation configured via `module-config.ts`
+The frontend is built with React 18 and TypeScript, utilizing Vite for development and bundling. Wouter handles client-side routing, and React Query manages server state. UI components are built using Radix UI primitives and shadcn/ui (New York style) with Tailwind CSS for styling. The design system emphasizes a professional admin dashboard aesthetic with consistent spacing, typography (Inter, JetBrains Mono), and a custom HSL-based color system supporting light/dark themes. Each module is self-contained with its own route namespace, using shared layout and reusable components. Authentication is managed via React Context API, with session data and theme preferences stored locally.
 
 ### Backend Architecture
-
-**Server Framework:**
-- Express.js running on Node.js
-- TypeScript for type safety across the stack
-- HTTP server (no WebSocket implementation currently)
-- Static file serving for the built React application
-
-**API Design:**
-- RESTful API endpoints under `/api` prefix
-- JWT-based authentication via POST `/api/auth/login` with 2-hour token expiry
-- Module-specific credentials: {module}@emblazers.com / 12345678
-- Module-based routing with CRUD operations for each entity type
-- JSON request/response format
-- Request logging middleware tracking method, path, status, and duration
-
-**Security Middleware:**
-- `moduleAuthMiddleware` - Global middleware that:
-  - Validates JWT tokens on all /api routes (except /api/health, /api/auth/login)
-  - Enforces module isolation via route-to-module mapping
-  - Fails closed (denies unmapped routes by default)
-  - Returns 401 for missing/invalid tokens, 403 for unauthorized module access
-
-**Data Layer:**
-- MongoDB Atlas as primary database (connected via MONGO_URI secret)
-- Mongoose ODM for data modeling and validation
-- MongoStorage class implements IStorage interface
-- Schema definitions using Zod for API validation
-- All entity types defined in `shared/schema.ts` with insert/select type separation
-
-**Development vs Production:**
-- Development: Vite middleware integrated into Express for HMR
-- Production: Pre-built static files served from `dist/public`
-- Environment-specific behavior controlled via `NODE_ENV`
+The backend is an Express.js application built with Node.js and TypeScript, exposing RESTful API endpoints under the `/api` prefix. JWT-based authentication secures the API, with module-specific credentials and a 2-hour token expiry. A global `moduleAuthMiddleware` enforces module isolation, validating JWT tokens and restricting access based on the user's module, operating in a fail-closed manner. MongoDB Atlas is the primary database, accessed via Mongoose ODM, with Zod used for API validation and schema definitions. The system distinguishes between development (Vite middleware integration) and production (serving pre-built static files) environments.
 
 ### Data Model
-
-**Core Entities:**
-- **Students:** ID, personal info, family contacts, class/section, admission status
-- **Staff:** ID, personal info, designation, department, employment details
-- **Fee Vouchers:** Student-linked, monthly/period-based, itemized fee heads
-- **Payroll:** Staff-linked, monthly salary records with allowances/deductions
-- **Finance:** Chart of accounts, vouchers (receipts/payments), ledgers
-- **Attendance:** Records for both students and staff, date-based tracking
-- **Timetable:** Class schedules, period allocations, teacher assignments
-- **Library:** Books, members, issue/return tracking
-- **Transport:** Routes, vehicles, drivers, student assignments
-- **Hostel:** Rooms, residents, hostel-specific fees
-
-**Cross-Module References:**
-- Student IDs referenced by Fees, Attendance, Exams, Library, Transport, Hostel
-- Staff IDs referenced by Payroll, Attendance, HR, Exams (invigilators)
-- Class/Section used across Students, Fees, Attendance, Timetable, Exams
+Core entities include Students, Staff, Fee Vouchers, Payroll, Finance, Attendance, Timetable, Library, Transport, and Hostel. Cross-module references are established, such as Student IDs being referenced by Fees, Attendance, and other modules, and Staff IDs by Payroll and HR.
 
 ### Authentication & Authorization
-
-**JWT-Based Authentication System:**
-- Module-specific credentials: {module}@emblazers.com / 12345678 for all 13 modules
-- JWT tokens with 2-hour expiry containing userId, email, role, and module
-- Token stored client-side in localStorage as `emblazers_token`
-- Session stored client-side in localStorage as `emblazers_session`
-- Token validated server-side on every protected API request
-
-**Module Isolation:**
-- Each module has strict route-to-module mapping in `moduleAuthMiddleware`
-- Users can only access API routes assigned to their logged-in module
-- Cross-module access returns 403 Forbidden
-- Unmapped routes are denied by default (fail-closed security)
-
-**Password Management:**
-- Module users can change passwords via sidebar "Change Password" button
-- Passwords are hashed using bcrypt (10 salt rounds) before storage
-- ModuleUser collection stores custom passwords in MongoDB
-- Login checks database password first, falls back to default if not set
-- POST /api/auth/change-password endpoint validates current password before updating
-
-**Access Control:**
-- Module-level access via `AuthProvider` context
-- `isAuthenticated(module)` checks current session against required module
-- Automatic logout on 401 responses via `forceLogout` function
-- Logout clears localStorage session and token
+The system uses JWT-based authentication with module-specific credentials ({module}@emblazers.com / 12345678). JWT tokens, containing user and module information, expire in 2 hours and are stored client-side. The `moduleAuthMiddleware` enforces strict module isolation, ensuring users only access API routes assigned to their logged-in module, with unmapped routes denied by default. Passwords are hashed using bcrypt and stored in the ModuleUser collection, allowing users to change their passwords.
 
 ### Build & Deployment
-
-**Build Process:**
-- Custom build script (`script/build.ts`) using esbuild for server and Vite for client
-- Server bundled with selected dependencies (allowlist approach) to reduce cold start time
-- Client assets output to `dist/public`
-- Server bundled to `dist/index.cjs`
-
-**Development Workflow:**
-- `npm run dev`: Runs Express server with Vite middleware
-- `npm run build`: Builds both client and server for production
-- `npm start`: Runs production server from bundled files
-- `npm run check`: TypeScript type checking
-- `npm run db:push`: Drizzle schema push (currently not used)
+A custom build script uses esbuild for the server and Vite for the client, bundling the server with selected dependencies to optimize cold start times. Client assets are output to `dist/public`, and the server to `dist/index.cjs`.
 
 ## External Dependencies
 
 ### UI & Styling
-- **Radix UI:** Comprehensive primitive component library (@radix-ui/react-*)
-- **Tailwind CSS:** Utility-first CSS framework with PostCSS
-- **shadcn/ui:** Pre-built component patterns
-- **Lucide React:** Icon library
-- **class-variance-authority:** Component variant management
-- **clsx + tailwind-merge:** Class name utilities
+- **Radix UI:** Primitive component library.
+- **Tailwind CSS:** Utility-first CSS framework.
+- **shadcn/ui:** Pre-built component patterns.
+- **Lucide React:** Icon library.
+- **class-variance-authority:** Component variant management.
+- **clsx + tailwind-merge:** Class name utilities.
 
 ### Data & Validation
-- **Zod:** Runtime type validation and schema definition
-- **Drizzle ORM:** SQL query builder and schema management (PostgreSQL dialect)
-- **drizzle-zod:** Zod schema generation from Drizzle schemas
-- **date-fns:** Date manipulation and formatting
+- **Zod:** Runtime type validation and schema definition.
+- **date-fns:** Date manipulation and formatting.
 
 ### State & Async
-- **TanStack React Query:** Server state management and caching
-- **React Hook Form:** Form state management
-- **@hookform/resolvers:** Validation resolver for Zod integration
+- **TanStack React Query:** Server state management and caching.
+- **React Hook Form:** Form state management.
+- **@hookform/resolvers:** Validation resolver for Zod integration.
 
 ### Server
-- **Express:** Web application framework
-- **connect-pg-simple:** PostgreSQL session store (configured but unused)
-- **nanoid:** Unique ID generation
+- **Express:** Web application framework.
+- **nanoid:** Unique ID generation.
 
 ### Development Tools
-- **Vite:** Frontend build tool and dev server
-- **tsx:** TypeScript execution for Node.js
-- **esbuild:** Fast JavaScript bundler for production server
-- **Replit plugins:** Development enhancements for Replit environment
+- **Vite:** Frontend build tool and dev server.
+- **tsx:** TypeScript execution for Node.js.
+- **esbuild:** Fast JavaScript bundler.
 
 ### Database
-- **MongoDB Atlas:** Primary database for all entity storage (via MONGO_URI secret)
-- **Mongoose:** ODM for MongoDB with schema validation
-- **PostgreSQL:** Available but not currently used (DATABASE_URL configured)
+- **MongoDB Atlas:** Primary database.
+- **Mongoose:** ODM for MongoDB.

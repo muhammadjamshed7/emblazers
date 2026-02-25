@@ -440,9 +440,9 @@ export class MemStorage implements IStorage {
     payrollData.forEach(p => this.payrolls.set(p.id, p));
 
     const accountData: Account[] = [
-      { id: "1", code: "1001", name: "Cash in Hand", type: "Assets", balance: 150000 },
-      { id: "2", code: "1002", name: "Bank Account", type: "Assets", balance: 2500000 },
-      { id: "3", code: "2001", name: "Accounts Payable", type: "Liabilities", balance: 350000 },
+      { id: "1", code: "1001", name: "Cash in Hand", type: "Asset", balance: 150000 },
+      { id: "2", code: "1002", name: "Bank Account", type: "Asset", balance: 2500000 },
+      { id: "3", code: "2001", name: "Accounts Payable", type: "Liability", balance: 350000 },
       { id: "4", code: "3001", name: "Tuition Fee Income", type: "Income", balance: 1500000 },
       { id: "5", code: "4001", name: "Salary Expense", type: "Expense", balance: 800000 },
     ];

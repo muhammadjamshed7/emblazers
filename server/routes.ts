@@ -1283,51 +1283,42 @@ export async function registerRoutes(
     res.json({ success: true });
   }));
 
-  // DEPRECATED: Members functionality removed - use Student/Staff search instead
-  // app.get("/api/library-members", async (_req, res) => {
-  //   const members = await storage.getLibraryMembers();
-  //   res.json(members);
-  // });
+  app.get("/api/library-members", asyncHandler(async (_req, res) => {
+    const members = await storage.getLibraryMembers();
+    res.json(members);
+  }));
 
-  // app.get("/api/library-members/:id", async (req, res) => {
-  //   const member = await storage.getLibraryMember(req.params.id);
-  //   if (!member) return res.status(404).json({ error: "Not found" });
-  //   res.json(member);
-  // });
+  app.get("/api/library-members/:id", asyncHandler(async (req, res) => {
+    const member = await storage.getLibraryMember(req.params.id);
+    if (!member) return res.status(404).json({ error: "Not found" });
+    res.json(member);
+  }));
 
-  // app.post("/api/library-members", async (req, res) => {
-  //   const parsed = insertLibraryMemberSchema.safeParse(req.body);
-  //   if (!parsed.success) return res.status(400).json({ error: parsed.error });
-  //   const member = await storage.createLibraryMember(parsed.data);
-  //   res.status(201).json(member);
-  // });
+  app.post("/api/library-members", asyncHandler(async (req, res) => {
+    const parsed = insertLibraryMemberSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error });
+    const member = await storage.createLibraryMember(parsed.data);
+    res.status(201).json(member);
+  }));
 
-  app.patch("/api/library-members/:id", async (req, res) => {
-    try {
-      const { id, ...updates } = req.body;
-      const parsed = insertLibraryMemberSchema.partial().safeParse(updates);
-      if (!parsed.success) return res.status(400).json({ error: parsed.error });
-      const member = await storage.updateLibraryMember(req.params.id, parsed.data);
-      if (!member) return res.status(404).json({ error: "Not found" });
-      res.json(member);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+  app.patch("/api/library-members/:id", asyncHandler(async (req, res) => {
+    const { id, ...updates } = req.body;
+    const parsed = insertLibraryMemberSchema.partial().safeParse(updates);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error });
+    const member = await storage.updateLibraryMember(req.params.id, parsed.data);
+    if (!member) return res.status(404).json({ error: "Not found" });
+    res.json(member);
+  }));
+
+  app.delete("/api/library-members/:id", asyncHandler(async (req, res) => {
+    const validation = await checkLibraryMemberReferences(req.params.id);
+    if (!validation.canDelete) {
+      return res.status(409).json({ error: validation.errorMessage, references: validation.references });
     }
-  });
-
-  app.delete("/api/library-members/:id", async (req, res) => {
-    try {
-      const validation = await checkLibraryMemberReferences(req.params.id);
-      if (!validation.canDelete) {
-        return res.status(409).json({ error: validation.errorMessage, references: validation.references });
-      }
-      const deleted = await storage.deleteLibraryMember(req.params.id);
-      if (!deleted) return res.status(404).json({ error: "Not found" });
-      res.json({ success: true });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
+    const deleted = await storage.deleteLibraryMember(req.params.id);
+    if (!deleted) return res.status(404).json({ error: "Not found" });
+    res.json({ success: true });
+  }));
 
   app.get("/api/book-issues", asyncHandler(async (_req, res) => {
     const issues = await storage.getBookIssues();
@@ -1818,7 +1809,7 @@ export async function registerRoutes(
   // ============== BULK OPERATION ENDPOINTS ==============
 
   // Bulk student admission
-  app.post("/api/bulk/students", async (req, res) => {
+  app.post("/api/bulk/students", asyncHandler(async (req, res) => {
     const { students } = req.body;
     if (!Array.isArray(students)) {
       return res.status(400).json({ success: 0, failed: 0, errors: [{ row: 0, message: "Students array required" }] });
@@ -1866,10 +1857,9 @@ export async function registerRoutes(
     }
 
     res.json(results);
-  });
+  }));
 
-  // Bulk fee voucher generation
-  app.post("/api/bulk/fee-vouchers", async (req, res) => {
+  app.post("/api/bulk/fee-vouchers", asyncHandler(async (req, res) => {
     const { vouchers } = req.body;
     if (!Array.isArray(vouchers)) {
       return res.status(400).json({ success: 0, failed: 0, errors: [{ row: 0, message: "Vouchers array required" }] });
@@ -1922,11 +1912,10 @@ export async function registerRoutes(
     }
 
     res.json(results);
-  });
+  }));
 
 
-  // Bulk result entry
-  app.post("/api/bulk/results", async (req, res) => {
+  app.post("/api/bulk/results", asyncHandler(async (req, res) => {
     const { results: resultData, examId } = req.body;
     if (!Array.isArray(resultData) || !examId) {
       return res.status(400).json({ success: 0, failed: 0, errors: [{ row: 0, message: "Results array and examId required" }] });
@@ -1963,7 +1952,7 @@ export async function registerRoutes(
     }
 
     res.json(results);
-  });
+  }));
 
   // ============== FEE STRUCTURE ENDPOINTS ==============
   app.get("/api/fee-structures", asyncHandler(async (_req, res) => {
@@ -2368,60 +2357,6 @@ export async function registerRoutes(
     const success = await storage.deleteJournalEntry(req.params.id);
     if (!success) return res.status(404).json({ error: "Journal entry not found" });
     res.json({ success: true });
-  }));
-
-  // ============== POS MODULE ==============
-  app.get("/api/pos-items", asyncHandler(async (_req, res) => {
-    const items = await storage.getPosItems();
-    res.json(items);
-  }));
-
-  app.get("/api/pos-items/:id", asyncHandler(async (req, res) => {
-    const item = await storage.getPosItem(req.params.id);
-    if (!item) return res.status(404).json({ error: "Item not found" });
-    res.json(item);
-  }));
-
-  app.post("/api/pos-items", asyncHandler(async (req, res) => {
-    const parsed = insertPosItemSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: parsed.error });
-    const item = await storage.createPosItem(parsed.data);
-    res.status(201).json(item);
-  }));
-
-  app.patch("/api/pos-items/:id", asyncHandler(async (req, res) => {
-    const item = await storage.updatePosItem(req.params.id, req.body);
-    if (!item) return res.status(404).json({ error: "Item not found" });
-    res.json(item);
-  }));
-
-  app.delete("/api/pos-items/:id", asyncHandler(async (req, res) => {
-    const success = await storage.deletePosItem(req.params.id);
-    if (!success) return res.status(404).json({ error: "Item not found" });
-    res.json({ success: true });
-  }));
-
-  app.get("/api/sales", asyncHandler(async (_req, res) => {
-    const sales = await storage.getSales();
-    res.json(sales);
-  }));
-
-  app.post("/api/sales", asyncHandler(async (req, res) => {
-    const parsed = insertSaleSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: parsed.error });
-
-    // Deduct stock
-    for (const item of parsed.data.items) {
-      const product = await storage.getPosItem(item.itemId);
-      if (product) {
-        await storage.updatePosItem(product.id, {
-          stock: Math.max(0, product.stock - item.quantity)
-        });
-      }
-    }
-
-    const sale = await storage.createSale(parsed.data);
-    res.status(201).json(sale);
   }));
 
   // WebSocket server setup for real-time notifications
