@@ -33,3 +33,8 @@ export { Counter } from "./Counter";
 export { default as Question } from "./Question";
 export { default as Quiz } from "./Quiz";
 export { default as QuizAttempt } from "./QuizAttempt";
+export { default as TeacherAssignment } from "./TeacherAssignment";
+export { default as TeacherContent } from "./TeacherContent";
+export { default as TeacherQuiz } from "./TeacherQuiz";
+export { default as StudentQuizAttempt } from "./StudentQuizAttempt";
+export { default as StudentPortalAccount } from "./StudentPortalAccount";

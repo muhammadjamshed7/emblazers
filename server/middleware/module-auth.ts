@@ -7,6 +7,10 @@ interface AuthPayload {
   email: string;
   role: string;
   module: ModuleType;
+  staffId?: string;
+  studentId?: string;
+  className?: string;
+  section?: string;
 }
 
 const allModules: ModuleType[] = ["student", "hr", "fee", "payroll", "finance", "attendance", "timetable", "datesheet", "curriculum", "pos", "library", "transport", "hostel"];
@@ -65,6 +69,13 @@ const routeToModulesMap: Record<string, ModuleType[]> = {
   "/api/journal-entries": ["finance"],
   "/api/finance/dashboard": ["finance"],
   "/api/finance/reports": ["finance"],
+  "/api/teacher-assignments": ["curriculum"],
+  "/api/teacher-content": ["curriculum"],
+  "/api/teacher-quizzes": ["curriculum"],
+  "/api/student-quiz-attempts": ["curriculum"],
+  "/api/student-portal-accounts": ["curriculum"],
+  "/api/curriculum/student-accounts": ["curriculum"],
+  "/api/curriculum/student-change-password": ["curriculum"],
 };
 
 const publicRoutes = [
@@ -72,32 +83,33 @@ const publicRoutes = [
   "/api/auth/login",
   "/api/public/vacancies",
   "/api/public/applications",
+  "/api/curriculum/teacher-login",
+  "/api/curriculum/student-login",
 ];
 
 function getBaseRoute(path: string): string {
-  const parts = path.split("/").filter(p => p); // Remove empty parts
+  const parts = path.split("/").filter(p => p);
 
-  // Handle bulk routes: /api/bulk/students -> /api/bulk/students
   if (parts[1] === "bulk") {
     return "/" + parts.slice(0, 3).join("/");
   }
 
-  // Handle library subroutes: /api/library/statistics -> /api/library/statistics
   if (parts[1] === "library" && parts.length > 2) {
     return "/" + parts.slice(0, 3).join("/");
   }
 
-  // Handle attendance subroutes: /api/attendance/summary -> /api/attendance/summary
   if (parts[1] === "attendance" && parts.length > 2) {
     return "/" + parts.slice(0, 3).join("/");
   }
 
-  // Handle finance subroutes: /api/finance/dashboard -> /api/finance/dashboard, /api/finance/reports/trial-balance -> /api/finance/reports
   if (parts[1] === "finance" && parts.length > 2) {
     return "/" + parts.slice(0, 3).join("/");
   }
 
-  // Default: /api/books -> /api/books
+  if (parts[1] === "curriculum" && parts.length > 2) {
+    return "/" + parts.slice(0, 3).join("/");
+  }
+
   return "/" + parts.slice(0, 2).join("/");
 }
 

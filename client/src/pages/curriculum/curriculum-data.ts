@@ -19,6 +19,8 @@ export const curriculumNavItems = [
   { label: "Result Reports", path: "/curriculum/reports", icon: FileText },
   { label: "Quizzes", path: "/curriculum/quizzes", icon: ClipboardList },
   { label: "Quiz Results", path: "/curriculum/quiz-results", icon: BarChart3 },
+  { label: "Teacher Assignments", path: "/curriculum/teacher-assignments", icon: BookOpen },
+  { label: "Student Accounts", path: "/curriculum/student-accounts", icon: GraduationCap },
 ];
 
 export function useCurriculumData() {

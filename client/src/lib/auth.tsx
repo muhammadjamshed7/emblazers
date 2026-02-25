@@ -14,6 +14,8 @@ interface AuthContextType {
   session: AuthSession | null;
   token: string | null;
   login: (module: ModuleType, email: string, password: string) => Promise<boolean>;
+  loginTeacher: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  loginStudent: (studentId: string, password: string) => Promise<{ success: boolean; error?: string; isFirstLogin?: boolean }>;
   logout: () => void;
   isAuthenticated: (module: ModuleType) => boolean;
   hasPermission: (action: PermissionAction) => boolean;
@@ -94,6 +96,74 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const loginTeacher = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const response = await fetch("/api/curriculum/teacher-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) return { success: false, error: data.error || "Login failed" };
+
+      if (data.success && data.token) {
+        const newSession: AuthSession = {
+          module: "curriculum",
+          email: data.user?.email || email,
+          name: data.user?.name || "Teacher",
+          role: "teacher",
+          loggedIn: true,
+          loginTime: new Date().toISOString(),
+          staffId: data.user?.staffId,
+        };
+        localStorage.setItem(TOKEN_KEY, data.token);
+        localStorage.setItem(SESSION_KEY, JSON.stringify(newSession));
+        setToken(data.token);
+        setSession(newSession);
+        return { success: true };
+      }
+      return { success: false, error: "Login failed" };
+    } catch (error) {
+      return { success: false, error: "Connection error" };
+    }
+  };
+
+  const loginStudent = async (studentId: string, password: string): Promise<{ success: boolean; error?: string; isFirstLogin?: boolean }> => {
+    try {
+      const response = await fetch("/api/curriculum/student-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentId, password }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) return { success: false, error: data.error || "Login failed" };
+
+      if (data.success && data.token) {
+        const newSession: AuthSession = {
+          module: "curriculum",
+          email: studentId,
+          name: data.user?.name || "Student",
+          role: "student",
+          loggedIn: true,
+          loginTime: new Date().toISOString(),
+          studentId: data.user?.studentId,
+          className: data.user?.className,
+          section: data.user?.section,
+        };
+        localStorage.setItem(TOKEN_KEY, data.token);
+        localStorage.setItem(SESSION_KEY, JSON.stringify(newSession));
+        setToken(data.token);
+        setSession(newSession);
+        return { success: true, isFirstLogin: data.user?.isFirstLogin };
+      }
+      return { success: false, error: "Login failed" };
+    } catch (error) {
+      return { success: false, error: "Connection error" };
+    }
+  };
+
   const logout = () => {
     setToken(null);
     setSession(null);
@@ -123,6 +193,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       token,
       login,
+      loginTeacher,
+      loginStudent,
       logout,
       isAuthenticated,
       hasPermission,

@@ -889,18 +889,128 @@ export const insertHostelFeeSchema = hostelFeeSchema.omit({ id: true });
 export type HostelFee = z.infer<typeof hostelFeeSchema>;
 export type InsertHostelFee = z.infer<typeof insertHostelFeeSchema>;
 
+// ============== TEACHER ASSIGNMENTS ==============
+export const teacherAssignmentSchema = z.object({
+  id: z.string(),
+  staffId: z.string(),
+  staffName: z.string(),
+  staffEmail: z.string(),
+  className: z.string(),
+  section: z.string(),
+  subject: z.string(),
+  assignedBy: z.string(),
+  isActive: z.boolean().default(true),
+  createdAt: z.string().optional(),
+});
+export const insertTeacherAssignmentSchema = teacherAssignmentSchema.omit({ id: true, createdAt: true });
+export type TeacherAssignment = z.infer<typeof teacherAssignmentSchema>;
+export type InsertTeacherAssignment = z.infer<typeof insertTeacherAssignmentSchema>;
+
+// ============== TEACHER CONTENT ==============
+export const teacherContentSchema = z.object({
+  id: z.string(),
+  staffId: z.string(),
+  teacherName: z.string(),
+  className: z.string(),
+  section: z.string(),
+  subject: z.string(),
+  title: z.string(),
+  description: z.string().default(""),
+  contentType: z.enum(["pdf", "image", "note", "link"]),
+  fileData: z.string().default(""),
+  fileName: z.string().default(""),
+  isPublished: z.boolean().default(false),
+  createdAt: z.string().optional(),
+});
+export const insertTeacherContentSchema = teacherContentSchema.omit({ id: true, createdAt: true });
+export type TeacherContent = z.infer<typeof teacherContentSchema>;
+export type InsertTeacherContent = z.infer<typeof insertTeacherContentSchema>;
+
+// ============== TEACHER QUIZZES ==============
+export const teacherQuizQuestionSchema = z.object({
+  questionText: z.string(),
+  questionType: z.enum(["mcq", "truefalse", "short"]),
+  options: z.array(z.string()).default([]),
+  correctAnswer: z.string(),
+  marks: z.number().default(1),
+});
+
+export const teacherQuizSchema = z.object({
+  id: z.string(),
+  staffId: z.string(),
+  teacherName: z.string(),
+  className: z.string(),
+  section: z.string(),
+  subject: z.string(),
+  title: z.string(),
+  instructions: z.string().default(""),
+  timeLimitMinutes: z.number().default(30),
+  startDateTime: z.string(),
+  endDateTime: z.string(),
+  passingMarks: z.number(),
+  totalMarks: z.number(),
+  isPublished: z.boolean().default(false),
+  questions: z.array(teacherQuizQuestionSchema).default([]),
+  createdAt: z.string().optional(),
+});
+export const insertTeacherQuizSchema = teacherQuizSchema.omit({ id: true, createdAt: true });
+export type TeacherQuiz = z.infer<typeof teacherQuizSchema>;
+export type InsertTeacherQuiz = z.infer<typeof insertTeacherQuizSchema>;
+
+// ============== STUDENT QUIZ ATTEMPTS ==============
+export const studentQuizAnswerSchema = z.object({
+  questionIndex: z.number(),
+  givenAnswer: z.string().default(""),
+  isCorrect: z.boolean().default(false),
+  marksAwarded: z.number().default(0),
+});
+
+export const studentQuizAttemptSchema = z.object({
+  id: z.string(),
+  quizId: z.string(),
+  studentId: z.string(),
+  studentName: z.string(),
+  className: z.string(),
+  section: z.string(),
+  answers: z.array(studentQuizAnswerSchema).default([]),
+  totalMarksObtained: z.number().default(0),
+  totalMarks: z.number(),
+  percentage: z.number().default(0),
+  grade: z.string().default("F"),
+  isPassed: z.boolean().default(false),
+  timeTakenMinutes: z.number().default(0),
+  submittedAt: z.string().optional(),
+});
+export const insertStudentQuizAttemptSchema = studentQuizAttemptSchema.omit({ id: true, submittedAt: true });
+export type StudentQuizAttempt = z.infer<typeof studentQuizAttemptSchema>;
+export type InsertStudentQuizAttempt = z.infer<typeof insertStudentQuizAttemptSchema>;
+
+// ============== STUDENT PORTAL ACCOUNTS ==============
+export const studentPortalAccountSchema = z.object({
+  id: z.string(),
+  studentId: z.string(),
+  studentName: z.string(),
+  className: z.string(),
+  section: z.string(),
+  isFirstLogin: z.boolean().default(true),
+  isActive: z.boolean().default(true),
+  lastLogin: z.string().nullable().optional(),
+  createdAt: z.string().optional(),
+});
+export type StudentPortalAccount = z.infer<typeof studentPortalAccountSchema>;
+
 // ============== ROLE-BASED PERMISSIONS ==============
-export const userRoleSchema = z.enum(["admin", "manager", "viewer"]);
+export const userRoleSchema = z.enum(["admin", "manager", "viewer", "teacher", "student"]);
 export type UserRole = z.infer<typeof userRoleSchema>;
 
-// Permission actions
 export const permissionActionSchema = z.enum(["view", "create", "edit", "delete"]);
 export type PermissionAction = z.infer<typeof permissionActionSchema>;
 
-// Define what each role can do
 export const rolePermissions: Record<UserRole, PermissionAction[]> = {
   admin: ["view", "create", "edit", "delete"],
   manager: ["view", "create", "edit"],
+  teacher: ["view", "create", "edit"],
+  student: ["view"],
   viewer: ["view"],
 } as const;
 
@@ -955,6 +1065,10 @@ export const authSessionSchema = z.object({
   role: userRoleSchema,
   loggedIn: z.boolean(),
   loginTime: z.string().optional(),
+  staffId: z.string().optional(),
+  studentId: z.string().optional(),
+  className: z.string().optional(),
+  section: z.string().optional(),
 });
 
 export type AuthSession = z.infer<typeof authSessionSchema>;

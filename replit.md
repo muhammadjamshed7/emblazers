@@ -22,6 +22,14 @@ Core entities include Students, Staff, Fee Vouchers, Payroll, Finance, Attendanc
 ### Authentication & Authorization
 The system uses JWT-based authentication with module-specific credentials ({module}@emblazers.com / 12345678). JWT tokens, containing user and module information, expire in 2 hours and are stored client-side. The `moduleAuthMiddleware` enforces strict module isolation, ensuring users only access API routes assigned to their logged-in module, with unmapped routes denied by default. Passwords are hashed using bcrypt and stored in the ModuleUser collection, allowing users to change their passwords.
 
+### Curriculum Multi-Role System
+The Curriculum module supports 3 user roles with separate login flows:
+- **Admin**: Standard module login (curriculum@emblazers.com / 12345678), full access to curriculum management plus Teacher Assignments and Student Accounts pages
+- **Teacher**: Logs in via staff email + default password "teacher123" at `/api/curriculum/teacher-login`. Must have active TeacherAssignment records. Gets dedicated dashboard, content upload, and quiz creation pages.
+- **Student**: Logs in via Student ID + password at `/api/curriculum/student-login`. Default password is their Student ID (bcrypt hashed). Portal accounts created by admin. Gets dashboard, study material, quizzes (timed), and results pages.
+
+New Mongoose models: TeacherAssignment, TeacherContent, TeacherQuiz, StudentQuizAttempt, StudentPortalAccount. Frontend pages under `/curriculum/teacher-*` and `/curriculum/student-*` with role-specific nav items and ModuleLayout.
+
 ### Build & Deployment
 A custom build script uses esbuild for the server and Vite for the client, bundling the server with selected dependencies to optimize cold start times. Client assets are output to `dist/public`, and the server to `dist/index.cjs`.
 

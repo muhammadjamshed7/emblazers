@@ -1,0 +1,106 @@
+You are working on an existing full-stack school management app called Emblazers.
+Tech Stack:
+
+Frontend: React 18 + TypeScript, Wouter routing, TanStack React Query, shadcn/ui, Tailwind CSS
+Backend: Express.js + Node.js
+Database: MongoDB Atlas with Mongoose
+Auth: JWT tokens in localStorage
+Live URL: https://emblazers.replit.app
+
+Your job: Extend the existing Curriculum module to support three user roles — Admin, Teacher, and Student — each with their own login and dashboard. Do NOT create new home page cards. Do NOT break any existing modules.
+
+ARCHITECTURE DECISION
+The existing Curriculum module login page (/curriculum/login) must be upgraded to show 3 role options:
+[ Admin Login ]   [ Teacher Login ]   [ Student Login ]
+Each button leads to its own login form. After login, users go to their respective dashboards. All three share the same Curriculum module URL namespace (/curriculum/...).
+
+PART 1 — DATABASE: NEW MONGODB COLLECTIONS
+Create these new Mongoose models. Do not modify existing collections.
+Collection 1: teacherAssignments
+js{
+  staffId: String,          // from existing staff collection
+  staffName: String,
+  staffEmail: String,
+  className: String,        // e.g. "Class 5"
+  section: String,          // e.g. "A"
+  subject: String,          // e.g. "Mathematics"
+  assignedBy: String,       // curriculum admin email
+  isActive: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now }
+}
+Collection 2: teacherContent
+js{
+  staffId: String,
+  teacherName: String,
+  className: String,
+  section: String,
+  subject: String,
+  title: String,
+  description: String,
+  contentType: String,      // "pdf" | "image" | "note" | "link"
+  fileData: String,         // base64 encoded file OR URL string
+  fileName: String,
+  isPublished: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now }
+}
+Collection 3: teacherQuizzes
+js{
+  staffId: String,
+  teacherName: String,
+  className: String,
+  section: String,
+  subject: String,
+  title: String,
+  instructions: String,
+  timeLimitMinutes: Number,
+  startDateTime: Date,
+  endDateTime: Date,
+  passingMarks: Number,
+  totalMarks: Number,
+  isPublished: { type: Boolean, default: false },
+  questions: [
+    {
+      questionText: String,
+      questionType: String,   // "mcq" | "truefalse" | "short"
+      options: [String],      // 4 options for MCQ
+      correctAnswer: String,
+      marks: Number
+    }
+  ],
+  createdAt: { type: Date, default: Date.now }
+}
+Collection 4: quizAttempts
+js{
+  quizId: String,
+  studentId: String,          // e.g. C5-A-2026-0007
+  studentName: String,
+  className: String,
+  section: String,
+  answers: [
+    {
+      questionIndex: Number,
+      givenAnswer: String,
+      isCorrect: Boolean,
+      marksAwarded: Number
+    }
+  ],
+  totalMarksObtained: Number,
+  totalMarks: Number,
+  percentage: Number,
+  grade: String,              // A+, A, B, C, D, F
+  isPassed: Boolean,
+  timeTakenMinutes: Number,
+  submittedAt: { type: Date, default: Date.now }
+}
+Collection 5: studentPortalAccounts
+js{
+  studentId: String,          // C5-A-2026-0007 — used as username
+  studentName: String,
+  className: String,
+  section: String,
+  passwordHash: String,       // bcrypt hashed
+  isFirstLogin: { type: Boolean, default: true },
+  isActive: { type: Boolean, default: true },
+  lastLogin: Date,
+  createdAt: { type: Date, default: Date.now }
+}

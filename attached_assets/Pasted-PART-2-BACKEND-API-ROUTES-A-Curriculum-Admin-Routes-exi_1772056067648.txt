@@ -1,0 +1,87 @@
+PART 2 — BACKEND API ROUTES
+A. Curriculum Admin Routes (existing JWT, add new ones)
+GET  /api/curriculum/staff-teachers
+     → Return all staff from existing `staff` collection where designation includes "Teacher"
+
+GET  /api/curriculum/teacher-assignments
+     → Return all teacherAssignments documents
+
+POST /api/curriculum/teacher-assignments
+     Body: { staffId, staffName, staffEmail, className, section, subject }
+     → Create new assignment
+
+DELETE /api/curriculum/teacher-assignments/:id
+     → Delete assignment
+
+GET  /api/curriculum/student-accounts
+     → Return all studentPortalAccounts with isActive status
+
+POST /api/curriculum/student-accounts/create
+     Body: { studentId } OR { className, section } for bulk
+     → Find student(s) in existing `students` collection
+     → Create studentPortalAccount with:
+         passwordHash = bcrypt(student dateOfBirth in DDMMYYYY format)
+         isFirstLogin = true
+     → Return created accounts count
+
+POST /api/curriculum/student-accounts/reset-password/:studentId
+     → Reset password back to DOB-based default
+     → Set isFirstLogin = true again
+
+GET  /api/curriculum/quiz-overview
+     → All quizzes across all teachers with attempt counts
+
+B. Teacher Auth Routes
+POST /api/teacher/login
+     Body: { staffEmail, password }
+     → Check staff collection for staffEmail
+     → Check teacherAssignments — if no assignment found, reject login with message "You have not been assigned any class yet. Contact admin."
+     → Default password = staffId value (e.g. "STF-2024-001")
+     → On success return JWT: { staffId, staffEmail, staffName, role: "teacher" }
+     → Also return their assignments array
+
+POST /api/teacher/change-password
+     Auth: Teacher JWT required
+     Body: { currentPassword, newPassword }
+C. Teacher Portal Routes (All require Teacher JWT)
+GET  /api/teacher/my-assignments
+     → Return teacherAssignments for this staffId
+
+GET  /api/teacher/content
+     → Return teacherContent for this staffId
+
+POST /api/teacher/content
+     Body: { title, description, contentType, className, section, subject, fileData, fileName }
+     → Save to teacherContent collection
+     → fileData: accept base64 string (frontend will convert file to base64 before sending)
+
+PATCH /api/teacher/content/:id/toggle-publish
+     → Flip isPublished true/false
+
+DELETE /api/teacher/content/:id
+     → Delete content item
+
+GET  /api/teacher/quizzes
+     → Return all quizzes for this staffId
+
+POST /api/teacher/quizzes
+     Body: full quiz object with questions array
+     → Save to teacherQuizzes
+
+PUT  /api/teacher/quizzes/:id
+     → Update quiz (only if no attempts yet)
+
+DELETE /api/teacher/quizzes/:id
+     → Delete quiz (only if no attempts yet)
+
+PATCH /api/teacher/quizzes/:id/toggle-publish
+     → Flip isPublished
+
+GET  /api/teacher/quizzes/:id/attempts
+     → Return all quizAttempts for this quizId
+     → Include student names
+
+PATCH /api/teacher/quizzes/:id/attempts/:attemptId/grade-short
+     Body: { questionIndex, marksAwarded }
+     → Manually grade a short answer question
+     → Recalculate total, percentage, grade, isPassed

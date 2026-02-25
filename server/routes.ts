@@ -997,6 +997,378 @@ export async function registerRoutes(
     res.json({ success: true });
   }));
 
+  // ============== CURRICULUM MULTI-ROLE AUTH ==============
+  app.post("/api/curriculum/teacher-login", asyncHandler(async (req, res) => {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required" });
+    }
+
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) return res.status(500).json({ error: "Server configuration error" });
+
+    const TeacherAssignmentModel = (await import("./models/TeacherAssignment")).default;
+    const StaffModel = (await import("./models/Staff")).default;
+
+    const staff = await StaffModel.findOne({ email: { $regex: new RegExp(`^${email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } });
+    if (!staff) return res.status(401).json({ error: "No staff account found with this email" });
+
+    const assignments = await TeacherAssignmentModel.find({ staffId: staff._id.toString(), isActive: true });
+    if (assignments.length === 0) {
+      return res.status(401).json({ error: "No active teaching assignments found for this account" });
+    }
+
+    const defaultPassword = "teacher123";
+    if (password !== defaultPassword) {
+      return res.status(401).json({ error: "Invalid password" });
+    }
+
+    const token = jwt.sign(
+      { userId: staff._id.toString(), email: staff.email, role: "teacher", module: "curriculum", staffId: staff._id.toString() },
+      jwtSecret,
+      { expiresIn: "3d" }
+    );
+
+    return res.json({
+      success: true,
+      token,
+      module: "curriculum",
+      user: { email: staff.email, role: "teacher", name: staff.name, staffId: staff._id.toString() },
+    });
+  }));
+
+  app.post("/api/curriculum/student-login", asyncHandler(async (req, res) => {
+    const { studentId, password } = req.body;
+    if (!studentId || !password) {
+      return res.status(400).json({ error: "Student ID and password are required" });
+    }
+
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) return res.status(500).json({ error: "Server configuration error" });
+
+    const StudentPortalAccountModel = (await import("./models/StudentPortalAccount")).default;
+    const account = await StudentPortalAccountModel.findOne({ studentId, isActive: true });
+    if (!account) return res.status(401).json({ error: "Student portal account not found. Contact admin." });
+
+    const isValid = await bcrypt.compare(password, account.passwordHash);
+    if (!isValid) return res.status(401).json({ error: "Invalid password" });
+
+    account.lastLogin = new Date();
+    await account.save();
+
+    const token = jwt.sign(
+      { userId: account._id.toString(), email: studentId, role: "student", module: "curriculum", studentId: account.studentId, className: account.className, section: account.section },
+      jwtSecret,
+      { expiresIn: "3d" }
+    );
+
+    return res.json({
+      success: true,
+      token,
+      module: "curriculum",
+      user: {
+        email: studentId,
+        role: "student",
+        name: account.studentName,
+        studentId: account.studentId,
+        className: account.className,
+        section: account.section,
+        isFirstLogin: account.isFirstLogin,
+      },
+    });
+  }));
+
+  app.post("/api/curriculum/student-change-password", asyncHandler(async (req, res) => {
+    const { studentId, currentPassword, newPassword } = req.body;
+    if (!studentId || !currentPassword || !newPassword) {
+      return res.status(400).json({ error: "All fields required" });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: "New password must be at least 6 characters" });
+    }
+
+    const StudentPortalAccountModel = (await import("./models/StudentPortalAccount")).default;
+    const account = await StudentPortalAccountModel.findOne({ studentId, isActive: true });
+    if (!account) return res.status(404).json({ error: "Account not found" });
+
+    const isValid = await bcrypt.compare(currentPassword, account.passwordHash);
+    if (!isValid) return res.status(401).json({ error: "Current password is incorrect" });
+
+    account.passwordHash = await bcrypt.hash(newPassword, 10);
+    account.isFirstLogin = false;
+    await account.save();
+
+    return res.json({ success: true, message: "Password changed successfully" });
+  }));
+
+  app.post("/api/curriculum/student-accounts", asyncHandler(async (req, res) => {
+    const { studentIds } = req.body;
+    if (!Array.isArray(studentIds) || studentIds.length === 0) {
+      return res.status(400).json({ error: "Student IDs array required" });
+    }
+
+    const StudentPortalAccountModel = (await import("./models/StudentPortalAccount")).default;
+    const results = { created: 0, skipped: 0, errors: [] as string[] };
+
+    for (const sid of studentIds) {
+      try {
+        const studentData = await storage.getStudents();
+        const student = studentData.find(s => s.studentId === sid || s.id === sid);
+        if (!student) {
+          results.errors.push(`Student ${sid} not found`);
+          results.skipped++;
+          continue;
+        }
+
+        const existing = await StudentPortalAccountModel.findOne({ studentId: student.studentId });
+        if (existing) {
+          results.skipped++;
+          continue;
+        }
+
+        const defaultPassword = student.studentId;
+        const passwordHash = await bcrypt.hash(defaultPassword, 10);
+
+        await StudentPortalAccountModel.create({
+          studentId: student.studentId,
+          studentName: student.name,
+          className: student.class,
+          section: student.section,
+          passwordHash,
+        });
+        results.created++;
+      } catch (err: any) {
+        results.errors.push(`${sid}: ${err.message}`);
+      }
+    }
+
+    res.json(results);
+  }));
+
+  // ============== STUDENT PORTAL ACCOUNTS (Admin view) ==============
+  app.get("/api/student-portal-accounts", asyncHandler(async (_req, res) => {
+    const StudentPortalAccountModel = (await import("./models/StudentPortalAccount")).default;
+    const accounts = await StudentPortalAccountModel.find().sort({ createdAt: -1 }).lean();
+    const mapped = accounts.map((a: any) => ({
+      id: a._id.toString(),
+      studentId: a.studentId,
+      studentName: a.studentName,
+      className: a.className,
+      section: a.section,
+      isFirstLogin: a.isFirstLogin,
+      isActive: a.isActive,
+      lastLogin: a.lastLogin?.toISOString() || null,
+      createdAt: a.createdAt?.toISOString(),
+    }));
+    res.json(mapped);
+  }));
+
+  app.patch("/api/student-portal-accounts/:id", asyncHandler(async (req, res) => {
+    const StudentPortalAccountModel = (await import("./models/StudentPortalAccount")).default;
+    const { isActive } = req.body;
+    const account = await StudentPortalAccountModel.findByIdAndUpdate(req.params.id, { isActive }, { new: true });
+    if (!account) return res.status(404).json({ error: "Account not found" });
+    res.json({ success: true });
+  }));
+
+  app.post("/api/student-portal-accounts/:id/reset-password", asyncHandler(async (req, res) => {
+    const StudentPortalAccountModel = (await import("./models/StudentPortalAccount")).default;
+    const account = await StudentPortalAccountModel.findById(req.params.id);
+    if (!account) return res.status(404).json({ error: "Account not found" });
+
+    const passwordHash = await bcrypt.hash(account.studentId, 10);
+    account.passwordHash = passwordHash;
+    account.isFirstLogin = true;
+    await account.save();
+    res.json({ success: true, message: "Password reset to Student ID" });
+  }));
+
+  // ============== TEACHER ASSIGNMENTS ==============
+  app.get("/api/teacher-assignments", asyncHandler(async (req, res) => {
+    const TeacherAssignmentModel = (await import("./models/TeacherAssignment")).default;
+    const query: any = {};
+    if (req.query.staffId) query.staffId = req.query.staffId;
+    if (req.query.className) query.className = req.query.className;
+    const docs = await TeacherAssignmentModel.find(query).sort({ createdAt: -1 }).lean();
+    const mapped = docs.map((d: any) => ({ id: d._id.toString(), ...d, _id: undefined, __v: undefined, createdAt: d.createdAt?.toISOString() }));
+    res.json(mapped);
+  }));
+
+  app.post("/api/teacher-assignments", asyncHandler(async (req, res) => {
+    const TeacherAssignmentModel = (await import("./models/TeacherAssignment")).default;
+    const { insertTeacherAssignmentSchema } = await import("@shared/schema");
+    const parsed = insertTeacherAssignmentSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error });
+    const doc = await TeacherAssignmentModel.create(parsed.data);
+    res.status(201).json({ id: doc._id.toString(), ...doc.toObject(), _id: undefined, __v: undefined });
+  }));
+
+  app.patch("/api/teacher-assignments/:id", asyncHandler(async (req, res) => {
+    const TeacherAssignmentModel = (await import("./models/TeacherAssignment")).default;
+    const doc = await TeacherAssignmentModel.findByIdAndUpdate(req.params.id, req.body, { new: true }).lean();
+    if (!doc) return res.status(404).json({ error: "Not found" });
+    res.json({ id: (doc as any)._id.toString(), ...doc, _id: undefined, __v: undefined });
+  }));
+
+  app.delete("/api/teacher-assignments/:id", asyncHandler(async (req, res) => {
+    const TeacherAssignmentModel = (await import("./models/TeacherAssignment")).default;
+    const result = await TeacherAssignmentModel.findByIdAndDelete(req.params.id);
+    if (!result) return res.status(404).json({ error: "Not found" });
+    res.json({ success: true });
+  }));
+
+  // ============== TEACHER CONTENT ==============
+  app.get("/api/teacher-content", asyncHandler(async (req, res) => {
+    const TeacherContentModel = (await import("./models/TeacherContent")).default;
+    const query: any = {};
+    if (req.query.staffId) query.staffId = req.query.staffId;
+    if (req.query.className) query.className = req.query.className;
+    if (req.query.section) query.section = req.query.section;
+    if (req.query.subject) query.subject = req.query.subject;
+    if (req.query.isPublished !== undefined) query.isPublished = req.query.isPublished === "true";
+    const docs = await TeacherContentModel.find(query).sort({ createdAt: -1 }).lean();
+    const mapped = docs.map((d: any) => ({ id: d._id.toString(), ...d, _id: undefined, __v: undefined, createdAt: d.createdAt?.toISOString() }));
+    res.json(mapped);
+  }));
+
+  app.post("/api/teacher-content", asyncHandler(async (req, res) => {
+    const TeacherContentModel = (await import("./models/TeacherContent")).default;
+    const { insertTeacherContentSchema } = await import("@shared/schema");
+    const parsed = insertTeacherContentSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error });
+    const doc = await TeacherContentModel.create(parsed.data);
+    res.status(201).json({ id: doc._id.toString(), ...doc.toObject(), _id: undefined, __v: undefined });
+  }));
+
+  app.patch("/api/teacher-content/:id", asyncHandler(async (req, res) => {
+    const TeacherContentModel = (await import("./models/TeacherContent")).default;
+    const doc = await TeacherContentModel.findByIdAndUpdate(req.params.id, req.body, { new: true }).lean();
+    if (!doc) return res.status(404).json({ error: "Not found" });
+    res.json({ id: (doc as any)._id.toString(), ...doc, _id: undefined, __v: undefined });
+  }));
+
+  app.delete("/api/teacher-content/:id", asyncHandler(async (req, res) => {
+    const TeacherContentModel = (await import("./models/TeacherContent")).default;
+    const result = await TeacherContentModel.findByIdAndDelete(req.params.id);
+    if (!result) return res.status(404).json({ error: "Not found" });
+    res.json({ success: true });
+  }));
+
+  // ============== TEACHER QUIZZES ==============
+  app.get("/api/teacher-quizzes", asyncHandler(async (req, res) => {
+    const TeacherQuizModel = (await import("./models/TeacherQuiz")).default;
+    const query: any = {};
+    if (req.query.staffId) query.staffId = req.query.staffId;
+    if (req.query.className) query.className = req.query.className;
+    if (req.query.section) query.section = req.query.section;
+    if (req.query.isPublished !== undefined) query.isPublished = req.query.isPublished === "true";
+    const docs = await TeacherQuizModel.find(query).sort({ createdAt: -1 }).lean();
+    const mapped = docs.map((d: any) => ({ id: d._id.toString(), ...d, _id: undefined, __v: undefined, createdAt: d.createdAt?.toISOString(), startDateTime: d.startDateTime?.toISOString(), endDateTime: d.endDateTime?.toISOString() }));
+    res.json(mapped);
+  }));
+
+  app.get("/api/teacher-quizzes/:id", asyncHandler(async (req, res) => {
+    const TeacherQuizModel = (await import("./models/TeacherQuiz")).default;
+    const doc = await TeacherQuizModel.findById(req.params.id).lean();
+    if (!doc) return res.status(404).json({ error: "Not found" });
+    const d = doc as any;
+    res.json({ id: d._id.toString(), ...d, _id: undefined, __v: undefined, createdAt: d.createdAt?.toISOString(), startDateTime: d.startDateTime?.toISOString(), endDateTime: d.endDateTime?.toISOString() });
+  }));
+
+  app.post("/api/teacher-quizzes", asyncHandler(async (req, res) => {
+    const TeacherQuizModel = (await import("./models/TeacherQuiz")).default;
+    const { insertTeacherQuizSchema } = await import("@shared/schema");
+    const parsed = insertTeacherQuizSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error });
+    const doc = await TeacherQuizModel.create(parsed.data);
+    res.status(201).json({ id: doc._id.toString(), ...doc.toObject(), _id: undefined, __v: undefined });
+  }));
+
+  app.patch("/api/teacher-quizzes/:id", asyncHandler(async (req, res) => {
+    const TeacherQuizModel = (await import("./models/TeacherQuiz")).default;
+    const doc = await TeacherQuizModel.findByIdAndUpdate(req.params.id, req.body, { new: true }).lean();
+    if (!doc) return res.status(404).json({ error: "Not found" });
+    const d = doc as any;
+    res.json({ id: d._id.toString(), ...d, _id: undefined, __v: undefined });
+  }));
+
+  app.delete("/api/teacher-quizzes/:id", asyncHandler(async (req, res) => {
+    const TeacherQuizModel = (await import("./models/TeacherQuiz")).default;
+    const result = await TeacherQuizModel.findByIdAndDelete(req.params.id);
+    if (!result) return res.status(404).json({ error: "Not found" });
+    res.json({ success: true });
+  }));
+
+  // ============== STUDENT QUIZ ATTEMPTS (Teacher Quizzes) ==============
+  app.get("/api/student-quiz-attempts", asyncHandler(async (req, res) => {
+    const StudentQuizAttemptModel = (await import("./models/StudentQuizAttempt")).default;
+    const query: any = {};
+    if (req.query.quizId) query.quizId = req.query.quizId;
+    if (req.query.studentId) query.studentId = req.query.studentId;
+    if (req.query.className) query.className = req.query.className;
+    const docs = await StudentQuizAttemptModel.find(query).sort({ submittedAt: -1 }).lean();
+    const mapped = docs.map((d: any) => ({ id: d._id.toString(), ...d, _id: undefined, __v: undefined, submittedAt: d.submittedAt?.toISOString() }));
+    res.json(mapped);
+  }));
+
+  app.post("/api/student-quiz-attempts", asyncHandler(async (req, res) => {
+    const StudentQuizAttemptModel = (await import("./models/StudentQuizAttempt")).default;
+    const TeacherQuizModel = (await import("./models/TeacherQuiz")).default;
+
+    const { quizId, studentId, studentName, className, section, answers, timeTakenMinutes } = req.body;
+
+    const quiz = await TeacherQuizModel.findById(quizId);
+    if (!quiz) return res.status(404).json({ error: "Quiz not found" });
+
+    const existing = await StudentQuizAttemptModel.findOne({ quizId, studentId });
+    if (existing) return res.status(409).json({ error: "You have already attempted this quiz" });
+
+    const gradedAnswers = (answers || []).map((ans: any, idx: number) => {
+      const question = quiz.questions[ans.questionIndex];
+      if (!question) return { ...ans, isCorrect: false, marksAwarded: 0 };
+
+      if (question.questionType === "short") {
+        return { ...ans, isCorrect: false, marksAwarded: 0 };
+      }
+
+      const isCorrect = ans.givenAnswer?.trim().toLowerCase() === question.correctAnswer?.trim().toLowerCase();
+      return {
+        questionIndex: ans.questionIndex,
+        givenAnswer: ans.givenAnswer || "",
+        isCorrect,
+        marksAwarded: isCorrect ? question.marks : 0,
+      };
+    });
+
+    const totalMarksObtained = gradedAnswers.reduce((sum: number, a: any) => sum + a.marksAwarded, 0);
+    const percentage = quiz.totalMarks > 0 ? Math.round((totalMarksObtained / quiz.totalMarks) * 100) : 0;
+    const isPassed = totalMarksObtained >= quiz.passingMarks;
+
+    let grade = "F";
+    if (percentage >= 90) grade = "A+";
+    else if (percentage >= 80) grade = "A";
+    else if (percentage >= 70) grade = "B";
+    else if (percentage >= 60) grade = "C";
+    else if (percentage >= 50) grade = "D";
+
+    const doc = await StudentQuizAttemptModel.create({
+      quizId,
+      studentId,
+      studentName,
+      className,
+      section,
+      answers: gradedAnswers,
+      totalMarksObtained,
+      totalMarks: quiz.totalMarks,
+      percentage,
+      grade,
+      isPassed,
+      timeTakenMinutes: timeTakenMinutes || 0,
+    });
+
+    res.status(201).json({ id: doc._id.toString(), ...doc.toObject(), _id: undefined, __v: undefined });
+  }));
+
   // ============== QUIZ ROUTES ==============
   app.get("/api/questions", asyncHandler(async (req, res) => {
     const questions = await storage.getQuestions();

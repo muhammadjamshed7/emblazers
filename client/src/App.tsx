@@ -72,6 +72,16 @@ import CurriculumEntry from "@/pages/curriculum/entry";
 import CurriculumReports from "@/pages/curriculum/reports";
 import CurriculumQuizzes from "@/pages/curriculum/quizzes";
 import CurriculumQuizResults from "@/pages/curriculum/quiz-results";
+import CurriculumLogin from "@/pages/curriculum/login";
+import CurriculumTeacherAssignments from "@/pages/curriculum/teacher-assignments";
+import CurriculumStudentAccounts from "@/pages/curriculum/student-accounts";
+import CurriculumTeacherDashboard from "@/pages/curriculum/teacher-dashboard";
+import CurriculumTeacherContent from "@/pages/curriculum/teacher-content";
+import CurriculumTeacherQuizzes from "@/pages/curriculum/teacher-quizzes";
+import CurriculumStudentDashboard from "@/pages/curriculum/student-dashboard";
+import CurriculumStudentContent from "@/pages/curriculum/student-content";
+import CurriculumStudentQuizzes from "@/pages/curriculum/student-quizzes";
+import CurriculumStudentResults from "@/pages/curriculum/student-results";
 
 import PosDashboard from "@/pages/pos/dashboard";
 import PosSales from "@/pages/pos/sales";
@@ -105,6 +115,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
 
+      <Route path="/curriculum/login" component={CurriculumLogin} />
       <Route path="/:module/login" component={ModuleLoginPage} />
       <Route path="/student/dashboard" component={StudentDashboard} />
       <Route path="/student/list" component={StudentList} />
@@ -167,6 +178,15 @@ function Router() {
       <Route path="/curriculum/reports" component={CurriculumReports} />
       <Route path="/curriculum/quizzes" component={CurriculumQuizzes} />
       <Route path="/curriculum/quiz-results" component={CurriculumQuizResults} />
+      <Route path="/curriculum/teacher-assignments" component={CurriculumTeacherAssignments} />
+      <Route path="/curriculum/student-accounts" component={CurriculumStudentAccounts} />
+      <Route path="/curriculum/teacher-dashboard" component={CurriculumTeacherDashboard} />
+      <Route path="/curriculum/teacher-content" component={CurriculumTeacherContent} />
+      <Route path="/curriculum/teacher-quizzes" component={CurriculumTeacherQuizzes} />
+      <Route path="/curriculum/student-dashboard" component={CurriculumStudentDashboard} />
+      <Route path="/curriculum/student-content" component={CurriculumStudentContent} />
+      <Route path="/curriculum/student-quizzes" component={CurriculumStudentQuizzes} />
+      <Route path="/curriculum/student-results" component={CurriculumStudentResults} />
 
       <Route path="/pos/dashboard" component={PosDashboard} />
       <Route path="/pos/sales" component={PosSales} />
