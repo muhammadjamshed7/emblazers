@@ -1,0 +1,677 @@
+Tech Stack:
+
+Frontend: React 18 + TypeScript, Wouter routing, TanStack React Query, shadcn/ui, Tailwind CSS
+Backend: Express.js + Node.js
+Database: MongoDB Atlas with Mongoose
+Auth: JWT tokens in localStorage
+Live URL: https://emblazers.replit.app
+
+Your job: Extend the existing Curriculum module to support three user roles — Admin, Teacher, and Student — each with their own login and dashboard. Do NOT create new home page cards. Do NOT break any existing modules.
+
+ARCHITECTURE DECISION
+The existing Curriculum module login page (/curriculum/login) must be upgraded to show 3 role options:
+[ Admin Login ]   [ Teacher Login ]   [ Student Login ]
+Each button leads to its own login form. After login, users go to their respective dashboards. All three share the same Curriculum module URL namespace (/curriculum/...).
+
+PART 1 — DATABASE: NEW MONGODB COLLECTIONS
+Create these new Mongoose models. Do not modify existing collections.
+Collection 1: teacherAssignments
+js{
+  staffId: String,          // from existing staff collection
+  staffName: String,
+  staffEmail: String,
+  className: String,        // e.g. "Class 5"
+  section: String,          // e.g. "A"
+  subject: String,          // e.g. "Mathematics"
+  assignedBy: String,       // curriculum admin email
+  isActive: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now }
+}
+Collection 2: teacherContent
+js{
+  staffId: String,
+  teacherName: String,
+  className: String,
+  section: String,
+  subject: String,
+  title: String,
+  description: String,
+  contentType: String,      // "pdf" | "image" | "note" | "link"
+  fileData: String,         // base64 encoded file OR URL string
+  fileName: String,
+  isPublished: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now }
+}
+Collection 3: teacherQuizzes
+js{
+  staffId: String,
+  teacherName: String,
+  className: String,
+  section: String,
+  subject: String,
+  title: String,
+  instructions: String,
+  timeLimitMinutes: Number,
+  startDateTime: Date,
+  endDateTime: Date,
+  passingMarks: Number,
+  totalMarks: Number,
+  isPublished: { type: Boolean, default: false },
+  questions: [
+    {
+      questionText: String,
+      questionType: String,   // "mcq" | "truefalse" | "short"
+      options: [String],      // 4 options for MCQ
+      correctAnswer: String,
+      marks: Number
+    }
+  ],
+  createdAt: { type: Date, default: Date.now }
+}
+Collection 4: quizAttempts
+js{
+  quizId: String,
+  studentId: String,          // e.g. C5-A-2026-0007
+  studentName: String,
+  className: String,
+  section: String,
+  answers: [
+    {
+      questionIndex: Number,
+      givenAnswer: String,
+      isCorrect: Boolean,
+      marksAwarded: Number
+    }
+  ],
+  totalMarksObtained: Number,
+  totalMarks: Number,
+  percentage: Number,
+  grade: String,              // A+, A, B, C, D, F
+  isPassed: Boolean,
+  timeTakenMinutes: Number,
+  submittedAt: { type: Date, default: Date.now }
+}
+Collection 5: studentPortalAccounts
+js{
+  studentId: String,          // C5-A-2026-0007 — used as username
+  studentName: String,
+  className: String,
+  section: String,
+  passwordHash: String,       // bcrypt hashed
+  isFirstLogin: { type: Boolean, default: true },
+  isActive: { type: Boolean, default: true },
+  lastLogin: Date,
+  createdAt: { type: Date, default: Date.now }
+}
+
+PART 2 — BACKEND API ROUTES
+A. Curriculum Admin Routes (existing JWT, add new ones)
+GET  /api/curriculum/staff-teachers
+     → Return all staff from existing `staff` collection where designation includes "Teacher"
+
+GET  /api/curriculum/teacher-assignments
+     → Return all teacherAssignments documents
+
+POST /api/curriculum/teacher-assignments
+     Body: { staffId, staffName, staffEmail, className, section, subject }
+     → Create new assignment
+
+DELETE /api/curriculum/teacher-assignments/:id
+     → Delete assignment
+
+GET  /api/curriculum/student-accounts
+     → Return all studentPortalAccounts with isActive status
+
+POST /api/curriculum/student-accounts/create
+     Body: { studentId } OR { className, section } for bulk
+     → Find student(s) in existing `students` collection
+     → Create studentPortalAccount with:
+         passwordHash = bcrypt(student dateOfBirth in DDMMYYYY format)
+         isFirstLogin = true
+     → Return created accounts count
+
+POST /api/curriculum/student-accounts/reset-password/:studentId
+     → Reset password back to DOB-based default
+     → Set isFirstLogin = true again
+
+GET  /api/curriculum/quiz-overview
+     → All quizzes across all teachers with attempt counts
+
+B. Teacher Auth Routes
+POST /api/teacher/login
+     Body: { staffEmail, password }
+     → Check staff collection for staffEmail
+     → Check teacherAssignments — if no assignment found, reject login with message "You have not been assigned any class yet. Contact admin."
+     → Default password = staffId value (e.g. "STF-2024-001")
+     → On success return JWT: { staffId, staffEmail, staffName, role: "teacher" }
+     → Also return their assignments array
+
+POST /api/teacher/change-password
+     Auth: Teacher JWT required
+     Body: { currentPassword, newPassword }
+C. Teacher Portal Routes (All require Teacher JWT)
+GET  /api/teacher/my-assignments
+     → Return teacherAssignments for this staffId
+
+GET  /api/teacher/content
+     → Return teacherContent for this staffId
+
+POST /api/teacher/content
+     Body: { title, description, contentType, className, section, subject, fileData, fileName }
+     → Save to teacherContent collection
+     → fileData: accept base64 string (frontend will convert file to base64 before sending)
+
+PATCH /api/teacher/content/:id/toggle-publish
+     → Flip isPublished true/false
+
+DELETE /api/teacher/content/:id
+     → Delete content item
+
+GET  /api/teacher/quizzes
+     → Return all quizzes for this staffId
+
+POST /api/teacher/quizzes
+     Body: full quiz object with questions array
+     → Save to teacherQuizzes
+
+PUT  /api/teacher/quizzes/:id
+     → Update quiz (only if no attempts yet)
+
+DELETE /api/teacher/quizzes/:id
+     → Delete quiz (only if no attempts yet)
+
+PATCH /api/teacher/quizzes/:id/toggle-publish
+     → Flip isPublished
+
+GET  /api/teacher/quizzes/:id/attempts
+     → Return all quizAttempts for this quizId
+     → Include student names
+
+PATCH /api/teacher/quizzes/:id/attempts/:attemptId/grade-short
+     Body: { questionIndex, marksAwarded }
+     → Manually grade a short answer question
+     → Recalculate total, percentage, grade, isPassed
+
+D. Student Portal Routes (All require Student JWT)
+POST /api/student-portal/login
+     Body: { studentId, password }
+     → Find in studentPortalAccounts
+     → Compare bcrypt password
+     → If isFirstLogin === true, include flag in response so frontend shows change-password screen
+     → JWT payload: { studentId, studentName, className, section, role: "student" }
+
+POST /api/student-portal/change-password
+     Auth: Student JWT
+     Body: { currentPassword, newPassword }
+     → After success, set isFirstLogin = false
+
+GET  /api/student-portal/dashboard
+     Auth: Student JWT
+     → Return:
+         - Student profile from `students` collection
+         - Active quizzes count (published, time slot currently active, not yet attempted)
+         - Completed quizzes count
+         - Pending fees total (from `feevouchers` collection where studentId matches)
+         - This month attendance % (from `attendancerecords` collection)
+
+GET  /api/student-portal/content
+     Auth: Student JWT
+     → Return teacherContent where className+section match AND isPublished = true
+     → Group by subject in response
+
+GET  /api/student-portal/quizzes
+     Auth: Student JWT
+     → Return teacherQuizzes where className+section match AND isPublished = true
+     → For each quiz add:
+         status: "upcoming" | "active" | "expired"  (compare current time vs startDateTime/endDateTime)
+         attempted: true/false  (check quizAttempts collection)
+         myResult: { grade, percentage, isPassed } if attempted
+
+GET  /api/student-portal/quizzes/:id/start
+     Auth: Student JWT
+     → Return quiz WITHOUT correctAnswer fields
+     → Validate: isPublished=true, current time is within slot, student has NOT attempted yet
+     → If already attempted: return 400 "Already submitted"
+     → If outside time slot: return 400 with message
+
+POST /api/student-portal/quizzes/:id/submit
+     Auth: Student JWT
+     Body: { answers: [{ questionIndex, givenAnswer }], timeTakenMinutes }
+     → Validate not already submitted
+     → Auto-grade MCQ and True/False by comparing with correctAnswer
+     → Short answer: isCorrect = null, marksAwarded = 0 (pending teacher grading)
+     → Calculate: totalMarksObtained, percentage, grade (A+≥90, A≥80, B≥70, C≥60, D≥50, F<50)
+     → isPassed = totalMarksObtained >= quiz.passingMarks
+     → Save to quizAttempts, return result immediately
+
+GET  /api/student-portal/results
+     Auth: Student JWT
+     → Return all quizAttempts for this studentId
+     → Join with quiz title, subject, teacher name
+
+GET  /api/student-portal/fees
+     Auth: Student JWT
+     → Query existing `feevouchers` collection where studentId = this student's ID
+     → Return: each voucher month, total amount, paid amount, due date, status
+
+GET  /api/student-portal/attendance
+     Auth: Student JWT
+     → Query existing `attendancerecords` for this student
+     → Return month-by-month: presentDays, absentDays, percentage
+
+PART 3 — FRONTEND PAGES
+3.1 — Upgrade Curriculum Login Page (/curriculum/login)
+Change the existing single login form into a role selector screen:
+┌─────────────────────────────────────────┐
+│           📚 Curriculum Portal           │
+│                                         │
+│  ┌──────────┐ ┌──────────┐ ┌─────────┐ │
+│  │  🔐      │ │  👨‍🏫     │ │  🎓    │ │
+│  │  Admin   │ │  Teacher │ │ Student │ │
+│  └──────────┘ └──────────┘ └─────────┘ │
+└─────────────────────────────────────────┘
+When user clicks a role, show that role's login form below (or navigate to sub-page). Admin login remains exactly as it is now. Teacher and Student get new login forms.
+
+3.2 — Curriculum Admin New Pages
+Page: Manage Teachers (/curriculum/teachers)
+Add to existing curriculum sidebar.
+Layout:
+
+Top: "Assign Teacher to Class" button → opens modal with form:
+
+Dropdown: Select Teacher (populated from /api/curriculum/staff-teachers)
+Dropdown: Class (Class 1 through Class 12)
+Dropdown: Section (A, B, C, D)
+Text input: Subject
+Save button
+
+
+Table below showing all assignments:
+| Teacher Name | Email | Class | Section | Subject | Date Assigned | Actions |
+
+Actions: Delete assignment
+
+
+
+Page: Student Accounts (/curriculum/student-accounts)
+Add to existing curriculum sidebar.
+Layout:
+
+Filter bar: Select Class + Section → click "Load Students"
+Table showing students from that class with columns:
+| Student ID | Student Name | Portal Account | Last Login | Actions |
+
+Portal Account column: "Active" badge (green) or "Not Created" badge (gray)
+Actions: "Create Account" button (if not created) or "Reset Password" button (if exists)
+
+
+Top: "Bulk Create Accounts for This Class" button → creates accounts for all students in selected class at once
+Show info box: "Default password = Student's Date of Birth (DDMMYYYY format). Student must change on first login."
+
+
+3.3 — Teacher Portal Pages
+Teacher Login Page (/curriculum/teacher-login)
+
+Form: Staff Email, Password
+Below form: small note — "Default password is your Staff ID. Contact admin if you cannot login."
+On success → redirect to /curriculum/teacher/dashboard
+
+Teacher Dashboard (/curriculum/teacher/dashboard)
+
+Top bar shows: Teacher name, logout button
+Sidebar navigation:
+
+Dashboard
+My Assignments
+Upload Content
+My Quizzes
+Quiz Results
+
+
+
+Dashboard cards:
+
+Total Content Uploaded
+Total Quizzes Created
+Active Quizzes Right Now
+Pending Short-Answer Grading (needs attention badge)
+
+My Assignments section on dashboard:
+Show assigned classes as colored cards:
+┌─────────────────┐
+│  Class 5 - A    │
+│  Mathematics    │
+│  24 students    │
+└─────────────────┘
+Upload Content Page (/curriculum/teacher/content)
+Left panel — Content List:
+
+Filter tabs: All | PDF | Images | Notes | Links
+Filter by class/subject dropdowns
+Each content card:
+
+File type icon + Title
+Class/Section/Subject badges
+Published toggle (green = published, gray = draft)
+Delete button
+
+
+
+Right panel — Upload Form (shown as slide-in panel or modal):
+
+Title (text input)
+Description (textarea)
+Class (dropdown — only teacher's assigned classes)
+Section (dropdown — only teacher's assigned sections)
+Subject (dropdown — only teacher's assigned subjects)
+Content Type: Tab buttons → PDF | Image | Note | Link
+
+If PDF: File input (accept .pdf) — convert to base64 on frontend before sending
+If Image: File input (accept .jpg, .jpeg, .png) — convert to base64 on frontend
+If Note: Rich textarea for text content
+If Link: URL text input
+
+
+Publish immediately toggle
+Save button
+
+Quiz Creator Page (/curriculum/teacher/quizzes)
+Quiz List View:
+Table columns: Title | Class/Section | Subject | Questions | Marks | Time Slot | Status | Actions
+Status badges:
+
+Draft (gray) — not published
+Scheduled (blue) — published but start time in future
+Active (green) — currently within time slot
+Expired (red) — past end time
+
+Actions: Edit | View Attempts | Delete | Publish/Unpublish toggle
+"Create New Quiz" button → opens Create Quiz page (/curriculum/teacher/quizzes/create)
+Create Quiz — 3 step wizard:
+Step 1: Quiz Settings
+
+Quiz Title
+Instructions for students
+Class (from assignments)
+Section (from assignments)
+Subject (from assignments)
+Time Limit (minutes) — number input with +/- buttons
+Start Date & Time — date+time picker
+End Date & Time — date+time picker
+Total Marks (auto-calculated from questions, shown as read-only)
+Passing Marks — number input
+
+Step 2: Add Questions
+
+"Add Question" button → inline question form appears:
+
+Question Text (textarea)
+Question Type: [ MCQ ] [ True/False ] [ Short Answer ]
+If MCQ:
+
+4 option inputs labeled A, B, C, D
+Radio button next to each to mark correct answer
+
+
+If True/False:
+
+Toggle: Correct Answer is TRUE / FALSE
+
+
+If Short Answer:
+
+"Model Answer" textarea (for teacher reference only, not shown to students)
+
+
+Marks for this question (number input)
+"Add to Quiz" button
+
+
+Questions list below with drag-to-reorder
+Each question card shows: Q number, question preview, type badge, marks, edit/delete buttons
+Running total marks shown at bottom
+
+Step 3: Review & Publish
+
+Full preview of quiz as student would see it
+Summary: Total questions, Total marks, Time limit, Time slot
+Two buttons: "Save as Draft" | "Save & Publish"
+
+Quiz Attempts View (/curriculum/teacher/quizzes/:id/attempts)
+Top stats bar:
+Total Attempts: 18 | Passed: 14 | Failed: 4 | Avg Score: 72% | Highest: 95% | Lowest: 42%
+Attempts table:
+| Student Name | Student ID | Score | Percentage | Grade | Status | Time Taken | Submitted At | Actions |
+Grade color coding: A+ (purple), A (green), B (blue), C (yellow), D (orange), F (red)
+Actions column: "View Details" button → opens modal showing each question with student's answer vs correct answer, marks awarded
+For Short Answer questions in the modal:
+
+Show student's answer in a box
+Input field for marks (0 to max marks for that question)
+"Save Marks" button
+After grading, total recalculates automatically
+
+
+3.4 — Student Portal Pages
+Student Login Page (/curriculum/student-login)
+
+Fields: Student ID (placeholder: e.g. C5-A-2026-0007), Password
+Login button
+Note below: "Contact your class teacher if you forgot your password"
+
+First Login — Force Password Change
+
+If isFirstLogin = true in response, show this screen BEFORE dashboard
+Form: New Password, Confirm New Password (minimum 8 characters)
+Info box: "You must set a new password before continuing"
+After success → go to dashboard
+
+Student Dashboard (/curriculum/student/dashboard)
+Top header bar:
+👋 Welcome, Ahmed Ali  |  Class 5 - A  |  Student ID: C5-A-2026-0007  |  [Logout]
+Summary cards row:
+┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+│  Quizzes     │ │  Quizzes     │ │  Pending     │ │  Attendance  │
+│  Active: 2   │ │  Done: 5     │ │  Fees: 3500  │ │  This Month  │
+│  Take Now →  │ │  View →      │ │  Pay Info →  │ │  87%         │
+└──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘
+Recent Activity section:
+
+Last 5 quiz results with grade badges
+
+Sidebar navigation:
+
+🏠 Dashboard
+📚 Study Material
+📝 My Quizzes
+📊 My Results
+💰 My Fees
+📅 Attendance
+
+Study Material Page (/curriculum/student/content)
+Top filter: Subject tabs (Mathematics | Science | English | Urdu | etc.)
+Content cards grid (2 or 3 per row):
+┌──────────────────────┐
+│  📄  PDF             │
+│  Chapter 3 Notes     │
+│  Mathematics         │
+│  By: Mr. Ali         │
+│  2 days ago          │
+│  [  View Content  ]  │
+└──────────────────────┘
+View behavior:
+
+PDF → opens in a modal with <iframe src="data:application/pdf;base64,..."> embedded viewer
+Image → lightbox modal showing the image
+Note → modal with formatted text
+Link → opens in new browser tab
+
+My Quizzes Page (/curriculum/student/quizzes)
+Three tabs:
+Tab 1: Active (can attempt now)
+Cards with green border:
+┌─────────────────────────────────────┐
+│  📝 Chapter 3 Quiz                  │
+│  Mathematics  |  Mr. Ali            │
+│  Questions: 10  |  Total: 20 marks  │
+│  Time Limit: 30 minutes             │
+│  ⏰ Ends in: 2 hours 14 minutes     │
+│                                     │
+│         [ Start Quiz ]              │
+└─────────────────────────────────────┘
+Tab 2: Upcoming (time not started yet)
+Cards with blue border — show countdown to start time. "Start Quiz" button disabled with "Opens on [date time]"
+Tab 3: Completed
+Cards with result:
+┌─────────────────────────────────────┐
+│  📝 Chapter 2 Quiz                  │
+│  Mathematics  |  Mr. Ali            │
+│  Score: 16/20  |  80%  |  Grade: A  │
+│  ✅ PASSED                          │
+│  Submitted: 2 days ago              │
+│         [ View Details ]            │
+└─────────────────────────────────────┘
+Quiz Taking Screen (/curriculum/student/quizzes/:id/take)
+This is a FULL SCREEN page (hide all navigation/sidebar):
+┌─────────────────────────────────────────────────────┐
+│  Chapter 3 Quiz  |  Question 4 of 10  |  ⏰ 24:35  │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│  Q4. What is the result of 15 × 8?                  │
+│                                                     │
+│  ○  A)  100                                         │
+│  ○  B)  120                                         │
+│  ○  C)  115                                         │
+│  ○  D)  130                                         │
+│                                                     │
+│  ┌──────────────────────────────────────────────┐   │
+│  │ 1✓ 2✓ 3✓ 4• 5  6  7  8  9  10              │   │
+│  └──────────────────────────────────────────────┘   │
+│                                                     │
+│           [← Previous]    [Next →]                  │
+│                              [Submit Quiz]          │
+└─────────────────────────────────────────────────────┘
+Rules:
+
+Timer counts down from timeLimitMinutes — shown in red when under 5 minutes
+Question palette at bottom: green = answered, white = not answered, blue = current
+"Submit Quiz" shows confirmation modal: "You have answered 8 of 10 questions. Are you sure you want to submit?"
+Auto-submit when timer hits 0:00
+After submit → immediately show result screen
+
+Quiz Result Screen (shown right after submission)
+┌─────────────────────────────────────┐
+│         Quiz Complete! 🎉           │
+│                                     │
+│         16 / 20 marks               │
+│                                     │
+│    ████████████████░░░░   80%       │
+│                                     │
+│         Grade: A                    │
+│         ✅ PASSED                   │
+│                                     │
+│  [View Detailed Results]  [Go Home] │
+└─────────────────────────────────────┘
+Detailed results show each question:
+
+✅ Correct answers with green background
+❌ Wrong answers with red background + what the correct answer was
+⏳ Short answers with "Pending teacher review" badge
+
+My Results Page (/curriculum/student/results)
+Table:
+| Quiz Title | Subject | Teacher | Date | Score | Grade | Status |
+Grade badges with colors (A+ purple, A green, B blue, C yellow, D orange, F red)
+Clicking any row → opens result detail modal showing per-question breakdown
+Summary stats at top:
+
+Average Grade
+Best Score
+Total Quizzes Attempted
+
+My Fees Page (/curriculum/student/fees)
+Pull data from existing feevouchers collection.
+Table:
+| Month | Total Amount | Paid | Balance | Due Date | Status |
+Status badges: Paid (green) | Partial (yellow) | Pending (orange) | Overdue (red)
+Summary at top:
+Total Outstanding: Rs. 3,500  |  Total Paid This Year: Rs. 42,000
+Note: This is READ-ONLY. No payment processing — just shows fee records.
+Attendance Page (/curriculum/student/attendance)
+Pull from existing attendancerecords collection.
+Month-by-month table:
+| Month | Present Days | Absent Days | Total Days | Attendance % |
+Color code the percentage: ≥90% green, 75-89% yellow, <75% red
+Overall attendance % shown as a circular progress indicator at top.
+
+PART 4 — IMPORTANT IMPLEMENTATION NOTES
+
+File Storage: Convert PDF and image files to base64 string on the frontend using FileReader API before sending to backend. Store as base64 string in MongoDB. For display, use <iframe src="data:application/pdf;base64,..." for PDFs and <img src="data:image/jpeg;base64,..." for images. Do not use any external file storage service.
+JWT Middleware: Create separate middleware functions:
+
+requireCurriculumAdmin — checks existing curriculum token
+requireTeacher — checks teacher JWT, attaches staffId to req
+requireStudent — checks student JWT, attaches studentId, className, section to req
+Each middleware checks role field in JWT payload.
+
+
+Grade Calculation Function (reuse across codebase):
+
+   A+ = percentage >= 90
+   A  = percentage >= 80
+   B  = percentage >= 70
+   C  = percentage >= 60
+   D  = percentage >= 50
+   F  = percentage < 50
+
+Student ID Lookup for Fees and Attendance: The student's studentId field in studentPortalAccounts (e.g., C5-A-2026-0007) is the same studentId field used in the existing feevouchers and attendancerecords collections. Use it directly for cross-collection queries.
+Teacher Default Password: When a teacher logs in for the first time, their default password is their staffId value from the staff collection (e.g., STF-2024-001). Store this as bcrypt hash in a new teacherAuthPasswords collection with fields { staffId, passwordHash, updatedAt }. On first teacher login attempt, if no record exists in this collection, auto-create one with the default password.
+Time Slot Enforcement: On the backend /api/student-portal/quizzes/:id/start, always check new Date() >= quiz.startDateTime && new Date() <= quiz.endDateTime before returning quiz questions. Never trust the frontend for this check.
+Prevent Double Submission: Before saving a quiz attempt, always query quizAttempts collection for existing { quizId, studentId } record. If found, return 400 error.
+Routing: Add all new routes to the existing Wouter router in the frontend. Teacher routes under /curriculum/teacher/... and student routes under /curriculum/student/.... The existing curriculum admin routes remain unchanged under /curriculum/....
+Sidebar: Teacher portal and Student portal each have their own sidebar component. They do NOT use the existing curriculum admin sidebar.
+Session Separation: Three different localStorage keys for three different sessions:
+
+curriculum_token — existing admin (unchanged)
+teacher_token — new teacher JWT
+student_token — new student JWT
+
+
+
+
+PART 5 — COMPLETE USER FLOW (For Testing After Build)
+Admin Flow:
+
+Go to /curriculum/login → click Admin → login with curriculum@emblazers.com / 12345678
+In sidebar, click "Manage Teachers" → assign Mr. Ali to "Class 5, Section A, Mathematics"
+In sidebar, click "Student Accounts" → select Class 5, Section A → click "Bulk Create Accounts"
+Accounts created with default password = each student's DOB in DDMMYYYY format
+
+Teacher Flow:
+
+Go to /curriculum/login → click Teacher → enter staff email + staffId as password
+See dashboard with assigned class: Class 5, Section A, Mathematics
+Go to "Upload Content" → upload a PDF notes file → publish it
+Go to "My Quizzes" → click "Create New Quiz":
+
+Title: "Chapter 3 Test", Class 5, Section A, Mathematics
+Time limit: 30 mins, Start: tomorrow 10:00 AM, End: tomorrow 11:00 AM
+Add 5 MCQ questions + 2 Short Answer questions
+Publish the quiz
+
+
+After quiz ends, go to "Quiz Attempts" → grade the short answer questions manually
+
+Student Flow:
+
+Go to /curriculum/login → click Student → enter Student ID + DOB as password
+First login → forced to set new password
+Dashboard shows: Active Quizzes, Pending Fees, Attendance %
+Go to "Study Material" → see teacher's uploaded PDF → click View → PDF opens in browser
+Go to "My Quizzes" → "Active" tab → click "Start Quiz" → answer all questions → submit
+See result immediately: Score, Percentage, Grade, Pass/Fail
+Go to "My Fees" → see monthly fee status
+Go to "Attendance" → see month-wise attendance
+
+
+Build all of this within the existing Emblazers project. Start with the database models, then backend routes, then frontend pages in that order. Test each section before moving to the next.
