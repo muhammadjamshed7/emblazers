@@ -1184,11 +1184,11 @@ export async function registerRoutes(
     const TeacherAuthPasswordModel = (await import("./models/TeacherAuthPassword")).default;
 
     const staff = await StaffModel.findOne({ email: { $regex: new RegExp(`^${staffEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } });
-    if (!staff) return res.status(401).json({ error: "No staff account found with this email" });
+    if (!staff) return res.status(404).json({ error: "Staff not found" });
 
     const assignments = await TeacherAssignmentModel.find({ staffId: staff._id.toString(), isActive: true }).lean();
     if (assignments.length === 0) {
-      return res.status(401).json({ error: "You have not been assigned any class yet. Contact admin." });
+      return res.status(403).json({ error: "You have not been assigned any class. Contact admin." });
     }
 
     const staffIdValue = staff.staffId || staff._id.toString();
@@ -1208,7 +1208,7 @@ export async function registerRoutes(
     }
 
     const token = jwt.sign(
-      { userId: staff._id.toString(), email: staff.email, role: "teacher", module: "curriculum", staffId: staff._id.toString() },
+      { userId: staff._id.toString(), email: staff.email, staffName: staff.name, role: "teacher", module: "curriculum", staffId: staff._id.toString() },
       jwtSecret,
       { expiresIn: "3d" }
     );
@@ -1309,8 +1309,10 @@ export async function registerRoutes(
 
   app.patch("/api/teacher/content/:id/toggle-publish", asyncHandler(async (req, res) => {
     const TeacherContentModel = (await import("./models/TeacherContent")).default;
+    const staffId = (req as any).user?.staffId;
     const doc = await TeacherContentModel.findById(req.params.id);
     if (!doc) return res.status(404).json({ error: "Not found" });
+    if (doc.staffId !== staffId) return res.status(403).json({ error: "Unauthorized: You do not own this resource" });
     doc.isPublished = !doc.isPublished;
     await doc.save();
     res.json({ id: doc._id.toString(), isPublished: doc.isPublished });
@@ -1318,8 +1320,11 @@ export async function registerRoutes(
 
   app.delete("/api/teacher/content/:id", asyncHandler(async (req, res) => {
     const TeacherContentModel = (await import("./models/TeacherContent")).default;
-    const result = await TeacherContentModel.findByIdAndDelete(req.params.id);
-    if (!result) return res.status(404).json({ error: "Not found" });
+    const staffId = (req as any).user?.staffId;
+    const doc = await TeacherContentModel.findById(req.params.id);
+    if (!doc) return res.status(404).json({ error: "Not found" });
+    if (doc.staffId !== staffId) return res.status(403).json({ error: "Unauthorized: You do not own this resource" });
+    await doc.deleteOne();
     res.json({ success: true });
   }));
 
@@ -1350,6 +1355,10 @@ export async function registerRoutes(
   app.put("/api/teacher/quizzes/:id", asyncHandler(async (req, res) => {
     const TeacherQuizModel = (await import("./models/TeacherQuiz")).default;
     const StudentQuizAttemptModel = (await import("./models/StudentQuizAttempt")).default;
+    const staffId = (req as any).user?.staffId;
+    const existing = await TeacherQuizModel.findById(req.params.id);
+    if (!existing) return res.status(404).json({ error: "Not found" });
+    if (existing.staffId !== staffId) return res.status(403).json({ error: "Unauthorized: You do not own this resource" });
     const attemptCount = await StudentQuizAttemptModel.countDocuments({ quizId: req.params.id });
     if (attemptCount > 0) {
       return res.status(400).json({ error: "Cannot update quiz that already has student attempts" });
@@ -1363,19 +1372,24 @@ export async function registerRoutes(
   app.delete("/api/teacher/quizzes/:id", asyncHandler(async (req, res) => {
     const TeacherQuizModel = (await import("./models/TeacherQuiz")).default;
     const StudentQuizAttemptModel = (await import("./models/StudentQuizAttempt")).default;
+    const staffId = (req as any).user?.staffId;
+    const doc = await TeacherQuizModel.findById(req.params.id);
+    if (!doc) return res.status(404).json({ error: "Not found" });
+    if (doc.staffId !== staffId) return res.status(403).json({ error: "Unauthorized: You do not own this resource" });
     const attemptCount = await StudentQuizAttemptModel.countDocuments({ quizId: req.params.id });
     if (attemptCount > 0) {
       return res.status(400).json({ error: "Cannot delete quiz that already has student attempts" });
     }
-    const result = await TeacherQuizModel.findByIdAndDelete(req.params.id);
-    if (!result) return res.status(404).json({ error: "Not found" });
+    await doc.deleteOne();
     res.json({ success: true });
   }));
 
   app.patch("/api/teacher/quizzes/:id/toggle-publish", asyncHandler(async (req, res) => {
     const TeacherQuizModel = (await import("./models/TeacherQuiz")).default;
+    const staffId = (req as any).user?.staffId;
     const doc = await TeacherQuizModel.findById(req.params.id);
     if (!doc) return res.status(404).json({ error: "Not found" });
+    if (doc.staffId !== staffId) return res.status(403).json({ error: "Unauthorized: You do not own this resource" });
     doc.isPublished = !doc.isPublished;
     await doc.save();
     res.json({ id: doc._id.toString(), isPublished: doc.isPublished });
@@ -1383,6 +1397,11 @@ export async function registerRoutes(
 
   app.get("/api/teacher/quizzes/:id/attempts", asyncHandler(async (req, res) => {
     const StudentQuizAttemptModel = (await import("./models/StudentQuizAttempt")).default;
+    const TeacherQuizModel = (await import("./models/TeacherQuiz")).default;
+    const staffId = (req as any).user?.staffId;
+    const quiz = await TeacherQuizModel.findById(req.params.id);
+    if (!quiz) return res.status(404).json({ error: "Quiz not found" });
+    if (quiz.staffId !== staffId) return res.status(403).json({ error: "Unauthorized: You do not own this resource" });
     const docs = await StudentQuizAttemptModel.find({ quizId: req.params.id }).sort({ submittedAt: -1 }).lean();
     const mapped = (docs as any[]).map((d: any) => ({ id: d._id.toString(), ...d, _id: undefined, __v: undefined, submittedAt: d.submittedAt?.toISOString() }));
     res.json(mapped);
@@ -1402,6 +1421,9 @@ export async function registerRoutes(
 
     const quiz = await TeacherQuizModel.findById(req.params.id);
     if (!quiz) return res.status(404).json({ error: "Quiz not found" });
+
+    const staffId = (req as any).user?.staffId;
+    if (quiz.staffId !== staffId) return res.status(403).json({ error: "Unauthorized: You do not own this resource" });
 
     if (questionIndex < 0 || questionIndex >= attempt.answers.length) {
       return res.status(400).json({ error: "Invalid question index" });
@@ -1710,6 +1732,14 @@ export async function registerRoutes(
     const existing = await StudentQuizAttemptModel.findOne({ quizId: req.params.id, studentId: user.studentId });
     if (existing) return res.status(400).json({ error: "Already submitted" });
 
+    const now = new Date();
+    if (now < quiz.startDateTime) {
+      return res.status(400).json({ error: "Quiz has not started yet" });
+    }
+    if (now > quiz.endDateTime) {
+      return res.status(400).json({ error: "Quiz time slot has ended" });
+    }
+
     const { answers, timeTakenMinutes } = req.body;
 
     const gradedAnswers = (answers || []).map((ans: any) => {
@@ -1717,7 +1747,7 @@ export async function registerRoutes(
       if (!question) return { ...ans, isCorrect: false, marksAwarded: 0 };
 
       if (question.questionType === "short") {
-        return { questionIndex: ans.questionIndex, givenAnswer: ans.givenAnswer || "", isCorrect: false, marksAwarded: 0 };
+        return { questionIndex: ans.questionIndex, givenAnswer: ans.givenAnswer || "", isCorrect: null, marksAwarded: 0 };
       }
 
       const isCorrect = ans.givenAnswer?.trim().toLowerCase() === question.correctAnswer?.trim().toLowerCase();
@@ -1751,6 +1781,20 @@ export async function registerRoutes(
       timeTakenMinutes: timeTakenMinutes || 0,
     });
 
+    const detailedAnswers = gradedAnswers.map((ga: any) => {
+      const question = quiz.questions[ga.questionIndex];
+      return {
+        questionText: question?.questionText || "",
+        questionType: question?.questionType || "",
+        givenAnswer: ga.givenAnswer,
+        correctAnswer: question?.correctAnswer || "",
+        isCorrect: ga.isCorrect,
+        marks: question?.marks || 0,
+        marksObtained: ga.marksAwarded,
+        options: question?.options || [],
+      };
+    });
+
     res.status(201).json({
       id: doc._id.toString(),
       totalMarksObtained,
@@ -1759,6 +1803,7 @@ export async function registerRoutes(
       grade,
       isPassed,
       timeTakenMinutes: doc.timeTakenMinutes,
+      answers: detailedAnswers,
     });
   }));
 

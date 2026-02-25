@@ -47,7 +47,7 @@ interface QuizResult {
     questionType: string;
     givenAnswer: string;
     correctAnswer: string;
-    isCorrect: boolean;
+    isCorrect: boolean | null;
     marks: number;
     marksObtained: number;
     options?: string[];
@@ -427,13 +427,15 @@ export default function StudentQuizzesPage() {
           </div>
           <div className="flex-1 overflow-y-auto p-4 md:p-8">
             <div className="max-w-2xl mx-auto space-y-4">
-              {quizResult.answers.map((a, idx) => (
+              {quizResult.answers.map((a, idx) => {
+                const isPendingReview = a.isCorrect === null || (a.questionType === "short" && a.isCorrect === null);
+                return (
                 <Card
                   key={idx}
                   className={
-                    a.questionType === "short" && !a.isCorrect
+                    isPendingReview
                       ? ""
-                      : a.isCorrect
+                      : a.isCorrect === true
                       ? "border-green-300 dark:border-green-700"
                       : "border-red-300 dark:border-red-700"
                   }
@@ -452,11 +454,11 @@ export default function StudentQuizzesPage() {
                     <div className="space-y-1 text-sm">
                       <p>
                         <span className="text-muted-foreground">Your answer: </span>
-                        <span className={a.isCorrect ? "text-green-700 dark:text-green-400 font-medium" : "text-red-700 dark:text-red-400 font-medium"}>
+                        <span className={a.isCorrect === true ? "text-green-700 dark:text-green-400 font-medium" : a.isCorrect === null ? "font-medium" : "text-red-700 dark:text-red-400 font-medium"}>
                           {a.givenAnswer || "(No answer)"}
                         </span>
                       </p>
-                      {!a.isCorrect && a.questionType !== "short" && (
+                      {a.isCorrect === false && a.questionType !== "short" && (
                         <p>
                           <span className="text-muted-foreground">Correct answer: </span>
                           <span className="text-green-700 dark:text-green-400 font-medium">
@@ -464,7 +466,7 @@ export default function StudentQuizzesPage() {
                           </span>
                         </p>
                       )}
-                      {a.questionType === "short" && !a.isCorrect && (
+                      {a.isCorrect === null && (
                         <Badge variant="outline" className="mt-1" data-testid={`badge-pending-review-${idx}`}>
                           Pending teacher review
                         </Badge>
@@ -472,11 +474,11 @@ export default function StudentQuizzesPage() {
                     </div>
 
                     <div className="pt-1">
-                      {a.questionType === "short" ? (
+                      {isPendingReview ? (
                         <Badge variant="outline">
                           <AlertCircle className="w-3 h-3 mr-1" /> Manual grading
                         </Badge>
-                      ) : a.isCorrect ? (
+                      ) : a.isCorrect === true ? (
                         <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 no-default-hover-elevate no-default-active-elevate">
                           <CheckCircle className="w-3 h-3 mr-1" /> Correct
                         </Badge>
@@ -488,7 +490,8 @@ export default function StudentQuizzesPage() {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+                );
+              })}
 
               <div className="pt-4">
                 <Button onClick={goHome} data-testid="button-go-home-detailed">

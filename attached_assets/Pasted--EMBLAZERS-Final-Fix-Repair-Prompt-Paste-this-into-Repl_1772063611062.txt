@@ -1,0 +1,319 @@
+# EMBLAZERS — Final Fix & Repair Prompt
+## Paste this into Replit Agent
+
+You are working on the **Emblazers** school management system (React + TypeScript frontend, Express.js backend, MongoDB Atlas, JWT auth, Wouter routing, shadcn/ui + Tailwind).
+
+The LMS feature (Teacher Portal + Student Portal inside Curriculum module) has been built. Your job is to **scan every file, find every bug, and fix it**. Work through each section below completely before moving to the next.
+
+---
+
+## SECTION 1 — SERVER STARTUP
+
+1. Run the server. If it crashes, read the full error and fix it before continuing.
+2. Open server/index.ts (or index.js). Confirm every route file is imported and registered with app.use(). Specifically check:
+   - curriculum admin routes
+   - teacher auth + teacher portal routes
+   - student portal routes
+3. Check every route file is imported with the correct file path. If any import says ./routes/teacherRoutes but the file is named teacher-routes.ts, fix the path.
+4. Confirm MongoDB connection string is read from env variable MONGODB_URI, not hardcoded.
+5. Confirm bcryptjs (or bcrypt) and jsonwebtoken are in package.json. If missing, add them.
+6. Confirm JWT_SECRET is read from process.env.JWT_SECRET everywhere. If hardcoded, move to env.
+
+---
+
+## SECTION 2 — MONGOOSE MODELS
+
+Check each model file for these specific issues:
+
+### TeacherAssignment model
+- Fields: staffId, staffName, staffEmail, className, section, subject, assignedBy, isActive, createdAt
+- isActive must have default: true
+
+### TeacherContent model
+- Fields: staffId, teacherName, className, section, subject, title, description, contentType, fileData, fileName, isPublished, createdAt
+- fileData is type String — confirm there is NO maxlength constraint on it (base64 strings are very long)
+- isPublished must have default: false
+
+### TeacherQuiz model
+- Fields: staffId, teacherName, className, section, subject, title, instructions, timeLimitMinutes, startDateTime, endDateTime, passingMarks, totalMarks, isPublished, questions, createdAt
+- startDateTime and endDateTime must be type Date, not String
+- questions is an array of subdocs with: questionText, questionType, options (array of strings), correctAnswer, marks
+
+### QuizAttempt model
+- Fields: quizId, studentId, studentName, className, section, answers, totalMarksObtained, totalMarks, percentage, grade, isPassed, timeTakenMinutes, submittedAt
+- answers array items: questionIndex, givenAnswer, isCorrect, marksAwarded
+- isCorrect must allow null (short answers pending grading) — do not set required: true on this field
+
+### StudentPortalAccount model
+- Fields: studentId, studentName, className, section, passwordHash, isFirstLogin, isActive, lastLogin, createdAt
+- isFirstLogin default: true
+- isActive default: true
+
+### TeacherAuthPassword model
+- Fields: staffId, passwordHash, updatedAt
+- If this model does not exist, create it now
+
+Confirm MongoDB collection names are exactly: teacherAssignments, teacherContent, teacherQuizzes, quizAttempts, studentPortalAccounts, teacherAuthPasswords
+
+---
+
+## SECTION 3 — BACKEND ROUTES
+
+### Teacher Login (POST /api/teacher/login)
+
+Fix these issues if found:
+
+ISSUE 1: Must query existing staff collection by staffEmail. If not found: return 404 { message: "Staff not found" }
+
+ISSUE 2: After finding staff, query teacherAssignments where staffEmail matches AND isActive is true. If no assignments: return 403 { message: "You have not been assigned any class. Contact admin." }
+
+ISSUE 3: Default password = the staff member's staffId field value (e.g. "STF-2024-001"). Check teacherAuthPasswords for this staffId. If no record exists, auto-create one: passwordHash = await bcrypt.hash(staff.staffId, 10). Then compare incoming password using bcrypt.compare().
+
+ISSUE 4: JWT payload must include: { staffId, staffEmail, staffName, role: "teacher" }
+
+ISSUE 5: Response must return both the token AND the assignments array.
+
+---
+
+### Student Portal Login (POST /api/student-portal/login)
+
+ISSUE 1: Find student in studentPortalAccounts by studentId field (not _id).
+
+ISSUE 2: If isFirstLogin === true, response must include { token, isFirstLogin: true }
+
+ISSUE 3: After successful login, update lastLogin: account.lastLogin = new Date(); await account.save();
+
+ISSUE 4: JWT payload: { studentId, studentName, className, section, role: "student" }
+
+---
+
+### Bulk Create Student Accounts (POST /api/curriculum/student-accounts/create)
+
+ISSUE 1: Queries existing students collection. Check the actual field name for date of birth in that collection (could be dateOfBirth, dob, or date_of_birth). Use whatever the real field name is.
+
+ISSUE 2: Format DOB as DDMMYYYY string, then bcrypt.hash(dobString, 10) for default password.
+
+ISSUE 3: Before creating, check if studentPortalAccount already exists for that studentId. If yes, skip it without throwing error. Return count of created vs skipped.
+
+---
+
+### Quiz Submit (POST /api/student-portal/quizzes/:id/submit)
+
+ISSUE 1 — Double submission check must be FIRST:
+const existing = await QuizAttempt.findOne({ quizId: req.params.id, studentId: req.user.studentId });
+if (existing) return res.status(400).json({ message: "Already submitted" });
+
+ISSUE 2 — Time slot check:
+const now = new Date();
+if (now < quiz.startDateTime || now > quiz.endDateTime) {
+  return res.status(400).json({ message: "Quiz time slot has ended" });
+}
+
+ISSUE 3 — Auto grading per question:
+- If questionType is "mcq" or "truefalse": compare givenAnswer with question.correctAnswer (trim, lowercase both). Set isCorrect = true/false, marksAwarded = isCorrect ? question.marks : 0
+- If questionType is "short": isCorrect = null, marksAwarded = 0
+
+ISSUE 4 — Grade calculation:
+percentage >= 90 = A+
+percentage >= 80 = A
+percentage >= 70 = B
+percentage >= 60 = C
+percentage >= 50 = D
+below 50 = F
+
+ISSUE 5 — isPassed must use quiz's own passingMarks field:
+isPassed = totalMarksObtained >= quiz.passingMarks
+(NOT percentage >= 50)
+
+---
+
+### Student Fees (GET /api/student-portal/fees)
+
+Queries existing feevouchers collection. Check the actual field name used for student ID in that collection. It must match the studentId value from the JWT (e.g. "C5-A-2026-0007"). Fix the query field name if it does not match.
+
+---
+
+### Student Attendance (GET /api/student-portal/attendance)
+
+Queries existing attendancerecords collection. Check the actual field name for student ID in that collection by looking at the attendance module's existing routes. Use the same field name in the student portal query.
+
+---
+
+### Manual Short Answer Grading (PATCH /api/teacher/quizzes/:id/attempts/:attemptId/grade-short)
+
+After saving the marks, recalculate ALL totals:
+1. Update attempt.answers[questionIndex].marksAwarded = marksAwarded
+2. Update attempt.answers[questionIndex].isCorrect = marksAwarded > 0
+3. Recalculate: attempt.totalMarksObtained = sum of all marksAwarded values
+4. Recalculate: attempt.percentage = Math.round((totalMarksObtained / totalMarks) * 100)
+5. Recalculate grade and isPassed
+6. await attempt.save()
+
+If this recalculation is missing, add it.
+
+---
+
+### Teacher Content and Quiz — Authorization Check
+
+Before any toggle-publish or delete action, verify:
+content.staffId === req.user.staffId (from JWT)
+If not matching, return 403. One teacher must not be able to edit another's content.
+
+---
+
+## SECTION 4 — JWT MIDDLEWARE
+
+Find the three middleware functions and fix:
+
+requireTeacher:
+- Extract token from Authorization header: req.headers.authorization?.split(" ")[1]
+- Call jwt.verify(token, process.env.JWT_SECRET)
+- Check decoded.role === "teacher" — if not, return 403
+- Set req.user = decoded (must include staffId)
+- Call next()
+
+requireStudent:
+- Same pattern, check decoded.role === "student"
+- req.user must include studentId, className, section
+
+requireCurriculumAdmin:
+- Same pattern, check the role that existing curriculum JWT uses
+
+Verify middleware is applied to correct routes:
+- /api/teacher/* (except /api/teacher/login) → requireTeacher
+- /api/student-portal/* (except /api/student-portal/login) → requireStudent
+- /api/curriculum/teacher-assignments* and /api/curriculum/student-accounts* → requireCurriculumAdmin
+
+---
+
+## SECTION 5 — FRONTEND FIXES
+
+### Curriculum Login Page (/curriculum/login)
+
+Must show 3 buttons: Admin | Teacher | Student
+Clicking each shows that role's login form (toggle with React state — no new routes needed).
+Admin form must remain exactly as it is today.
+Teacher form: Staff Email + Password fields.
+Student form: Student ID + Password fields.
+
+---
+
+### Token Storage
+
+Teacher login must store token as: localStorage.setItem("teacher_token", data.token)
+Student login must store token as: localStorage.setItem("student_token", data.token)
+These must NOT overwrite "curriculum_token"
+
+All teacher API calls must send: Authorization: Bearer + localStorage.getItem("teacher_token")
+All student API calls must send: Authorization: Bearer + localStorage.getItem("student_token")
+
+---
+
+### First Login Redirect (Student)
+
+After student login, if response.isFirstLogin === true:
+- Do NOT go to dashboard
+- Show a "Set New Password" screen with New Password and Confirm Password fields
+- Call POST /api/student-portal/change-password
+- On success, navigate to /curriculum/student-dashboard
+- Dashboard must not be accessible until password is changed
+
+---
+
+### Quiz Taking Page
+
+TIMER FIX:
+- Use setInterval counting down from timeLimitMinutes * 60 seconds
+- Display as MM:SS format
+- When timeLeft reaches 0, auto-submit immediately
+- When timeLeft < 300 (5 minutes), change timer text color to red
+
+AUTO-SUBMIT:
+if (timeLeft <= 0) {
+  clearInterval(timerInterval);
+  submitQuiz(); // same function as manual submit button
+}
+
+QUESTION PALETTE:
+- Small numbered buttons (1, 2, 3...) at bottom of screen
+- White background = not answered
+- Green background = answered
+- Blue border = current question
+
+CONFIRM BEFORE SUBMIT:
+Show modal: "You have answered X of Y questions. Are you sure you want to submit?"
+Two buttons: Cancel | Submit
+
+AFTER SUBMIT:
+Use router.replace (not push) to go to results page so back button does not return to quiz.
+
+---
+
+### Content Viewer (Student)
+
+For PDF files in student content page:
+<iframe src={"data:application/pdf;base64," + content.fileData} width="100%" height="600px" />
+
+For image files:
+<img src={"data:image/jpeg;base64," + content.fileData} alt={content.title} style={{ maxWidth: "100%" }} />
+
+If content type is "png", use "data:image/png;base64," prefix instead.
+Fix any broken viewer using these patterns.
+
+---
+
+### Teacher Quiz Creator — Questions Step
+
+MCQ questions must have exactly 4 option input fields with a radio button next to each to mark the correct answer. The correctAnswer saved must be the option text value, not the array index number.
+
+Total marks counter must update automatically as questions are added/removed.
+
+Each question card must have Edit and Delete buttons. Delete removes from state array. Edit pre-fills the question form.
+
+---
+
+### Teacher Assignments Dropdown
+
+The "Select Teacher" dropdown must call GET /api/curriculum/staff-teachers with the curriculum admin token to get the list. If the dropdown is empty:
+1. Check the API call URL is correct
+2. Check the curriculum admin token is being sent
+3. Check the response is an array and the dropdown maps over it
+
+---
+
+### Null Safety on All Pages
+
+On every page that fetches API data, add optional chaining before rendering arrays or nested values:
+
+WRONG: data.quizzes.map(...)
+CORRECT: data?.quizzes?.map(...)
+
+Also add loading states:
+if (isLoading) return <div>Loading...</div>
+if (!data) return <div>No data found</div>
+
+Apply this to: student dashboard, student quizzes list, student fees, student attendance, teacher dashboard, teacher content list, teacher quiz list, teacher quiz attempts page.
+
+---
+
+## SECTION 6 — FINAL VERIFICATION CHECKLIST
+
+Go through each item. Fix anything that fails.
+
+1. Server starts with zero console errors
+2. Admin login works — existing curriculum email and password still work, existing curriculum pages unchanged
+3. Teacher login — use a real staff email from staff collection, password = their staffId value
+4. Teacher can see their assigned classes on dashboard
+5. Teacher uploads a PDF — file appears in content list with publish toggle
+6. Student login — use real student ID, password = DOB in DDMMYYYY format
+7. Student sees uploaded PDF in Study Material page — PDF renders inside iframe
+8. Student opens My Quizzes — Active tab shows available quiz
+9. Student takes quiz — answers questions, submits, sees result with grade and pass/fail
+10. Student fees page shows data from feevouchers collection (may be empty if no vouchers, that is fine)
+11. Student attendance page shows data (may be empty, that is fine)
+12. Teacher goes to quiz attempts — sees the student submission
+13. Teacher grades short answer — enters marks, saves, total score updates correctly
+14. Browser developer tools shows no red console errors on any page
+15. Browser network tab shows no 401 or 403 errors on any authenticated page after login
+
+After completing all fixes, list every issue found and what was changed to fix it.

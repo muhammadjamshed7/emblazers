@@ -14,18 +14,18 @@ export default function StudentFeesPage() {
   const totalPaid = fees.reduce((sum: number, f: any) => sum + (f.paidAmount || 0), 0);
   const totalOutstanding = totalAmount - totalPaid;
 
-  const getStatusBadgeColor = (status: string) => {
+  const getStatusBadgeClass = (status: string) => {
     switch (status?.toLowerCase()) {
       case "paid":
-        return "default";
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
       case "partial":
-        return "secondary";
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
       case "pending":
-        return "outline";
+        return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200";
       case "overdue":
-        return "destructive";
+        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
       default:
-        return "outline";
+        return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200";
     }
   };
 
@@ -107,7 +107,7 @@ export default function StudentFeesPage() {
                         {f.dueDate ? new Date(f.dueDate).toLocaleDateString() : "-"}
                       </td>
                       <td className="p-4">
-                        <Badge variant={getStatusBadgeColor(f.status)}>
+                        <Badge className={`no-default-hover-elevate no-default-active-elevate ${getStatusBadgeClass(f.status)}`}>
                           {getStatusLabel(f.status)}
                         </Badge>
                       </td>

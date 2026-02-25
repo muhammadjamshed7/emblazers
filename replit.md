@@ -20,9 +20,11 @@ The backend is an Express.js application built with Node.js and TypeScript, expo
 Core entities include Students, Staff, Fee Vouchers, Payroll, Finance, Attendance, Timetable, Library, Transport, and Hostel. Cross-module references are established, such as Student IDs being referenced by Fees, Attendance, and other modules, and Staff IDs by Payroll and HR.
 
 ### Authentication & Authorization
-The system uses JWT-based authentication with module-specific credentials ({module}@emblazers.com / 12345678). JWT tokens, containing user and module information, expire in 2 hours and are stored client-side. The `moduleAuthMiddleware` enforces strict module isolation, ensuring users only access API routes assigned to their logged-in module, with unmapped routes denied by default. Passwords are hashed using bcrypt and stored in the ModuleUser collection, allowing users to change their passwords.
+The system uses JWT-based authentication with module-specific credentials ({module}@emblazers.com / 12345678). JWT tokens, containing user and module information, expire in 3 days and are stored client-side. The `moduleAuthMiddleware` enforces strict module isolation, ensuring users only access API routes assigned to their logged-in module, with unmapped routes denied by default. Passwords are hashed using bcrypt and stored in the ModuleUser collection, allowing users to change their passwords.
 
 Three role-specific middleware functions in `server/middleware/module-auth.ts`: `requireCurriculumAdmin` (checks curriculum module + admin role), `requireTeacher` (checks teacher role + staffId), `requireStudent` (checks student role + studentId).
+
+All teacher content/quiz modification routes enforce ownership by checking `doc.staffId === req.user.staffId` before allowing updates, deletes, toggle-publish, or grading actions. This prevents one teacher from modifying another's resources.
 
 Teacher passwords are stored in the `teacherAuthPasswords` collection (TeacherAuthPassword model) with bcrypt hashes. On first login attempt, if no record exists, one is auto-created with the default password (staffId value). The teacher change-password route actually persists the new hashed password.
 

@@ -3,7 +3,7 @@ import mongoose, { Schema, Document } from "mongoose";
 export interface IStudentQuizAnswer {
   questionIndex: number;
   givenAnswer: string;
-  isCorrect: boolean;
+  isCorrect: boolean | null;
   marksAwarded: number;
 }
 
@@ -27,7 +27,7 @@ const AnswerSchema = new Schema(
   {
     questionIndex: { type: Number, required: true },
     givenAnswer: { type: String, default: "" },
-    isCorrect: { type: Boolean, default: false },
+    isCorrect: { type: Boolean, default: null },
     marksAwarded: { type: Number, default: 0 },
   },
   { _id: false }
