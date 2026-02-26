@@ -35,7 +35,7 @@ const seedUsers: SeedUser[] = [
   { email: "attendance@emblazers.com", password: "12345678", role: "Attendance" },
   { email: "timetable@emblazers.com", password: "12345678", role: "Timetable" },
   { email: "datesheet@emblazers.com", password: "12345678", role: "Datesheet" },
-  { email: "curriculum@emblazers.com", password: "12345678", role: "Curriculum" },
+  { email: "admin@emblazers.com", password: "12345678", role: "Curriculum" },
   { email: "pos@emblazers.com", password: "12345678", role: "POS" },
   { email: "library@emblazers.com", password: "12345678", role: "Library" },
   { email: "transport@emblazers.com", password: "12345678", role: "Transport" },

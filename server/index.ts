@@ -88,6 +88,17 @@ app.use((req, res, next) => {
 
 (async () => {
   await connectDB();
+
+  try {
+    const { ModuleUser } = await import("./models/ModuleUser");
+    const curriculumUser = await ModuleUser.findOne({ module: "curriculum" });
+    if (curriculumUser && curriculumUser.email === "curriculum@emblazers.com") {
+      curriculumUser.email = "admin@emblazers.com";
+      await curriculumUser.save();
+      console.log("Migrated curriculum admin email to admin@emblazers.com");
+    }
+  } catch (e) {}
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

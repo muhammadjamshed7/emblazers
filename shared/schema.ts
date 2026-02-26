@@ -1040,7 +1040,7 @@ export const moduleUserCredentials: Record<ModuleType, { email: string; password
   attendance: { email: "attendance@emblazers.com", password: "12345678", role: "admin", name: "Attendance Admin" },
   timetable: { email: "timetable@emblazers.com", password: "12345678", role: "admin", name: "Timetable Admin" },
   datesheet: { email: "datesheet@emblazers.com", password: "12345678", role: "admin", name: "DateSheet Admin" },
-  curriculum: { email: "curriculum@emblazers.com", password: "12345678", role: "admin", name: "Curriculum Admin" },
+  curriculum: { email: "admin@emblazers.com", password: "12345678", role: "admin", name: "Curriculum Admin" },
   pos: { email: "pos@emblazers.com", password: "12345678", role: "admin", name: "POS Admin" },
   library: { email: "library@emblazers.com", password: "12345678", role: "admin", name: "Library Admin" },
   transport: { email: "transport@emblazers.com", password: "12345678", role: "admin", name: "Transport Admin" },
