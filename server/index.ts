@@ -99,18 +99,6 @@ app.use((req, res, next) => {
     }
   } catch (e) {}
 
-  try {
-    const bcrypt = await import("bcryptjs");
-    const StudentPortalAccountModel = (await import("./models/StudentPortalAccount")).default;
-    const defaultHash = await bcrypt.hash("12345678", 10);
-    const result = await StudentPortalAccountModel.updateMany(
-      { isFirstLogin: true },
-      { $set: { passwordHash: defaultHash } }
-    );
-    if (result.modifiedCount > 0) {
-      console.log(`Reset ${result.modifiedCount} student account(s) to default password`);
-    }
-  } catch (e) {}
 
   await registerRoutes(httpServer, app);
 
