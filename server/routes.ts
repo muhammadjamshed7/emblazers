@@ -1101,8 +1101,8 @@ export async function registerRoutes(
           continue;
         }
 
-        const dobPassword = formatDobPassword(student.dob);
-        const passwordHash = await bcrypt.hash(dobPassword, 10);
+        const defaultPassword = "12345678";
+        const passwordHash = await bcrypt.hash(defaultPassword, 10);
 
         await StudentPortalAccountModel.create({
           studentId: student.studentId,
@@ -1125,14 +1125,11 @@ export async function registerRoutes(
     const account = await StudentPortalAccountModel.findOne({ studentId: req.params.studentId });
     if (!account) return res.status(404).json({ error: "Account not found" });
 
-    const allStudents = await storage.getStudents();
-    const student = allStudents.find(s => s.studentId === req.params.studentId);
-    const dobPassword = student ? formatDobPassword(student.dob) : req.params.studentId;
-
-    account.passwordHash = await bcrypt.hash(dobPassword, 10);
+    const defaultPassword = "12345678";
+    account.passwordHash = await bcrypt.hash(defaultPassword, 10);
     account.isFirstLogin = true;
     await account.save();
-    res.json({ success: true, message: "Password reset to DOB default" });
+    res.json({ success: true, message: "Password reset to default (12345678)" });
   }));
 
   app.patch("/api/curriculum/student-accounts/:id", asyncHandler(async (req, res) => {

@@ -207,7 +207,7 @@ export default function CurriculumLoginPage() {
                     </button>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">Default password is your Date of Birth (DDMMYYYY format). You must change it on first login.</p>
+                <p className="text-xs text-muted-foreground">Default password is 12345678. You must change it on first login.</p>
                 <Button type="submit" className="w-full bg-blue-500 hover:bg-blue-600" disabled={isLoading} data-testid="button-student-submit">
                   {isLoading ? "Signing in..." : "Sign in as Student"}
                 </Button>
