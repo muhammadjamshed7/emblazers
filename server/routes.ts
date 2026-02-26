@@ -1564,21 +1564,21 @@ export async function registerRoutes(
     let pendingFeesTotal = 0;
     try {
       const FeeVoucherModel = (await import("./models/FeeVoucher")).default;
-      const feeVouchers = await FeeVoucherModel.find({ studentId: user.studentId, status: { $ne: "paid" } }).lean();
+      const feeVouchers = await FeeVoucherModel.find({ studentId: user.studentId, status: { $nin: ["Paid", "paid"] } }).lean();
       pendingFeesTotal = (feeVouchers as any[]).reduce((sum: number, v: any) => sum + ((v.totalAmount || 0) - (v.paidAmount || 0)), 0);
     } catch {}
 
     let thisMonthAttendance = 0;
     try {
       const AttendanceRecordModel = (await import("./models/AttendanceRecord")).default;
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      const startOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+      const endOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-31`;
       const records = await AttendanceRecordModel.find({
         studentId: user.studentId,
         date: { $gte: startOfMonth, $lte: endOfMonth },
       }).lean();
       const total = records.length;
-      const present = (records as any[]).filter((r: any) => r.status === "present" || r.status === "Present").length;
+      const present = (records as any[]).filter((r: any) => r.status?.toUpperCase() === "PRESENT").length;
       thisMonthAttendance = total > 0 ? Math.round((present / total) * 100) : 0;
     } catch {}
 
@@ -1873,7 +1873,7 @@ export async function registerRoutes(
         const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
         if (!monthlyMap[key]) monthlyMap[key] = { present: 0, absent: 0, total: 0 };
         monthlyMap[key].total++;
-        if (r.status === "present" || r.status === "Present") monthlyMap[key].present++;
+        if (r.status?.toUpperCase() === "PRESENT") monthlyMap[key].present++;
         else monthlyMap[key].absent++;
       }
 
