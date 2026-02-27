@@ -1,919 +1,1266 @@
 # Emblazers - School Management System
 
-## Complete Documentation
+## Complete System Documentation
+
+**Version:** 1.0
+**Live URL:** https://emblazers.replit.app
+**Last Updated:** February 2026
 
 ---
 
 ## Table of Contents
 
-1. [Overview](#overview)
-2. [Tech Stack](#tech-stack)
-3. [Environment Setup](#environment-setup)
-4. [System Architecture](#system-architecture)
-5. [Modules Overview](#modules-overview)
-6. [Authentication & Authorization](#authentication--authorization)
-7. [Curriculum Module — Multi-Role System](#curriculum-module--multi-role-system)
-8. [API Reference](#api-reference)
-9. [Database Schema](#database-schema)
-10. [Frontend Pages & Routes](#frontend-pages--routes)
-11. [User Flows](#user-flows)
-12. [Build & Deployment](#build--deployment)
-13. [File Storage](#file-storage)
-14. [Grade Calculation](#grade-calculation)
-15. [Troubleshooting](#troubleshooting)
+1. [System Overview](#1-system-overview)
+2. [Login Credentials](#2-login-credentials)
+3. [Architecture](#3-architecture)
+4. [Authentication & Authorization](#4-authentication--authorization)
+5. [Modules Overview](#5-modules-overview)
+6. [Complete API Reference](#6-complete-api-reference)
+7. [Database Models](#7-database-models)
+8. [Frontend Pages & Routes](#8-frontend-pages--routes)
+9. [Cross-Module Data Flow](#9-cross-module-data-flow)
+10. [Curriculum Multi-Role System](#10-curriculum-multi-role-system)
 
 ---
 
-## Overview
+## 1. System Overview
 
-Emblazers is a comprehensive school management system designed for managing 14 administrative modules across student management, HR, finance, academics, and facilities. Each department operates as an independent module with its own authentication, dashboard, and feature set. The system provides a professional, information-dense admin interface for school administrators.
+Emblazers is a comprehensive school management system with **13 administrative modules** covering student management, HR, finance, academics, and facilities. Each module operates independently with its own login, dashboard, and feature set.
 
-The Curriculum module is the most advanced, supporting three distinct user roles (Admin, Teacher, Student) with separate login flows, dashboards, and full learning management features including quiz creation, content upload, and automated grading.
+### Modules at a Glance
 
-The system also includes a fallback in-memory storage (`MemStorage`) for development/testing when MongoDB is not available, though production use requires MongoDB Atlas.
-
-**Live URL:** https://emblazers.replit.app
+| # | Module | Purpose | Login Email |
+|---|--------|---------|-------------|
+| 1 | **Student** | Student records, enrollment, alumni | student@emblazers.com |
+| 2 | **HR** | Staff management, vacancies, recruitment | hr@emblazers.com |
+| 3 | **Fee** | Fee structures, challans, payments | fee@emblazers.com |
+| 4 | **Payroll** | Salary generation, payslips | payroll@emblazers.com |
+| 5 | **Finance** | Chart of accounts, ledger, journals | finance@emblazers.com |
+| 6 | **Attendance** | Student & staff attendance tracking | attendance@emblazers.com |
+| 7 | **Timetable** | Class and teacher scheduling | timetable@emblazers.com |
+| 8 | **DateSheet** | Exam date sheet management | datesheet@emblazers.com |
+| 9 | **Curriculum** | Syllabus, exams, LMS (3 roles) | admin@emblazers.com |
+| 10 | **POS** | Point of sale for canteen/stationery | pos@emblazers.com |
+| 11 | **Library** | Books, members, issue/return | library@emblazers.com |
+| 12 | **Transport** | Routes, vehicles, drivers, allocation | transport@emblazers.com |
+| 13 | **Hostel** | Rooms, residents, hostel fees | hostel@emblazers.com |
 
 ---
 
-## Tech Stack
+## 2. Login Credentials
+
+### Module Admin Logins
+All module admins share the same default password: **12345678**
+
+| Role | Email | Password | Login URL |
+|------|-------|----------|-----------|
+| Student Admin | student@emblazers.com | 12345678 | /student/login |
+| HR Admin | hr@emblazers.com | 12345678 | /hr/login |
+| Fee Admin | fee@emblazers.com | 12345678 | /fee/login |
+| Payroll Admin | payroll@emblazers.com | 12345678 | /payroll/login |
+| Finance Admin | finance@emblazers.com | 12345678 | /finance/login |
+| Attendance Admin | attendance@emblazers.com | 12345678 | /attendance/login |
+| Timetable Admin | timetable@emblazers.com | 12345678 | /timetable/login |
+| DateSheet Admin | datesheet@emblazers.com | 12345678 | /datesheet/login |
+| Curriculum Admin | admin@emblazers.com | 12345678 | /curriculum/login |
+| POS Admin | pos@emblazers.com | 12345678 | /pos/login |
+| Library Admin | library@emblazers.com | 12345678 | /library/login |
+| Transport Admin | transport@emblazers.com | 12345678 | /transport/login |
+| Hostel Admin | hostel@emblazers.com | 12345678 | /hostel/login |
+
+### Curriculum Module - Multi-Role Logins
+
+| Role | Login Method | Default Password | Login URL |
+|------|-------------|-----------------|-----------|
+| **Admin** | admin@emblazers.com | 12345678 | /curriculum/login (Admin tab) |
+| **Teacher** | Staff email (e.g. john@school.com) | Staff ID (e.g. STF-2024-001) | /curriculum/login (Teacher tab) |
+| **Student** | Student ID (e.g. C5-A-2024-0001) | 12345678 | /curriculum/login (Student tab) |
+
+---
+
+## 3. Architecture
+
+### Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | React 18 + TypeScript |
-| Routing | Wouter |
-| Server State | TanStack React Query v5 |
-| UI Components | shadcn/ui + Radix UI |
-| Styling | Tailwind CSS |
-| Backend | Express.js + Node.js + TypeScript |
-| Database | MongoDB Atlas with Mongoose ODM |
-| Authentication | JWT (JSON Web Tokens) |
-| Validation | Zod |
-| Build | Vite (frontend) + esbuild (server) |
-| Runtime | tsx (TypeScript execution) |
-
----
-
-## Environment Setup
-
-### Required Environment Variables
-
-| Variable | Required | Description | Default |
-|----------|----------|-------------|---------|
-| `MONGO_URI` | Yes | MongoDB Atlas connection string | None |
-| `JWT_SECRET` | Yes | Secret key for JWT signing/verification | None |
-| `PORT` | No | Server listening port | `5000` |
-| `NODE_ENV` | No | Environment mode (`development` / `production`) | `development` |
-| `CLIENT_URL` | No | CORS allowed origin | `true` (all origins) |
-
-### Running the Project
-
-```bash
-npm run dev
-```
-
-This starts the Express server on port 5000 with Vite middleware for hot-reloading in development.
-
----
-
-## System Architecture
-
-### Frontend Architecture
-
-- Built with React 18 and TypeScript using Vite for bundling
-- Wouter handles client-side routing
-- React Query manages server state and caching
-- UI components built with Radix UI primitives and shadcn/ui (New York style)
-- Tailwind CSS for styling with HSL-based color system supporting light/dark themes
-- Each module is self-contained with its own route namespace
-- Authentication managed via React Context API
-
-### Backend Architecture
-
-- Express.js application exposing RESTful API endpoints under `/api`
-- JWT-based authentication with module-specific credentials
-- Global `moduleAuthMiddleware` enforces module isolation
-- MongoDB Atlas accessed via Mongoose ODM
-- Zod used for API request validation
-- Development mode: Vite middleware integration
-- Production mode: serves pre-built static files from `dist/public`
+| **Frontend** | React 18, TypeScript, Vite |
+| **UI Library** | Radix UI, shadcn/ui, Tailwind CSS |
+| **State Management** | TanStack React Query v5 |
+| **Routing** | Wouter |
+| **Backend** | Express.js, Node.js, TypeScript |
+| **Database** | MongoDB Atlas via Mongoose ODM |
+| **Authentication** | JWT (jsonwebtoken), bcryptjs |
+| **Validation** | Zod |
+| **Build** | esbuild (server), Vite (client) |
 
 ### Project Structure
 
 ```
-client/
-  src/
-    components/
-      layout/          # ModuleLayout, AppSidebar
-      ui/              # shadcn/ui components
-    hooks/             # Custom React hooks
-    lib/
-      auth.tsx         # Authentication context & hooks
-      grade-utils.ts   # Shared grade color utilities
-      module-config.ts # Module definitions
-      queryClient.ts   # React Query client setup
-    pages/
-      home.tsx         # Landing page with module cards
-      curriculum/      # All curriculum module pages
-        curriculum-data.ts   # Admin nav items & hooks
-        teacher-data.ts      # Teacher nav items & hooks
-        student-data.ts      # Student nav items & hooks
-        login.tsx            # 3-role login page
-        ...                  # Module pages
-server/
-  index.ts             # Server entry point
-  routes.ts            # All API route handlers
-  db.ts                # MongoDB connection setup
-  storage.ts           # Storage interface (MemStorage / MongoStorage)
-  mongo-storage.ts     # MongoDB storage implementation
-  middleware/
-    module-auth.ts     # Module authentication middleware
-    auth.ts            # JWT verification middleware
-  models/              # Mongoose model definitions
-  utils/
-    grade.ts           # Grade calculation utility
-shared/
-  schema.ts            # Shared Zod schemas & types
+emblazers/
+├── client/
+│   └── src/
+│       ├── components/
+│       │   ├── layout/         # ModuleLayout, sidebar
+│       │   └── ui/             # shadcn/ui components
+│       ├── hooks/              # useToast, etc.
+│       ├── lib/
+│       │   ├── auth.tsx        # AuthContext, useAuth
+│       │   ├── queryClient.ts  # React Query setup
+│       │   └── grade-utils.ts  # Grade colors/calculations
+│       └── pages/
+│           ├── home.tsx        # Landing page
+│           ├── module-login.tsx # Generic module login
+│           ├── student/        # Student module pages
+│           ├── hr/             # HR module pages
+│           ├── fee/            # Fee module pages
+│           ├── payroll/        # Payroll module pages
+│           ├── finance/        # Finance module pages
+│           ├── attendance/     # Attendance module pages
+│           ├── timetable/      # Timetable module pages
+│           ├── datesheet/      # DateSheet module pages
+│           ├── curriculum/     # Curriculum module pages (admin + teacher + student)
+│           ├── pos/            # POS module pages
+│           ├── library/        # Library module pages
+│           ├── transport/      # Transport module pages
+│           ├── hostel/         # Hostel module pages
+│           └── careers/        # Public careers pages
+├── server/
+│   ├── index.ts               # Entry point, MongoDB connect, migrations
+│   ├── routes.ts              # All API route handlers
+│   ├── storage.ts             # Storage interface (CRUD operations)
+│   ├── seed-module-users.ts   # Seeds default module admin users
+│   ├── middleware/
+│   │   └── module-auth.ts     # JWT auth + module isolation middleware
+│   ├── models/                # Mongoose models (52 models)
+│   └── utils/
+│       └── grade.ts           # Server-side grade calculation
+├── shared/
+│   └── schema.ts              # Shared types, Zod schemas, credentials
+└── dist/                      # Production build output
+    ├── index.cjs              # Server bundle
+    └── public/                # Client bundle
 ```
 
----
+### How Frontend & Backend Connect
 
-## Modules Overview
-
-The system includes 14 independent modules, each accessible from the home page:
-
-| Module | Route | Description |
-|--------|-------|-------------|
-| Students | `/student` | Manage student admissions, profiles, and academics |
-| HR | `/hr` | Manage staff, vacancies, and HR operations |
-| Fees | `/fee` | Manage fee vouchers, payments, and collections |
-| Payroll | `/payroll` | Manage staff salaries, allowances, and deductions |
-| Finance | `/finance` | Manage accounts, vouchers, and financial reports |
-| Attendance | `/attendance` | Track and manage student and staff attendance |
-| Timetable | `/timetable` | Create and manage class and teacher timetables |
-| Date Sheet | `/datesheet` | Create and manage exam date sheets |
-| Curriculum | `/curriculum` | Manage syllabus, exams, results + Teacher & Student portals |
-| POS | `/pos` | Point of sale for uniforms, books, and stationery |
-| Library | `/library` | Manage books, members, and book issues |
-| Transport | `/transport` | Manage routes, vehicles, and student allocation |
-| Hostel | `/hostel` | Manage hostel rooms, residents, and fees |
-| Reports & History | `/reports` | Centralized reports and analytics |
-
-Each module follows the same pattern:
-1. Login page at `/{module}/login`
-2. Dashboard at `/{module}/dashboard`
-3. Module-specific pages within the same namespace
-4. Dedicated sidebar navigation
-
-### Default Login Credentials
-
-All standard modules use the pattern:
-- **Email:** `{module}@emblazers.com`
-- **Password:** `12345678`
-
-Example: `student@emblazers.com / 12345678`, `hr@emblazers.com / 12345678`
+1. **Development**: Vite dev server runs with Express middleware integration. Both frontend and backend run on port 5000. Vite handles HMR for the frontend.
+2. **Production**: Express serves pre-built static files from `dist/public/`. API routes are handled by Express under `/api/`.
+3. **API Communication**: Frontend uses `fetch()` with `Authorization: Bearer <token>` headers. React Query manages caching, refetching, and invalidation.
 
 ---
 
-## Authentication & Authorization
+## 4. Authentication & Authorization
 
-### JWT-Based Authentication
+### Authentication Flow
 
-- Tokens are generated on login with a **3-day** expiry (`expiresIn: "3d"`) for all roles
-- Tokens contain: `userId`, `email`, `role`, `module`, and role-specific fields
-- Stored client-side in localStorage
+```
+User submits credentials
+         │
+         ▼
+POST /api/auth/login (module admin)
+POST /api/teacher/login (teacher)
+POST /api/student-portal/login (student)
+         │
+         ▼
+Server validates credentials (bcrypt.compare)
+         │
+         ▼
+JWT token issued (3-day expiry)
+Contains: userId, email, role, module, staffId/studentId
+         │
+         ▼
+Token stored in localStorage:
+  Admin:   emblazers_token / emblazers_session
+  Teacher: teacher_token / teacher_session
+  Student: student_token / student_session
+         │
+         ▼
+All API requests include: Authorization: Bearer <token>
+```
 
-### Module Auth Middleware
+### Module Isolation (moduleAuthMiddleware)
 
-The `moduleAuthMiddleware` in `server/middleware/module-auth.ts`:
-1. Extracts JWT from the `Authorization: Bearer <token>` header
-2. Verifies the token signature using `JWT_SECRET`
-3. Maps the requested API route to the appropriate module
-4. Validates the user's module matches the route's module
-5. Operates in fail-closed mode — unmapped routes are denied
+Every API request passes through `moduleAuthMiddleware` which:
+
+1. **Skips** public routes (login, health, public vacancies)
+2. **Extracts** JWT from Authorization header
+3. **Verifies** token signature and expiry
+4. **Maps** the API path to allowed modules using `routeToModulesMap`
+5. **Blocks** access if the user's module isn't in the allowed list (403 Forbidden)
+6. **Denies** unmapped routes by default (fail-closed security)
+
+### Public Routes (No Auth Required)
+
+| Route | Purpose |
+|-------|---------|
+| GET /api/health | Server health check |
+| POST /api/auth/login | Module admin login |
+| POST /api/teacher/login | Teacher login |
+| POST /api/student-portal/login | Student login |
+| GET /api/public/vacancies | Public job listings |
+| GET /api/public/vacancies/:id | Public vacancy details |
+| POST /api/public/applications | Submit job application |
+
+### Route-to-Module Access Map
+
+| API Route | Allowed Modules |
+|-----------|----------------|
+| /api/students | student, fee, attendance, hostel, transport, library, curriculum |
+| /api/staff | hr, payroll, attendance, timetable, library, curriculum |
+| /api/fee-vouchers, /api/fee-structures | fee |
+| /api/challans, /api/payments | fee |
+| /api/payrolls | payroll |
+| /api/accounts, /api/ledger-entries, /api/journal-entries | finance |
+| /api/chart-of-accounts, /api/finance-vouchers | finance |
+| /api/expenses, /api/vendors | finance |
+| /api/attendance-records, /api/attendance/* | attendance |
+| /api/timetables | timetable |
+| /api/datesheets | datesheet |
+| /api/curriculums, /api/questions, /api/quizzes | curriculum |
+| /api/curriculum/* | curriculum |
+| /api/teacher/* | curriculum |
+| /api/student-portal/* | curriculum |
+| /api/pos-items, /api/sales | pos |
+| /api/books, /api/book-issues, /api/book-categories | library |
+| /api/library-members, /api/library/* | library |
+| /api/routes, /api/vehicles, /api/drivers | transport |
+| /api/student-transports | transport |
+| /api/hostel-rooms, /api/hostel-residents | hostel |
+| /api/hostel-fees | hostel |
+| /api/vacancies, /api/applicants | hr |
+| /api/notifications, /api/activity-logs | all modules |
 
 ### Role-Specific Middleware
 
-Three additional middleware functions for the Curriculum module:
+| Middleware | Checks | Used For |
+|-----------|--------|----------|
+| requireCurriculumAdmin | module=curriculum, role=admin | Admin-only curriculum routes |
+| requireTeacher | role=teacher, staffId present | Teacher content/quiz routes |
+| requireStudent | role=student, studentId present | Student portal routes |
 
-| Middleware | Checks | Used By |
-|-----------|--------|---------|
-| `requireCurriculumAdmin` | Module = curriculum, Role = admin | Admin-only routes |
-| `requireTeacher` | Role = teacher, has staffId | Teacher portal routes |
-| `requireStudent` | Role = student, has studentId | Student portal routes |
+### Teacher Ownership Enforcement
 
-### Session Separation
-
-Three separate localStorage key pairs to prevent session conflicts:
-
-| Role | Token Key | Session Key |
-|------|-----------|-------------|
-| Admin | `emblazers_token` | `emblazers_session` |
-| Teacher | `teacher_token` | `teacher_session` |
-| Student | `student_token` | `student_session` |
-
-### Password Storage
-
-- Admin passwords: bcrypt hashed in the `ModuleUser` collection
-- Teacher passwords: bcrypt hashed in the `teacherAuthPasswords` collection
-- Student passwords: bcrypt hashed in the `studentPortalAccounts` collection
+All teacher content/quiz modification routes enforce ownership:
+- Before update/delete, the system checks `doc.staffId === req.user.staffId`
+- Returns 403 if a teacher tries to modify another teacher's content
 
 ---
 
-## Curriculum Module — Multi-Role System
+## 5. Modules Overview
 
-The Curriculum module supports 3 user roles with separate login flows, dashboards, and feature sets.
+### 5.1 Student Module
+Manages student enrollment, profiles, and records.
 
-### Login Page (`/curriculum/login`)
-
-Displays a role selector with three options:
-- **Admin Login** — Full curriculum management
-- **Teacher Login** — Manage classes and content
-- **Student Login** — Access learning portal
-
-### Role 1: Curriculum Admin
-
-**Credentials:** `curriculum@emblazers.com / 12345678`
-
-**Sidebar Navigation:**
-- Dashboard
-- Curriculum (Syllabus)
-- Exams
-- Result Entry
-- Result Reports
-- Quizzes
-- Quiz Results
-- Teacher Assignments
-- Student Accounts
+**Pages:** Dashboard, Student List, Add Student, Edit Student, Student Profile, Alumni, Reports
 
 **Key Features:**
-- View and manage the syllabus, exams, and results
-- Assign teachers to classes with subject mappings
-- Bulk create student portal accounts
-- Reset student passwords
-- Overview of all quizzes across all teachers
+- Student CRUD with auto-generated IDs (format: C{class}-{section}-{year}-{seq})
+- Photo upload, B-Form/CNIC storage
+- Status tracking (Active, Inactive, Alumni, Left)
+- Bulk import via CSV
+- Student profile with attendance summary, fee history
+- Alumni tracking
 
-### Role 2: Teacher
+**Data shared with:** Fee (studentId), Attendance (studentId), Hostel (studentId), Transport (studentId), Library (studentId), Curriculum (studentId)
 
-**Credentials:** Staff email + Staff ID as default password (e.g., `ali@school.com / STF0001`)
+---
 
-**Password Behavior:**
-- On first login, if no password record exists in `teacherAuthPasswords`, one is auto-created with the Staff ID as the default password (bcrypt hashed)
-- Teachers can change their password at any time
-- Old password is rejected after change
+### 5.2 HR Module
+Manages staff records and recruitment.
 
-**Login Requirements:**
-- Must have active `TeacherAssignment` records
-- If no assignments exist, login is rejected with: "You have not been assigned any class yet. Contact admin."
-
-**Sidebar Navigation:**
-- Dashboard
-- My Assignments
-- Upload Content
-- My Quizzes
-- Quiz Results
+**Pages:** Dashboard, Staff List, Add Staff, Staff Profile, Vacancies, Applicants, Reports
 
 **Key Features:**
-- View assigned classes and subjects
-- Upload study materials (PDF, images, notes, links) — files converted to base64
-- Create quizzes with MCQ, True/False, and Short Answer questions
-- Publish/unpublish content and quizzes
-- View student quiz attempts with statistics
-- Manually grade short-answer questions with mark allocation
+- Staff CRUD with auto-generated IDs (format: STF-{year}-{seq})
+- Employment tracking (Full-time, Part-time, Contract)
+- Status management (Active, Probation, On Leave, Terminated)
+- Job vacancy posting with public careers page
+- Application tracking with status pipeline (New > Shortlisted > Interviewed > Selected > Rejected)
+- Bulk staff import
 
-### Role 3: Student
+**Data shared with:** Payroll (staffId), Attendance (staffId), Timetable (teacherId), Curriculum (staffId for teacher assignments)
 
-**Credentials:** Student ID + Date of Birth in DDMMYYYY format (e.g., `C5-A-2024-0001 / 09022006`)
+---
 
-**Password Behavior:**
-- Default password = DOB in DDMMYYYY format (e.g., February 9, 2006 = `09022006`)
-- Portal accounts created by admin via bulk creation or individual creation
-- On first login, `isFirstLogin = true` triggers a forced password change screen
-- After changing password, `isFirstLogin` is set to `false`
+### 5.3 Fee Module
+Manages fee structures, challans, vouchers, and payments.
 
-**Sidebar Navigation:**
-- Dashboard
-- Study Material
-- My Quizzes
-- My Results
-- My Fees
-- Attendance
+**Pages:** Dashboard, Fee Structures, Challans, Payments, Vouchers, Generate Fees, Reports
 
 **Key Features:**
-- Dashboard with summary cards (active quizzes, completed quizzes, pending fees, attendance %)
-- Browse study materials grouped by subject with inline viewers (PDF iframe, image lightbox, text modal)
-- Take quizzes in full-screen mode with countdown timer and question palette
-- View quiz results with per-question breakdown and grade badges
-- View fee records (read-only) with payment status
-- View month-by-month attendance with circular progress indicator
+- Fee structure definition by class with multiple fee heads
+- Challan generation (individual or bulk)
+- Payment recording with multiple modes (Cash, Bank, Cheque, Online)
+- Discount rules (Sibling, Merit, Staff Child, Scholarship)
+- Late fee rules (Fixed, Percentage, Daily)
+- Installment plans
+- Auto-posting to Finance ledger on payment
+- Fee voucher generation with bulk support
+
+**Data shared with:** Finance (auto-posts on payment), Student Portal (student sees their fee records)
 
 ---
 
-## API Reference
+### 5.4 Payroll Module
+Manages salary generation and payment tracking.
 
-### Public Routes (No Authentication Required)
+**Pages:** Dashboard, Payroll List, Generate Payroll, Reports
+
+**Key Features:**
+- Monthly payroll generation per staff member
+- Allowances and deductions configuration
+- Gross/Net salary calculation
+- Payment status tracking (Paid/Unpaid)
+- Auto-posts Finance Voucher when payroll marked as Paid
+- Payroll reports by department, month
+
+**Data shared with:** Finance (auto-posts payment voucher), HR (reads staff data)
+
+---
+
+### 5.5 Finance Module
+Full double-entry accounting system.
+
+**Pages:** Dashboard, Chart of Accounts, Ledger, Expenses, Vendors, Finance Vouchers, Reports
+
+**Key Features:**
+- Chart of Accounts (Asset, Liability, Equity, Income, Expense)
+- Ledger entries with debit/credit tracking
+- Journal entries for manual adjustments
+- Finance vouchers (Receipt, Payment, Journal, Contra)
+- Expense management with vendor linking
+- Vendor management with bank details
+- Auto-receives entries from Fee payments and Payroll
+
+**Data received from:** Fee module (payment receipts), Payroll module (salary payments)
+
+---
+
+### 5.6 Attendance Module
+Tracks daily attendance for students and staff.
+
+**Pages:** Dashboard, Mark Students, Mark Staff, Records, Reports
+
+**Key Features:**
+- Mark attendance by class/section for students
+- Mark attendance for staff
+- Status options: PRESENT, ABSENT, LEAVE
+- Upsert logic (update if same student+date exists)
+- Daily summary and reports
+- Attendance percentage calculations
+
+**Data shared with:** Student Portal (student sees their attendance), Dashboard (this month %)
+
+---
+
+### 5.7 Timetable Module
+Manages class and teacher schedules.
+
+**Pages:** Dashboard, Class Timetable, Teacher Timetable, Create Timetable
+
+**Key Features:**
+- Create timetable grid (day x period)
+- Assign subjects and teachers to slots
+- View by class or by teacher
+- Conflict detection
+
+**Data depends on:** HR (teacher list), Student (class list)
+
+---
+
+### 5.8 DateSheet Module
+Manages examination schedules.
+
+**Pages:** Dashboard, DateSheet List, Create DateSheet, Edit DateSheet, View DateSheet
+
+**Key Features:**
+- Create exam date sheets (Monthly, Term, Annual)
+- Map subjects to dates, times, rooms, invigilators
+- View/print formatted date sheets
+- Edit and update existing date sheets
+
+---
+
+### 5.9 Curriculum Module (3 Roles)
+Learning Management System with Admin, Teacher, and Student portals.
+
+See [Section 10: Curriculum Multi-Role System](#10-curriculum-multi-role-system) for full details.
+
+---
+
+### 5.10 POS Module
+Point of sale for school canteen/stationery.
+
+**Pages:** Dashboard, Sales, New Sale, Items, Reports
+
+**Key Features:**
+- Item inventory management
+- Create sales with multiple items
+- Auto stock deduction on sale
+- Sales reports and analytics
+
+---
+
+### 5.11 Library Module
+Manages books, members, and lending.
+
+**Pages:** Dashboard, Books, Issue/Return, Reports
+
+**Key Features:**
+- Book catalog with categories
+- Member registration (Student/Staff)
+- Book issue and return tracking
+- Overdue detection and fine calculation
+- Available/Issued/Total statistics
+
+**Data depends on:** Student (member reference), HR (staff member reference)
+
+---
+
+### 5.12 Transport Module
+Manages school transportation.
+
+**Pages:** Dashboard, Routes, Vehicles, Drivers, Allocation, Reports
+
+**Key Features:**
+- Route management with stops
+- Vehicle fleet tracking with maintenance status
+- Driver management with license tracking
+- Student-to-route allocation
+- Monthly transport fee tracking
+
+**Data depends on:** Student (allocation), HR (drivers may be staff)
+
+---
+
+### 5.13 Hostel Module
+Manages school hostel operations.
+
+**Pages:** Dashboard, Rooms, Residents, Hostel Fees, Reports
+
+**Key Features:**
+- Room management with bed capacity tracking
+- Student resident registration
+- Check-in/check-out tracking
+- Monthly hostel fee management
+- Room availability/occupancy status
+
+**Data depends on:** Student (resident is a student)
+
+---
+
+## 6. Complete API Reference
+
+### Authentication APIs
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | /api/auth/login | Module admin login | Public |
+| GET | /api/auth/me | Get current user profile | Required |
+| POST | /api/auth/change-password | Change admin password | Required |
+| POST | /api/teacher/login | Teacher login | Public |
+| POST | /api/teacher/change-password | Change teacher password | Teacher |
+| POST | /api/student-portal/login | Student login | Public |
+| POST | /api/student-portal/change-password | Change student password | Student |
+
+### Health & Public APIs
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/public/vacancies` | List all active job vacancies |
-| GET | `/api/public/vacancies/:id` | Get a specific vacancy |
-| POST | `/api/public/applications` | Submit a job application |
+| GET | /api/health | Server health + DB status |
+| GET | /api/public/vacancies | List open job vacancies |
+| GET | /api/public/vacancies/:id | Get vacancy details |
+| POST | /api/public/applications | Submit job application |
 
-### Standard Module Routes
-
-All standard modules (Students, HR, Fees, etc.) follow this pattern:
-
-```
-POST   /api/auth/login          # Login with module credentials
-GET    /api/auth/me              # Get current user info
-POST   /api/auth/change-password # Change password
-GET    /api/{resource}           # List resources
-POST   /api/{resource}           # Create resource
-PUT    /api/{resource}/:id       # Update resource
-DELETE /api/{resource}/:id       # Delete resource
-```
-
-### Curriculum Admin Routes
+### Student APIs (Module: student)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/curriculum/staff-teachers` | List all staff with teacher designation |
-| GET | `/api/curriculum/teacher-assignments` | List all teacher assignments |
-| POST | `/api/curriculum/teacher-assignments` | Create a new teacher assignment |
-| DELETE | `/api/curriculum/teacher-assignments/:id` | Delete an assignment |
-| GET | `/api/curriculum/student-accounts` | List all student portal accounts |
-| POST | `/api/curriculum/student-accounts/create` | Create student accounts (single or bulk by class) |
-| POST | `/api/curriculum/student-accounts/reset-password/:studentId` | Reset student password to DOB default |
-| PATCH | `/api/curriculum/student-accounts/:id` | Toggle student account active status |
-| GET | `/api/curriculum/quiz-overview` | All quizzes with attempt counts |
+| GET | /api/students | List all students (supports ?query= search) |
+| GET | /api/students/:id | Get student by ID |
+| POST | /api/students | Create student |
+| PATCH | /api/students/:id | Update student |
+| DELETE | /api/students/:id | Delete student (checks references) |
+| POST | /api/students/bulk | Bulk import students |
 
-**Create Student Accounts - Request Body:**
-```json
-// Single student
-{ "studentId": "C5-A-2024-0001" }
-
-// Bulk by class
-{ "className": "Class 5", "section": "A" }
-```
-
-### Teacher Auth Routes
+### HR / Staff APIs (Module: hr)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/teacher/login` | Teacher login with staff email and password |
-| POST | `/api/teacher/change-password` | Change teacher password |
+| GET | /api/staff | List all staff (supports ?query= search) |
+| GET | /api/staff/:id | Get staff by ID |
+| POST | /api/staff | Create staff member |
+| PATCH | /api/staff/:id | Update staff member |
+| DELETE | /api/staff/:id | Delete staff (checks references) |
+| POST | /api/staff/bulk | Bulk import staff |
+| GET | /api/vacancies | List all vacancies |
+| GET | /api/vacancies/:id | Get vacancy details |
+| POST | /api/vacancies | Create vacancy |
+| PATCH | /api/vacancies/:id | Update vacancy |
+| DELETE | /api/vacancies/:id | Delete vacancy |
+| GET | /api/applicants | List all applicants |
+| GET | /api/applicants/:id | Get applicant details |
+| POST | /api/applicants | Create applicant |
+| PATCH | /api/applicants/:id | Update applicant status |
+| DELETE | /api/applicants/:id | Delete applicant |
 
-**Teacher Login - Request Body:**
-```json
-{
-  "staffEmail": "ali@school.com",
-  "password": "STF0001"
-}
-```
-
-**Teacher Login - Response:**
-```json
-{
-  "success": true,
-  "token": "eyJhbG...",
-  "module": "curriculum",
-  "user": {
-    "email": "ali@school.com",
-    "role": "teacher",
-    "name": "Mr. Ali",
-    "staffId": "64a...",
-    "staffEmail": "ali@school.com"
-  },
-  "assignments": [
-    {
-      "id": "64b...",
-      "className": "Class 5",
-      "section": "A",
-      "subject": "Mathematics"
-    }
-  ]
-}
-```
-
-### Teacher Portal Routes
-
-All require Teacher JWT in `Authorization: Bearer <token>` header.
+### Fee APIs (Module: fee)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/teacher/my-assignments` | Get teacher's class assignments |
-| GET | `/api/teacher/content` | List teacher's uploaded content |
-| POST | `/api/teacher/content` | Upload new content (base64 file data) |
-| PATCH | `/api/teacher/content/:id/toggle-publish` | Toggle content publish status |
-| DELETE | `/api/teacher/content/:id` | Delete content |
-| GET | `/api/teacher/quizzes` | List teacher's quizzes |
-| POST | `/api/teacher/quizzes` | Create a new quiz with questions |
-| PUT | `/api/teacher/quizzes/:id` | Update quiz (blocked if attempts exist) |
-| DELETE | `/api/teacher/quizzes/:id` | Delete quiz (blocked if attempts exist) |
-| PATCH | `/api/teacher/quizzes/:id/toggle-publish` | Toggle quiz publish status |
-| GET | `/api/teacher/quizzes/:id/attempts` | Get all student attempts for a quiz |
-| PATCH | `/api/teacher/quizzes/:id/attempts/:attemptId/grade-short` | Grade a short-answer question |
+| GET | /api/fee-structures | List fee structures |
+| GET | /api/fee-structures/:id | Get fee structure |
+| POST | /api/fee-structures | Create fee structure |
+| PATCH | /api/fee-structures/:id | Update fee structure |
+| DELETE | /api/fee-structures/:id | Delete fee structure |
+| GET | /api/fee-vouchers | List fee vouchers |
+| GET | /api/fee-vouchers/:id | Get fee voucher |
+| POST | /api/fee-vouchers | Create fee voucher |
+| PATCH | /api/fee-vouchers/:id | Update fee voucher |
+| DELETE | /api/fee-vouchers/:id | Delete fee voucher |
+| POST | /api/bulk/fee-vouchers | Bulk create fee vouchers |
+| GET | /api/challans | List challans |
+| GET | /api/challans/:id | Get challan |
+| POST | /api/challans | Create challan |
+| PATCH | /api/challans/:id | Update challan |
+| DELETE | /api/challans/:id | Delete challan |
+| GET | /api/payments | List payments |
+| GET | /api/payments/:id | Get payment |
+| GET | /api/payments/challan/:challanId | Get payments for a challan |
+| POST | /api/payments | Record payment (updates challan + finance) |
+| PATCH | /api/payments/:id | Update payment |
+| DELETE | /api/payments/:id | Delete payment |
+| GET | /api/discount-rules | List discount rules |
+| POST | /api/discount-rules | Create discount rule |
+| GET | /api/late-fee-rules | List late fee rules |
+| POST | /api/late-fee-rules | Create late fee rule |
+| GET | /api/installment-plans | List installment plans |
+| POST | /api/installment-plans | Create installment plan |
 
-**Create Quiz - Request Body:**
-```json
-{
-  "title": "Chapter 3 Test",
-  "instructions": "Answer all questions",
-  "className": "Class 5",
-  "section": "A",
-  "subject": "Mathematics",
-  "timeLimitMinutes": 30,
-  "startDateTime": "2026-02-25T10:00:00.000Z",
-  "endDateTime": "2026-02-25T11:00:00.000Z",
-  "passingMarks": 18,
-  "questions": [
-    {
-      "questionText": "What is 1/2 + 1/4?",
-      "questionType": "mcq",
-      "options": ["1/4", "3/4", "1/2", "1"],
-      "correctAnswer": "3/4",
-      "marks": 5
-    },
-    {
-      "questionText": "A fraction has numerator and denominator.",
-      "questionType": "truefalse",
-      "options": ["True", "False"],
-      "correctAnswer": "True",
-      "marks": 5
-    },
-    {
-      "questionText": "Explain what a fraction is.",
-      "questionType": "short",
-      "options": [],
-      "correctAnswer": "",
-      "marks": 5
-    }
-  ]
-}
-```
-
-**Grade Short Answer - Request Body:**
-```json
-{
-  "questionIndex": 5,
-  "marksAwarded": 4
-}
-```
-
-### Student Portal Routes
-
-All require Student JWT in `Authorization: Bearer <token>` header.
+### Payroll APIs (Module: payroll)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/student-portal/login` | Student login with student ID and password |
-| POST | `/api/student-portal/change-password` | Change password (sets isFirstLogin=false) |
-| GET | `/api/student-portal/dashboard` | Get dashboard data (profile, stats) |
-| GET | `/api/student-portal/content` | Get study materials grouped by subject |
-| GET | `/api/student-portal/quizzes` | Get quizzes with status and attempt info |
-| GET | `/api/student-portal/quizzes/:id/start` | Start a quiz (returns questions without answers) |
-| POST | `/api/student-portal/quizzes/:id/submit` | Submit quiz answers |
-| GET | `/api/student-portal/results` | Get all quiz results |
-| GET | `/api/student-portal/fees` | Get fee voucher records |
-| GET | `/api/student-portal/attendance` | Get attendance records by month |
+| GET | /api/payrolls | List payroll records |
+| GET | /api/payrolls/:id | Get payroll record |
+| POST | /api/payrolls | Generate payroll |
+| PATCH | /api/payrolls/:id | Update payroll (auto-posts to finance if Paid) |
+| DELETE | /api/payrolls/:id | Delete payroll record |
 
-**Student Login - Request Body:**
-```json
-{
-  "studentId": "C5-A-2024-0001",
-  "password": "09022006"
-}
-```
+### Finance APIs (Module: finance)
 
-**Student Login - Response:**
-```json
-{
-  "success": true,
-  "token": "eyJhbG...",
-  "module": "curriculum",
-  "user": {
-    "email": "C5-A-2024-0001",
-    "role": "student",
-    "name": "ali",
-    "studentId": "C5-A-2024-0001",
-    "className": "Class 5",
-    "section": "A",
-    "isFirstLogin": true
-  }
-}
-```
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /api/chart-of-accounts | List chart of accounts |
+| POST | /api/chart-of-accounts | Create account |
+| GET | /api/accounts | List accounts (legacy) |
+| POST | /api/accounts | Create account (legacy) |
+| GET | /api/ledger-entries | List ledger entries (filterable) |
+| POST | /api/ledger-entries | Create ledger entry |
+| GET | /api/journal-entries | List journal entries |
+| POST | /api/journal-entries | Create journal entry |
+| GET | /api/finance-vouchers | List finance vouchers |
+| POST | /api/finance-vouchers | Create finance voucher |
+| GET | /api/expenses | List expenses |
+| POST | /api/expenses | Record expense |
+| GET | /api/vendors | List vendors |
+| POST | /api/vendors | Create vendor |
 
-**Dashboard Response:**
-```json
-{
-  "profile": {
-    "name": "ali",
-    "studentId": "C5-A-2024-0001",
-    "className": "Class 5",
-    "section": "A"
-  },
-  "activeQuizzesCount": 1,
-  "completedQuizzesCount": 0,
-  "pendingFeesTotal": 200,
-  "thisMonthAttendance": 0
-}
-```
+### Attendance APIs (Module: attendance)
 
-**Submit Quiz - Request Body:**
-```json
-{
-  "answers": [
-    { "questionIndex": 0, "givenAnswer": "3/4" },
-    { "questionIndex": 1, "givenAnswer": "True" },
-    { "questionIndex": 2, "givenAnswer": "A fraction represents a part of a whole" }
-  ],
-  "timeTakenMinutes": 15
-}
-```
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /api/attendance-records | List records (filterable by date/class/type) |
+| POST | /api/attendance-records | Mark attendance (single or array, upsert) |
+| PATCH | /api/attendance-records/:id | Update attendance record |
+| DELETE | /api/attendance-records/:id | Delete attendance record |
+| GET | /api/attendance/summary | Daily attendance summary |
+| GET | /api/attendance/report | Attendance report (date range) |
 
-**Submit Quiz - Response:**
-```json
-{
-  "id": "64c...",
-  "totalMarksObtained": 25,
-  "totalMarks": 35,
-  "percentage": 71,
-  "grade": "B",
-  "isPassed": true,
-  "timeTakenMinutes": 15
-}
-```
+### Timetable APIs (Module: timetable)
 
-**Quiz Validation Rules:**
-- Quiz must be published (`isPublished = true`)
-- Current time must be within `startDateTime` and `endDateTime`
-- Student must not have already submitted (double submission blocked)
-- MCQ and True/False questions are auto-graded
-- Short answer questions get `marksAwarded: 0` (pending teacher grading)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /api/timetables | List timetables |
+| POST | /api/timetables | Create/save timetable |
+| PATCH | /api/timetables/:id | Update timetable |
+| DELETE | /api/timetables/:id | Delete timetable |
 
----
+### DateSheet APIs (Module: datesheet)
 
-## Database Schema
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /api/datesheets | List datesheets |
+| GET | /api/datesheets/:id | Get datesheet |
+| POST | /api/datesheets | Create datesheet |
+| PATCH | /api/datesheets/:id | Update datesheet |
+| DELETE | /api/datesheets/:id | Delete datesheet |
 
-### Core Collections (All Modules)
+### Curriculum Admin APIs (Module: curriculum)
 
-| Collection | Description |
-|-----------|-------------|
-| `moduleusers` | Admin login credentials for all modules |
-| `students` | Student records (admissions, profiles, academics) |
-| `staff` | Staff/teacher records |
-| `feevouchers` | Fee payment records |
-| `payrolls` | Staff payroll records |
-| `accounts` | Financial accounts |
-| `financevouchers` | Finance journal entries |
-| `ledgerentries` | Financial ledger entries |
-| `attendancerecords` | Student attendance records |
-| `timetables` | Class timetables |
-| `datesheets` | Exam date sheets |
-| `syllabi` | Curriculum/syllabus records |
-| `exams` | Exam configurations |
-| `examresults` | Student exam results |
-| `posproducts` | POS inventory items |
-| `postransactions` | POS sales transactions |
-| `books` | Library book records |
-| `librarymembers` | Library members |
-| `bookissues` | Library book issues |
-| `transportroutes` | Transport routes |
-| `transportvehicles` | Transport vehicles |
-| `studenttransport` | Student transport allocations |
-| `hostelrooms` | Hostel rooms |
-| `hostelresidents` | Hostel residents |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /api/curriculums | List curriculum/syllabus items |
+| POST | /api/curriculums | Create curriculum item |
+| PATCH | /api/curriculums/:id | Update curriculum item |
+| DELETE | /api/curriculums/:id | Delete curriculum item |
+| GET | /api/questions | List question bank |
+| POST | /api/questions | Create question |
+| GET | /api/quizzes | List quizzes |
+| POST | /api/quizzes | Create quiz |
+| GET | /api/curriculum/staff-teachers | List staff with teacher designation |
+| GET | /api/curriculum/teacher-assignments | List teacher-class-subject assignments |
+| POST | /api/curriculum/teacher-assignments | Create teacher assignment |
+| DELETE | /api/curriculum/teacher-assignments/:id | Remove assignment |
+| GET | /api/curriculum/student-accounts | List student portal accounts |
+| POST | /api/curriculum/student-accounts/create | Bulk create student accounts |
+| POST | /api/curriculum/student-accounts/reset-password/:studentId | Reset student password |
+| PATCH | /api/curriculum/student-accounts/:id | Update student account |
+| GET | /api/curriculum/quiz-overview | Quiz statistics overview |
+| GET | /api/curriculum/published-quizzes | List published quizzes |
+| GET | /api/exams | List exams |
+| POST | /api/exams | Create exam |
+| GET | /api/exam-results | List exam results |
+| POST | /api/exam-results | Create exam result |
 
-### Curriculum Module Collections
+### Teacher APIs (Role: teacher)
 
-#### `teacherassignments`
-```
-{
-  staffId: String              // Reference to staff collection
-  staffName: String
-  staffEmail: String
-  className: String            // e.g. "Class 5"
-  section: String              // e.g. "A"
-  subject: String              // e.g. "Mathematics"
-  assignedBy: String           // Admin email who created the assignment
-  isActive: Boolean            // default: true
-  createdAt: Date
-}
-```
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | /api/teacher/login | Teacher login |
+| GET | /api/teacher/my-assignments | Get teacher's class/subject assignments |
+| GET | /api/teacher/content | List teacher's uploaded content |
+| POST | /api/teacher/content | Upload study material |
+| PATCH | /api/teacher/content/:id | Update content |
+| DELETE | /api/teacher/content/:id | Delete content (ownership enforced) |
+| PATCH | /api/teacher/content/:id/toggle-publish | Toggle content visibility |
+| GET | /api/teacher/quizzes | List teacher's quizzes |
+| POST | /api/teacher/quizzes | Create quiz |
+| PUT | /api/teacher/quizzes/:id | Update quiz (ownership enforced) |
+| DELETE | /api/teacher/quizzes/:id | Delete quiz (ownership enforced) |
+| PATCH | /api/teacher/quizzes/:id/toggle-publish | Toggle quiz publish status |
+| GET | /api/teacher/quizzes/:id/attempts | List student attempts (ownership enforced) |
+| PATCH | /api/teacher/quizzes/:id/attempts/:attemptId/grade-short | Grade short-answer question |
+| POST | /api/teacher/change-password | Change teacher password |
 
-#### `teachercontents`
-```
-{
-  staffId: String
-  teacherName: String
-  className: String
-  section: String
-  subject: String
-  title: String
-  description: String
-  contentType: String          // "pdf" | "image" | "note" | "link"
-  fileData: String             // Base64 encoded file OR URL string
-  fileName: String
-  isPublished: Boolean         // default: false
-  createdAt: Date
-}
-```
+### Student Portal APIs (Role: student)
 
-#### `teacherquizzes`
-```
-{
-  staffId: String
-  teacherName: String
-  className: String
-  section: String
-  subject: String
-  title: String
-  instructions: String
-  timeLimitMinutes: Number
-  startDateTime: Date
-  endDateTime: Date
-  passingMarks: Number
-  totalMarks: Number
-  isPublished: Boolean         // default: false
-  questions: [{
-    questionText: String
-    questionType: String       // "mcq" | "truefalse" | "short"
-    options: [String]          // 4 options for MCQ, 2 for T/F
-    correctAnswer: String      // Optional for short answer
-    marks: Number
-  }]
-  createdAt: Date
-}
-```
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | /api/student-portal/login | Student login |
+| GET | /api/student-portal/dashboard | Dashboard data (profile, quiz counts, fees, attendance) |
+| GET | /api/student-portal/content | Study material (grouped by subject) |
+| GET | /api/student-portal/quizzes | Available quizzes (status: active/upcoming/expired) |
+| GET | /api/student-portal/quizzes/:id/start | Start a quiz (returns questions without answers) |
+| POST | /api/student-portal/quizzes/:id/submit | Submit quiz answers |
+| GET | /api/student-portal/results | Quiz results with per-question breakdown |
+| GET | /api/student-portal/fees | Fee voucher records |
+| GET | /api/student-portal/attendance | Monthly attendance records |
+| POST | /api/student-portal/change-password | Change student password |
 
-#### `studentquizattempts`
-```
-{
-  quizId: String               // Reference to teacherquizzes
-  studentId: String            // e.g. "C5-A-2024-0001"
-  studentName: String
-  className: String
-  section: String
-  answers: [{
-    questionIndex: Number
-    givenAnswer: String
-    isCorrect: Boolean
-    marksAwarded: Number
-  }]
-  totalMarksObtained: Number
-  totalMarks: Number
-  percentage: Number
-  grade: String                // A+, A, B, C, D, F
-  isPassed: Boolean
-  timeTakenMinutes: Number
-  submittedAt: Date
-}
-```
+### POS APIs (Module: pos)
 
-#### `studentportalaccounts`
-```
-{
-  studentId: String            // Unique — used as login username
-  studentName: String
-  className: String
-  section: String
-  passwordHash: String         // bcrypt hashed
-  isFirstLogin: Boolean        // default: true
-  isActive: Boolean            // default: true
-  lastLogin: Date
-  createdAt: Date
-}
-```
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /api/pos-items | List POS items |
+| POST | /api/pos-items | Add POS item |
+| PATCH | /api/pos-items/:id | Update POS item |
+| DELETE | /api/pos-items/:id | Delete POS item |
+| GET | /api/sales | List sales |
+| GET | /api/sales/:id | Get sale details |
+| POST | /api/sales | Create sale (deducts stock) |
 
-#### `teacherauthpasswords`
-```
-{
-  staffId: String              // Unique — references staff._id
-  passwordHash: String         // bcrypt hashed
-  updatedAt: Date
-}
-```
+### Library APIs (Module: library)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /api/books | List books |
+| POST | /api/books | Add book |
+| PATCH | /api/books/:id | Update book |
+| DELETE | /api/books/:id | Delete book |
+| GET | /api/book-categories | List categories |
+| POST | /api/book-categories | Create category |
+| GET | /api/library-members | List members |
+| POST | /api/library-members | Register member |
+| GET | /api/book-issues | List book issues |
+| POST | /api/book-issues | Issue book |
+| PATCH | /api/book-issues/:id | Return book / update issue |
+| GET | /api/library/statistics | Library statistics |
+
+### Transport APIs (Module: transport)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /api/routes | List routes |
+| POST | /api/routes | Create route |
+| PATCH | /api/routes/:id | Update route |
+| DELETE | /api/routes/:id | Delete route |
+| GET | /api/vehicles | List vehicles |
+| POST | /api/vehicles | Add vehicle |
+| PATCH | /api/vehicles/:id | Update vehicle |
+| DELETE | /api/vehicles/:id | Delete vehicle |
+| GET | /api/drivers | List drivers |
+| POST | /api/drivers | Add driver |
+| PATCH | /api/drivers/:id | Update driver |
+| DELETE | /api/drivers/:id | Delete driver |
+| GET | /api/student-transports | List allocations |
+| POST | /api/student-transports | Allocate student to route |
+| PATCH | /api/student-transports/:id | Update allocation |
+| DELETE | /api/student-transports/:id | Remove allocation |
+
+### Hostel APIs (Module: hostel)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /api/hostel-rooms | List rooms |
+| POST | /api/hostel-rooms | Create room |
+| PATCH | /api/hostel-rooms/:id | Update room |
+| DELETE | /api/hostel-rooms/:id | Delete room |
+| GET | /api/hostel-residents | List residents |
+| POST | /api/hostel-residents | Register resident |
+| PATCH | /api/hostel-residents/:id | Update resident |
+| DELETE | /api/hostel-residents/:id | Remove resident |
+| GET | /api/hostel-fees | List hostel fees |
+| POST | /api/hostel-fees | Create hostel fee |
+| PATCH | /api/hostel-fees/:id | Update hostel fee |
+
+### Shared APIs (All modules)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /api/notifications | Get notifications for current module |
+| PATCH | /api/notifications/:id/read | Mark notification as read |
+| GET | /api/activity-logs | Get system activity logs |
 
 ---
 
-## Frontend Pages & Routes
+## 7. Database Models
 
-### Home Page
+The system uses **52 Mongoose models** stored in MongoDB Atlas.
 
-| Route | Page | Description |
-|-------|------|-------------|
-| `/` | Home | Landing page with 14 module cards |
+### Core Entities
 
-### Curriculum Module Routes
+| Model | Collection | Key Fields | Unique Index |
+|-------|-----------|------------|--------------|
+| Student | students | studentId, name, class, section, status | studentId |
+| Staff | staffs | staffId, name, department, designation, status | staffId |
+| ModuleUser | moduleusers | module, email, passwordHash, role | module |
 
-#### Login
-| Route | Page |
-|-------|------|
-| `/curriculum/login` | 3-role login selector (Admin / Teacher / Student) |
+### Fee & Finance Models
 
-#### Admin Pages
-| Route | Page | Description |
-|-------|------|-------------|
-| `/curriculum/dashboard` | Dashboard | Module overview |
-| `/curriculum/syllabus` | Syllabus | Curriculum management |
-| `/curriculum/exams` | Exams | Exam configuration |
-| `/curriculum/entry` | Result Entry | Enter exam results |
-| `/curriculum/reports` | Result Reports | View result reports |
-| `/curriculum/quizzes` | Quizzes | Admin quiz overview |
-| `/curriculum/quiz-results` | Quiz Results | Admin quiz results view |
-| `/curriculum/teacher-assignments` | Teacher Assignments | Assign teachers to classes |
-| `/curriculum/teacher-assignments-view` | Assignments View | Alternative view |
-| `/curriculum/student-accounts` | Student Accounts | Manage student portal accounts |
+| Model | Key Fields | Unique Index |
+|-------|------------|--------------|
+| FeeStructure | structureId, class, feeHeads[], totalAmount | structureId |
+| FeeVoucher | voucherId, studentId, month, totalAmount, netAmount, status (Paid/Unpaid/Partial), fine, discount, paymentHistory[] | voucherId |
+| Challan | challanNo, studentId, netAmount, balanceAmount, status, dueDate | challanNo |
+| Payment | receiptNo, challanId, amount, paymentMode, paymentDate | receiptNo |
+| DiscountRule | name, type (Percentage/Fixed), value, category | - |
+| LateFeeRule | name, type (Fixed/Percentage/Daily), value, gracePeriodDays | - |
+| InstallmentPlan | name, numberOfInstallments, installments[] | - |
+| ChartOfAccounts | accountCode, accountName, accountType, currentBalance | accountCode |
+| LedgerEntry | entryNo, accountId, debit, credit, referenceType | entryNo |
+| JournalEntry | journalNo, entries[], totalDebit, totalCredit, status | journalNo |
+| FinanceVoucher | voucherId, type (Receipt/Payment/Journal/Contra), entries[], status | voucherId |
+| Expense | expenseId, category, amount, vendorId, status | expenseId |
+| Vendor | vendorId, name, category, status | vendorId |
 
-#### Teacher Pages
-| Route | Page | Description |
-|-------|------|-------------|
-| `/curriculum/teacher-dashboard` | Teacher Dashboard | Overview with stats and assigned classes |
-| `/curriculum/teacher-content` | Upload Content | Upload and manage study materials |
-| `/curriculum/teacher-quizzes` | My Quizzes | Create and manage quizzes |
-| `/curriculum/teacher-quiz-results` | Quiz Results | View attempts and grade short answers |
+### Payroll Model
 
-#### Student Pages
-| Route | Page | Description |
-|-------|------|-------------|
-| `/curriculum/student-dashboard` | Student Dashboard | Welcome bar, summary cards, recent activity |
-| `/curriculum/student-content` | Study Material | Browse content by subject with viewers |
-| `/curriculum/student-quizzes` | My Quizzes | Active/Upcoming/Completed tabs, full-screen quiz taking |
-| `/curriculum/student-results` | My Results | Quiz results table with grade badges and detail modal |
-| `/curriculum/student-fees` | My Fees | Fee vouchers (read-only) |
-| `/curriculum/student-attendance` | Attendance | Month-by-month attendance with circular progress |
+| Model | Key Fields | Unique Index |
+|-------|------------|--------------|
+| Payroll | payrollId, staffId, month, basicSalary, allowances[], deductions[], grossSalary, netSalary, status (Paid/Unpaid) | payrollId, {staffId+month} |
 
----
+### Attendance Model
 
-## User Flows
+| Model | Key Fields | Unique Index |
+|-------|------------|--------------|
+| AttendanceRecord | date (String), targetType (STUDENT/STAFF), studentId, staffId, status (PRESENT/ABSENT/LEAVE), markedBy | {studentId+date}, {staffId+date} |
 
-### Admin Flow
+### Academic Models
 
-1. Go to `/curriculum/login` and click **Admin Login**
-2. Enter credentials: `curriculum@emblazers.com / 12345678`
-3. Navigate to **Teacher Assignments** in sidebar
-4. Assign a teacher (e.g., Mr. Ali) to Class 5, Section A, Mathematics
-5. Navigate to **Student Accounts** in sidebar
-6. Select Class 5, Section A and click **Bulk Create Accounts**
-7. Accounts are created with default password = each student's DOB in DDMMYYYY format
+| Model | Key Fields | Unique Index |
+|-------|------------|--------------|
+| Curriculum | class, subject, topics[], assignedTeachers[] | - |
+| Timetable | class, section, slots[{day, period, subject, teacherId}] | - |
+| Datesheet | examName, examType, class, entries[{subject, date, startTime, endTime}] | - |
+| Exam | name, term, classRange, startDate, endDate | - |
+| ExamResult | resultId, examId, studentId, subject, marksObtained, grade | resultId, {examId+studentId+subject} |
+| Question | subject, class, type (MCQ/TrueFalse/ShortAnswer), prompt, correctAnswer | - |
 
-### Teacher Flow
+### Curriculum LMS Models
 
-1. Go to `/curriculum/login` and click **Teacher Login**
-2. Enter staff email and default password (Staff ID value)
-3. View assigned classes on the dashboard
-4. Go to **Upload Content** and upload a PDF/image/note/link
-5. Publish the content using the toggle
-6. Go to **My Quizzes** and click **Create New Quiz**
-7. Configure quiz settings (title, class, section, subject, time slot, passing marks)
-8. Add questions (MCQ + True/False + Short Answer)
-9. Review and publish the quiz
-10. After students take the quiz, go to **Quiz Results**
-11. View statistics and grade short-answer questions manually
+| Model | Key Fields | Unique Index |
+|-------|------------|--------------|
+| TeacherAssignment | staffId, staffName, staffEmail, className, section, subject, isActive | {staffId+className+section+subject} |
+| TeacherAuthPassword | staffId, passwordHash | staffId |
+| TeacherContent | staffId, teacherName, className, section, subject, title, contentType (pdf/image/note/link), fileData, isPublished | - |
+| TeacherQuiz | staffId, teacherName, className, section, subject, title, timeLimitMinutes, startDateTime, endDateTime, passingMarks, totalMarks, isPublished, questions[{questionText, questionType, options, correctAnswer, marks}] | - |
+| StudentPortalAccount | studentId, studentName, className, section, passwordHash, isFirstLogin, isActive, lastLogin | studentId |
+| StudentQuizAttempt | quizId, studentId, studentName, className, section, answers[{questionIndex, givenAnswer, isCorrect (true/false/null), marksAwarded}], totalMarksObtained, totalMarks, percentage, grade, isPassed, timeTakenMinutes, submittedAt | {quizId+studentId} |
 
-### Student Flow
+### Facility Models
 
-1. Go to `/curriculum/login` and click **Student Login**
-2. Enter Student ID and DOB-based password
-3. On first login, the system forces a password change (minimum 8 characters)
-4. View dashboard with summary cards (active quizzes, fees, attendance)
-5. Go to **Study Material** to browse teacher-uploaded content by subject
-6. Go to **My Quizzes** and click **Start Quiz** on an active quiz
-7. Answer questions in full-screen mode with countdown timer
-8. Submit quiz and see immediate results (score, percentage, grade, pass/fail)
-9. Go to **My Results** to review past quiz attempts with per-question breakdown
-10. Go to **My Fees** to check fee payment status
-11. Go to **Attendance** to view month-by-month attendance percentage
+| Model | Key Fields | Unique Index |
+|-------|------------|--------------|
+| Room | hostelName, roomNumber, bedCount, occupiedBeds, status | - |
+| Resident | residentId, studentId, roomId, checkInDate, monthlyRent, status | residentId |
+| HostelFee | feeId, residentId, studentId, month, totalAmount, status | feeId |
+| Route | routeId, routeCode, routeName, stops[] | routeId |
+| Vehicle | vehicleId, registrationNumber, type, capacity, status | vehicleId |
+| Driver | driverId, name, licenseNumber, vehicleId, salary, status | driverId |
+| TransportAllocation | allocationId, studentId, routeId, stopName, monthlyFee, status | allocationId |
+| Book | accessionNo, title, author, category, totalCopies, availableCopies | - |
+| BookCategory | name | - |
+| BookIssue | bookId, memberId, issueDate, dueDate, returnDate, fine, status | - |
+| LibraryMember | memberId, name, type (Student/Staff), referenceId | - |
+| POSItem | itemCode, name, category, price, stock | - |
+| Sale | invoiceNo, date, customer, items[], grandTotal | invoiceNo |
 
----
+### System Models
 
-## Build & Deployment
-
-### Development Mode
-
-```bash
-npm run dev
-```
-
-- Starts Express server with Vite middleware on port 5000
-- Hot module replacement (HMR) enabled for frontend changes
-- Server automatically restarts on backend changes via `tsx`
-
-### Production Build
-
-```bash
-npm run build
-```
-
-- **Frontend:** Vite builds React app to `dist/public/`
-- **Backend:** esbuild bundles server with dependencies to `dist/index.cjs`
-- Selected dependencies are bundled to optimize cold start times
-
-### Deployment
-
-The app is deployed to Replit and accessible at `https://emblazers.replit.app`. In production mode, the Express server serves the pre-built static files from `dist/public/`.
+| Model | Key Fields |
+|-------|------------|
+| Notification | type, title, message, module, priority, read |
+| ActivityLog | module, action, entityType, description, userId |
+| Vacancy | title, department, designation, positions, status |
+| Applicant | vacancyId, name, email, status |
+| Counter | _id (sequence name), seq |
 
 ---
 
-## File Storage
+## 8. Frontend Pages & Routes
 
-The system uses **base64 encoding** for file storage — no external file storage services are used.
+### Home & Public Pages
 
-### Upload Flow
-1. Frontend converts files to base64 using `FileReader` API
-2. Base64 string sent to backend in the `fileData` field
-3. Stored directly in MongoDB as a string
+| Path | Page | Description |
+|------|------|-------------|
+| / | Home | Landing page with module grid |
+| /careers | Careers | Public job vacancies listing |
+| /careers/:id | Apply | Job application form |
+| /:module/login | Module Login | Generic login for all modules |
+| /curriculum/login | Curriculum Login | Multi-role login (Admin/Teacher/Student) |
 
-### Display Flow
-- **PDF:** `<iframe src="data:application/pdf;base64,{fileData}">`
-- **Image:** `<img src="data:image/{type};base64,{fileData}">`
-- **Note:** Rendered as formatted text in a modal
-- **Link:** Opens in a new browser tab
+### Student Module (7 pages)
 
-### Supported Content Types
-| Type | File Input | Display |
-|------|-----------|---------|
-| `pdf` | `.pdf` files | Embedded iframe viewer |
-| `image` | `.jpg, .jpeg, .png` files | Lightbox modal |
-| `note` | Text input | Formatted text modal |
-| `link` | URL input | New tab redirect |
+| Path | Page |
+|------|------|
+| /student/dashboard | Dashboard with enrollment stats |
+| /student/list | Student listing with search & filters |
+| /student/add | Add new student form |
+| /student/edit/:id | Edit student form |
+| /student/profile/:id | Student profile with full history |
+| /student/alumni | Alumni listing |
+| /student/reports | Student reports & analytics |
+
+### HR Module (7 pages)
+
+| Path | Page |
+|------|------|
+| /hr/dashboard | HR dashboard with staff stats |
+| /hr/list | Staff listing with search |
+| /hr/add | Add new staff form |
+| /hr/profile/:id | Staff profile |
+| /hr/vacancies | Vacancy management |
+| /hr/applicants | Application tracking pipeline |
+| /hr/reports | HR reports |
+
+### Fee Module (7 pages)
+
+| Path | Page |
+|------|------|
+| /fee/dashboard | Fee dashboard with collection stats |
+| /fee/structures | Fee structure management |
+| /fee/challans | Challan management |
+| /fee/payments | Payment records |
+| /fee/vouchers | Fee voucher listing |
+| /fee/generate | Bulk fee generation |
+| /fee/reports | Fee collection reports |
+
+### Payroll Module (4 pages)
+
+| Path | Page |
+|------|------|
+| /payroll/dashboard | Payroll dashboard |
+| /payroll/list | Payroll records |
+| /payroll/generate | Generate monthly payroll |
+| /payroll/reports | Payroll reports |
+
+### Finance Module (7 pages)
+
+| Path | Page |
+|------|------|
+| /finance/dashboard | Finance dashboard |
+| /finance/accounts | Chart of accounts |
+| /finance/ledger | General ledger |
+| /finance/expenses | Expense management |
+| /finance/vendors | Vendor management |
+| /finance/vouchers | Finance vouchers |
+| /finance/reports | Financial reports |
+
+### Attendance Module (5 pages)
+
+| Path | Page |
+|------|------|
+| /attendance/dashboard | Daily attendance overview |
+| /attendance/mark-students | Mark student attendance by class |
+| /attendance/mark-staff | Mark staff attendance |
+| /attendance/records | Attendance records viewer |
+| /attendance/reports | Attendance reports |
+
+### Timetable Module (4 pages)
+
+| Path | Page |
+|------|------|
+| /timetable/dashboard | Timetable dashboard |
+| /timetable/class | View class timetable |
+| /timetable/teacher | View teacher timetable |
+| /timetable/create | Create timetable |
+
+### DateSheet Module (5 pages)
+
+| Path | Page |
+|------|------|
+| /datesheet/dashboard | DateSheet dashboard |
+| /datesheet/list | DateSheet listing |
+| /datesheet/create | Create exam datesheet |
+| /datesheet/edit/:id | Edit datesheet |
+| /datesheet/view/:id | View formatted datesheet |
+
+### Curriculum Module - Admin (10 pages)
+
+| Path | Page |
+|------|------|
+| /curriculum/dashboard | Admin dashboard |
+| /curriculum/syllabus | Syllabus management |
+| /curriculum/exams | Exam management |
+| /curriculum/entry | Result entry |
+| /curriculum/reports | Curriculum reports |
+| /curriculum/quizzes | Quiz bank management |
+| /curriculum/quiz-results | Quiz results overview |
+| /curriculum/teacher-assignments | Assign teachers to classes |
+| /curriculum/teacher-assignments-view | View all assignments |
+| /curriculum/student-accounts | Manage student portal accounts |
+
+### Curriculum Module - Teacher (4 pages)
+
+| Path | Page |
+|------|------|
+| /curriculum/teacher-dashboard | Teacher dashboard with stats |
+| /curriculum/teacher-content | Upload/manage study material |
+| /curriculum/teacher-quizzes | Create/manage quizzes |
+| /curriculum/teacher-quiz-results | View & grade student attempts |
+
+### Curriculum Module - Student (6 pages)
+
+| Path | Page |
+|------|------|
+| /curriculum/student-dashboard | Dashboard with summary cards |
+| /curriculum/student-content | Browse study material by subject |
+| /curriculum/student-quizzes | Take quizzes (full-screen mode) |
+| /curriculum/student-results | View quiz results with breakdown |
+| /curriculum/student-fees | View fee records (read-only) |
+| /curriculum/student-attendance | View attendance with circular progress |
+
+### POS Module (5 pages)
+
+| Path | Page |
+|------|------|
+| /pos/dashboard | POS dashboard |
+| /pos/sales | Sales history |
+| /pos/new | Create new sale |
+| /pos/items | Item inventory management |
+| /pos/reports | Sales reports |
+
+### Library Module (4 pages)
+
+| Path | Page |
+|------|------|
+| /library/dashboard | Library dashboard with stats |
+| /library/books | Book catalog management |
+| /library/issue | Issue/return books |
+| /library/reports | Library reports |
+
+### Transport Module (6 pages)
+
+| Path | Page |
+|------|------|
+| /transport/dashboard | Transport dashboard |
+| /transport/routes | Route management |
+| /transport/vehicles | Vehicle fleet management |
+| /transport/drivers | Driver management |
+| /transport/allocation | Student-to-route allocation |
+| /transport/reports | Transport reports |
+
+### Hostel Module (5 pages)
+
+| Path | Page |
+|------|------|
+| /hostel/dashboard | Hostel dashboard |
+| /hostel/rooms | Room management |
+| /hostel/residents | Resident management |
+| /hostel/fees | Hostel fee management |
+| /hostel/reports | Hostel reports |
+
+**Total: ~90 frontend pages across 13 modules + public pages**
 
 ---
 
-## Grade Calculation
+## 9. Cross-Module Data Flow
 
-### Backend Utility (`server/utils/grade.ts`)
+### How Data Flows Between Modules
 
 ```
-A+ = percentage >= 90
-A  = percentage >= 80
-B  = percentage >= 70
-C  = percentage >= 60
-D  = percentage >= 50
-F  = percentage < 50
+                    ┌─────────────┐
+                    │   Student   │
+                    │   Module    │
+                    └──────┬──────┘
+                           │ studentId
+        ┌──────────────────┼──────────────────┬─────────────────┐
+        ▼                  ▼                  ▼                 ▼
+┌───────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│  Fee Module   │  │  Attendance  │  │   Library    │  │  Transport   │
+│               │  │   Module     │  │   Module     │  │   Module     │
+│ Fee Vouchers  │  │  Records     │  │ Book Issues  │  │ Allocation   │
+│ Challans      │  │              │  │              │  │              │
+│ Payments ─────┼──┤              │  │              │  │              │
+└───────┬───────┘  └──────┬───────┘  └──────────────┘  └──────────────┘
+        │                 │
+        │ Auto-post       │ studentId query
+        ▼                 ▼
+┌───────────────┐  ┌──────────────┐         ┌──────────────┐
+│   Finance     │  │  Curriculum  │         │   Hostel     │
+│   Module      │  │ Student      │         │   Module     │
+│ Ledger        │  │ Portal       │         │ Residents    │
+│ Vouchers      │  │ (reads fees  │         │ Hostel Fees  │
+│               │  │ & attendance)│         │              │
+└───────┬───────┘  └──────────────┘         └──────────────┘
+        │
+        │ Auto-post
+        ▼
+┌───────────────┐         ┌──────────────┐
+│   Payroll     │────────▶│  HR Module   │
+│   Module      │  reads  │  (staffId)   │
+└───────────────┘  staff  └──────┬───────┘
+                                 │ staffId
+                          ┌──────┴───────┐
+                          ▼              ▼
+                   ┌──────────┐  ┌──────────────┐
+                   │Timetable │  │  Curriculum   │
+                   │  Module  │  │ Teacher Portal│
+                   └──────────┘  └──────────────┘
 ```
 
-### Frontend Utility (`client/src/lib/grade-utils.ts`)
+### Key Data Connections
 
-Provides consistent grade badge colors across all pages:
+| Source Module | Target Module | Shared Key | What Flows |
+|-------------|--------------|-----------|-----------|
+| Student | Fee | studentId | Fee vouchers reference students |
+| Student | Attendance | studentId | Attendance records for students |
+| Student | Library | studentId | Book issues to student members |
+| Student | Transport | studentId | Route allocations for students |
+| Student | Hostel | studentId | Hostel resident records |
+| Student | Curriculum | studentId | Student portal accounts, quiz attempts |
+| HR/Staff | Payroll | staffId | Salary generation for staff |
+| HR/Staff | Attendance | staffId | Attendance records for staff |
+| HR/Staff | Timetable | staffId | Teacher schedule assignments |
+| HR/Staff | Curriculum | staffId | Teacher assignments, content, quizzes |
+| Fee | Finance | Auto-post | Payment creates ledger entry + finance voucher |
+| Payroll | Finance | Auto-post | Paid payroll creates finance voucher |
+| Attendance | Student Portal | studentId | Student sees their attendance in curriculum |
+| Fee | Student Portal | studentId | Student sees their fee records in curriculum |
 
-| Grade | Color |
-|-------|-------|
-| A+ | Purple |
-| A | Green |
-| B | Blue |
-| C | Yellow |
-| D | Orange |
-| F | Red |
+### Auto-Posting Flow: Fee Payment to Finance
 
-Two exported functions:
-- `getGradeColor(grade)` — Returns Tailwind CSS classes for a grade badge
-- `getGradeFromPercentage(percentage)` — Returns grade string and color from a percentage
+```
+1. Fee Admin records a Payment (POST /api/payments)
+2. Server updates Challan status (Paid/Partial)
+3. Server auto-creates:
+   - LedgerEntry (debit: Cash/Bank, credit: Fee Income)
+   - FinanceVoucher (type: Receipt)
+4. Finance module sees these entries automatically
+```
+
+### Auto-Posting Flow: Payroll to Finance
+
+```
+1. Payroll Admin marks payroll as "Paid" (PATCH /api/payrolls/:id)
+2. Server auto-creates:
+   - FinanceVoucher (type: Payment, narration: Salary)
+3. Finance module sees this voucher automatically
+```
 
 ---
 
-## Troubleshooting
+## 10. Curriculum Multi-Role System
 
-### Common Issues
+The Curriculum module is the most complex module, supporting 3 distinct user roles with separate login flows, dashboards, and feature sets.
 
-**MongoDB connection fails:**
-- Verify `MONGO_URI` environment variable is set correctly
-- Check MongoDB Atlas network access rules (whitelist your IP or allow all `0.0.0.0/0`)
-- Check the server logs for "MongoDB connected successfully"
-
-**Teacher can't login:**
-- Ensure the teacher has active assignments (admin must assign them first)
-- Default password is the Staff ID value (check the `staff` collection for the `_id` or custom `staffId`)
-- If password was changed, use the new password
-
-**Student can't login:**
-- Ensure admin has created a portal account for the student
-- Default password is DOB in DDMMYYYY format (e.g., February 9, 2006 = `09022006`)
-- Check if the account `isActive` is true
-
-**Quiz won't start for student:**
-- Quiz must be published (`isPublished = true`)
-- Current time must be between `startDateTime` and `endDateTime`
-- Student must not have already submitted the quiz
-
-**"null" attempt ID error on grade-short:**
-- The backend validates attempt IDs before processing
-- Ensure the attempt ID is a valid 24-character hex string
-- This was previously a known issue, now fixed with input validation
-
-**JWT token expired:**
-- All tokens (admin, teacher, student) expire after 3 days
-- Re-login to get a new token
-
-### Data Flow Diagram
+### Role Architecture
 
 ```
-Admin creates → Teacher Assignment → Teacher can login
-Admin creates → Student Portal Account → Student can login
-
-Teacher uploads → Content → Published → Student sees in Study Material
-Teacher creates → Quiz → Published + Active Time → Student can attempt
-
-Student submits → Quiz Attempt → Auto-graded (MCQ/TF)
-                                → Pending (Short Answer) → Teacher grades manually
+                    ┌──────────────────────────┐
+                    │    /curriculum/login      │
+                    │  (Role Selection Screen)  │
+                    └─────────┬────────────────┘
+                              │
+              ┌───────────────┼───────────────┐
+              ▼               ▼               ▼
+        ┌──────────┐   ┌──────────┐   ┌──────────┐
+        │  Admin   │   │ Teacher  │   │ Student  │
+        │  Login   │   │  Login   │   │  Login   │
+        └────┬─────┘   └────┬─────┘   └────┬─────┘
+             │              │              │
+             ▼              ▼              ▼
+     POST /api/auth/   POST /api/     POST /api/
+       login           teacher/login  student-portal/
+                                        login
+             │              │              │
+             ▼              ▼              ▼
+     emblazers_token   teacher_token  student_token
+     emblazers_session teacher_session student_session
+             │              │              │
+             ▼              ▼              ▼
+     /curriculum/      /curriculum/   /curriculum/
+       dashboard       teacher-       student-
+                       dashboard      dashboard
 ```
+
+### Admin Role
+
+**Login:** admin@emblazers.com / 12345678
+**Token storage:** emblazers_token / emblazers_session
+
+**Capabilities:**
+- Manage syllabus, exams, question bank, quizzes
+- Assign teachers to classes/sections/subjects (TeacherAssignment)
+- Create/manage student portal accounts
+- View quiz overview and results
+- View all exam results and reports
+
+### Teacher Role
+
+**Login:** Staff email + password (default = staffId, e.g., STF-2024-001)
+**Token storage:** teacher_token / teacher_session
+**Prerequisite:** Must have active TeacherAssignment records
+
+**Login Flow:**
+1. Find staff by email in Staff collection
+2. Check TeacherAuthPassword collection for password hash
+3. If no auth record exists, auto-create one with staffId as default password
+4. Verify at least one active TeacherAssignment exists
+5. Issue JWT with role=teacher, staffId, staffName
+
+**Capabilities:**
+- View assigned classes/sections/subjects
+- Upload study material (PDF, Image, Note, Link) with publish/unpublish toggle
+- Create quizzes with MCQ, True/False, Short Answer questions
+- Set quiz time windows (startDateTime to endDateTime)
+- View student quiz attempts and grade short-answer questions manually
+- Change password
+
+**Ownership Enforcement:**
+All content/quiz modification routes verify `doc.staffId === req.user.staffId`. A teacher cannot modify another teacher's resources (403 Forbidden).
+
+### Student Role
+
+**Login:** Student ID (e.g., C5-A-2024-0001) + password (default: 12345678)
+**Token storage:** student_token / student_session
+**Prerequisite:** Admin must create StudentPortalAccount for the student
+
+**Login Flow:**
+1. Find StudentPortalAccount by studentId (must be isActive: true)
+2. Verify password with bcrypt
+3. Issue JWT with role=student, studentId, studentName, className, section
+4. Track isFirstLogin flag for forced password change
+
+**Capabilities:**
+- Dashboard: active quiz count, completed quiz count, pending fees total, this month attendance %
+- Browse published study material by subject (PDF viewer, image lightbox, note reader)
+- Take quizzes in full-screen mode with countdown timer
+- View quiz results with per-question breakdown
+- View fee records from the Fee module (read-only)
+- View attendance records from the Attendance module
+- Change password (forced on first login)
+
+### Quiz Taking Flow
+
+```
+Student opens Quizzes page
+         │
+         ▼
+Sees tabs: Active | Upcoming | Completed
+         │
+         ▼ (clicks Start Quiz on active quiz)
+         │
+GET /api/student-portal/quizzes/:id/start
+  → Validates: quiz published, within time window, not already attempted
+  → Returns quiz data WITHOUT correct answers
+         │
+         ▼
+Full-Screen Quiz Interface:
+  → Top bar: quiz title, question X of Y, countdown timer
+  → Timer turns red when < 5 minutes remaining
+  → One question at a time with Previous/Next buttons
+  → MCQ: radio buttons with A/B/C/D labels
+  → True/False: radio buttons
+  → Short Answer: text input
+  → Question palette at bottom: green=answered, white=unanswered, blue=current
+  → Click any palette number to jump to that question
+         │
+         ▼ (clicks Submit or timer reaches 0:00)
+         │
+Submit confirmation modal: "You have answered X of Y questions"
+         │
+         ▼
+POST /api/student-portal/quizzes/:id/submit
+  → Validates time window (distinct "not started" vs "ended" errors)
+  → Auto-grades MCQ and True/False (isCorrect: true/false)
+  → Short answers: isCorrect set to null (pending teacher review)
+  → Calculates totalMarksObtained, percentage, grade, isPassed
+  → Returns full result with per-question breakdown
+         │
+         ▼
+Quiz Result Screen:
+  → "Quiz Complete!" with score, percentage bar, grade badge, pass/fail badge
+  → "View Detailed Results" button shows per-question review:
+     - Green background + checkmark for correct answers
+     - Red background + X for wrong answers + shows correct answer
+     - "Pending teacher review" badge for short answers
+  → "Go Home" button returns to quizzes list
+```
+
+### Grading System
+
+| Percentage | Grade | Badge Color |
+|-----------|-------|-------------|
+| >= 90% | A+ | Purple |
+| >= 80% | A | Green |
+| >= 70% | B | Blue |
+| >= 60% | C | Yellow |
+| >= 50% | D | Orange |
+| < 50% | F | Red |
+
+Passing threshold is set per-quiz by the teacher via the `passingMarks` field.
+
+### Content Types
+
+| Type | Upload Format | Student View |
+|------|-------------|-------------|
+| PDF | Base64-encoded file data | Embedded PDF viewer (iframe) |
+| Image | Base64-encoded image data | Lightbox modal |
+| Note | Plain text | Formatted text container |
+| Link | URL string | Opens in new browser tab |
+
+---
+
+## End of Documentation
+
+This document covers the entire Emblazers school management system:
+- **13 modules** with independent authentication
+- **~90 frontend pages** across all modules
+- **150+ API endpoints** organized by module
+- **52 database models** with full field definitions
+- **3-role curriculum LMS** with full quiz workflow
+- **Cross-module data flow** showing how modules share data
+- **Complete credential reference** for all login types
