@@ -45,7 +45,6 @@ import {
   type QuizAttempt, type InsertQuizAttempt,
   moduleCredentials,
   moduleUserCredentials,
-  demoUsers,
   type ModuleType,
   type UserRole,
 } from "@shared/schema";
@@ -647,17 +646,6 @@ export class MemStorage implements IStorage {
         valid: true,
         role: newCreds.role,
         name: newCreds.name,
-      };
-    }
-
-    // Check demo users (work across all modules for testing different roles)
-    // Demo users can access any module - useful for testing permissions
-    const demoUser = demoUsers.find(u => u.email === email && u.password === password);
-    if (demoUser) {
-      return {
-        valid: true,
-        role: demoUser.role,
-        name: demoUser.name,
       };
     }
 

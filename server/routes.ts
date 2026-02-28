@@ -4,7 +4,6 @@ import { WebSocketServer, WebSocket } from "ws";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { storage } from "./storage";
-import { User } from "./models/User";
 import { ModuleUser } from "./models/ModuleUser";
 import { authenticateToken, requireModule } from "./middleware/auth";
 import { isDBConnected } from "./db";
@@ -1055,25 +1054,6 @@ export async function registerRoutes(
     }));
     res.json(mapped);
   }));
-
-  function formatDobPassword(dob: string): string {
-    if (!dob) return "00000000";
-    const d = new Date(dob);
-    if (isNaN(d.getTime())) {
-      const parts = dob.split(/[-\/]/);
-      if (parts.length === 3) {
-        const day = parts[0].padStart(2, '0');
-        const month = parts[1].padStart(2, '0');
-        const year = parts[2];
-        return `${day}${month}${year}`;
-      }
-      return dob.replace(/\D/g, '').slice(0, 8) || "00000000";
-    }
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = String(d.getFullYear());
-    return `${day}${month}${year}`;
-  }
 
   app.post("/api/curriculum/student-accounts/create", asyncHandler(async (req, res) => {
     const { studentId, className, section } = req.body;

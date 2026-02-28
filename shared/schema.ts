@@ -10,7 +10,7 @@ export const moduleCredentials = {
   attendance: { email: "attendance@emblazers.com", password: "12345678" },
   timetable: { email: "timetable@emblazers.com", password: "12345678" },
   datesheet: { email: "datesheet@emblazers.com", password: "12345678" },
-  curriculum: { email: "curriculum@emblazers.com", password: "12345678" },
+  curriculum: { email: "admin@emblazers.com", password: "12345678" },
   pos: { email: "pos@emblazers.com", password: "12345678" },
   library: { email: "library@emblazers.com", password: "12345678" },
   transport: { email: "transport@emblazers.com", password: "12345678" },
@@ -986,21 +986,7 @@ export const insertStudentQuizAttemptSchema = studentQuizAttemptSchema.omit({ id
 export type StudentQuizAttempt = z.infer<typeof studentQuizAttemptSchema>;
 export type InsertStudentQuizAttempt = z.infer<typeof insertStudentQuizAttemptSchema>;
 
-// ============== STUDENT PORTAL ACCOUNTS ==============
-export const studentPortalAccountSchema = z.object({
-  id: z.string(),
-  studentId: z.string(),
-  studentName: z.string(),
-  className: z.string(),
-  section: z.string(),
-  isFirstLogin: z.boolean().default(true),
-  isActive: z.boolean().default(true),
-  lastLogin: z.string().nullable().optional(),
-  createdAt: z.string().optional(),
-});
-export type StudentPortalAccount = z.infer<typeof studentPortalAccountSchema>;
-
-// ============== ROLE-BASED PERMISSIONS ==============
+// ============== ROLE TYPES ==============
 export const userRoleSchema = z.enum(["admin", "manager", "viewer", "teacher", "student"]);
 export type UserRole = z.infer<typeof userRoleSchema>;
 
@@ -1015,22 +1001,6 @@ export const rolePermissions: Record<UserRole, PermissionAction[]> = {
   viewer: ["view"],
 } as const;
 
-// User schema for role-based access
-export const userSchema = z.object({
-  id: z.string(),
-  email: z.string(),
-  password: z.string(),
-  name: z.string(),
-  role: userRoleSchema,
-  modules: z.array(z.string()), // Modules the user has access to
-  createdAt: z.string(),
-});
-
-export const insertUserSchema = userSchema.omit({ id: true, createdAt: true });
-export type User = z.infer<typeof userSchema>;
-export type InsertUser = z.infer<typeof insertUserSchema>;
-
-// Update module credentials to include role and allow multiple users per module
 export const moduleUserCredentials: Record<ModuleType, { email: string; password: string; role: UserRole; name: string }> = {
   student: { email: "student@emblazers.com", password: "12345678", role: "admin", name: "Student Admin" },
   hr: { email: "hr@emblazers.com", password: "12345678", role: "admin", name: "HR Admin" },
@@ -1046,17 +1016,6 @@ export const moduleUserCredentials: Record<ModuleType, { email: string; password
   transport: { email: "transport@emblazers.com", password: "12345678", role: "admin", name: "Transport Admin" },
   hostel: { email: "hostel@emblazers.com", password: "12345678", role: "admin", name: "Hostel Admin" },
 };
-
-// Demo users with different roles for testing permissions
-export type DemoUser = { email: string; password: string; role: UserRole; name: string };
-export const demoUsers: DemoUser[] = [
-  // Admin users (full access)
-  { email: "admin@emblazers.com", password: "admin123", role: "admin", name: "System Admin" },
-  // Manager users (can view, create, edit but not delete)
-  { email: "manager@emblazers.com", password: "manager123", role: "manager", name: "School Manager" },
-  // Viewer users (read-only access)
-  { email: "viewer@emblazers.com", password: "viewer123", role: "viewer", name: "Auditor" },
-];
 
 // ============== AUTH SESSION ==============
 export const authSessionSchema = z.object({
