@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import rateLimit from "express-rate-limit";
 import { storage } from "./storage";
 import { ModuleUser } from "./models/ModuleUser";
 import { authenticateToken, requireModule } from "./middleware/auth";
@@ -96,6 +97,14 @@ export async function registerRoutes(
       });
     };
 
+  const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: { error: "Too many login attempts. Please try again after 15 minutes." },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
   app.get("/api/health", (_req, res) => {
     res.json({ ok: true, db: isDBConnected() });
   });
@@ -149,7 +158,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/auth/login", async (req, res) => {
+  app.post("/api/auth/login", loginLimiter, async (req, res) => {
     const { email, password, module } = req.body;
 
     if (!email || !password) {
@@ -1147,7 +1156,7 @@ export async function registerRoutes(
 
   // ============== TEACHER AUTH ROUTES ==============
 
-  app.post("/api/teacher/login", asyncHandler(async (req, res) => {
+  app.post("/api/teacher/login", loginLimiter, asyncHandler(async (req, res) => {
     const { staffEmail, password } = req.body;
     if (!staffEmail || !password) {
       return res.status(400).json({ error: "Staff email and password are required" });
@@ -1165,7 +1174,7 @@ export async function registerRoutes(
 
     const assignments = await TeacherAssignmentModel.find({ staffId: staff._id.toString(), isActive: true }).lean();
     if (assignments.length === 0) {
-      return res.status(403).json({ error: "You have not been assigned any class. Contact admin." });
+      return res.status(403).json({ error: "You have not been assigned any class. Contact admin.", code: "NO_ASSIGNMENT" });
     }
 
     const staffIdValue = staff.staffId || staff._id.toString();
@@ -1446,7 +1455,7 @@ export async function registerRoutes(
 
   // ============== STUDENT PORTAL ROUTES ==============
 
-  app.post("/api/student-portal/login", asyncHandler(async (req, res) => {
+  app.post("/api/student-portal/login", loginLimiter, asyncHandler(async (req, res) => {
     const { studentId, password } = req.body;
     if (!studentId || !password) {
       return res.status(400).json({ error: "Student ID and password are required" });
