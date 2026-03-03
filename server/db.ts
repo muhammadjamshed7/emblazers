@@ -5,7 +5,7 @@ async function seedDefaultAccounts(): Promise<void> {
   try {
     const count = await ChartOfAccountsModel.countDocuments();
     if (count > 0) return;
-
+//database links
     const defaultAccounts = [
       { accountCode: "1001", accountName: "Cash", accountType: "Asset" },
       { accountCode: "1002", accountName: "Bank", accountType: "Asset" },
